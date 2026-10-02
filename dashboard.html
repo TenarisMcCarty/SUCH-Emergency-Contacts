@@ -15,13 +15,18 @@
   <script src="schedule.js" defer></script>
   <script src="words.js" defer></script>
   <script src="qrcode.js" defer></script>
+  <script src="opentype.js" defer></script>
+  <script src="earcut.js" defer></script>
+  <script src="logo.js" defer></script>
+  <script src="cardmaker.js" defer></script>
   <script src="dashboard.js" defer></script>
 </head>
 <body class="dash">
   <header class="topbar">
     <div class="wrap topbar-inner">
-      <span class="brand">Tenaris</span>
+      <img class="brand-logo" src="logo.svg" alt="Tenaris">
       <span class="product">Emergency Cards</span>
+      <span id="owner-flag" class="owner-flag" hidden>Owner</span>
       <button id="lock" class="topbar-btn" type="button" hidden>Lock</button>
     </div>
   </header>
@@ -42,18 +47,28 @@
       </form>
       <details class="minor">
         <summary>Lost the password?</summary>
-        <p>There's no way to recover it. Starting over creates a new password and empty lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
-        <button id="start-over" class="btn btn-danger" type="button">Start over</button>
+        <div id="lost-supervisor">
+          <p>Ask the site owner. They can reset it with their recovery code, and no cards stop working.</p>
+        </div>
+        <div id="lost-owner" hidden>
+          <label for="recovery-input">Your recovery code</label>
+          <input id="recovery-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button id="use-recovery" class="btn btn-light" type="button">Reset the password</button>
+          <p id="recovery-msg" class="msg" role="status"></p>
+          <p class="small">No recovery code either? Starting over creates new lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
+          <button id="start-over" class="btn btn-danger" type="button">Start over</button>
+        </div>
       </details>
     </section>
 
-    <!-- ============ Setup steps (first time, change password, replace token) ============ -->
+    <!-- ============ Setup steps (first time, password, token, recovery code) ============ -->
     <section id="setup" class="panel narrow" hidden>
       <p id="setup-step" class="eyebrow"></p>
 
       <div id="setup-password">
         <h1>Choose the dashboard password</h1>
-        <p>Everyone who manages the cards shares this password. It also protects the GitHub access stored in the public data file, so it has to be strong. Use the suggested one unless you have a good reason not to.</p>
+        <p id="pw-intro">Everyone who manages the cards shares this password. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.</p>
+        <p id="pw-warning" class="warn" hidden>Everyone else who uses the dashboard will need the new password once you publish. Tell them before you do.</p>
         <code id="suggested" class="key"></code>
         <div class="btn-row">
           <button id="suggest-again" class="btn btn-light" type="button">Suggest another</button>
@@ -83,6 +98,17 @@
         <input id="token-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button id="token-next" class="btn btn-primary" type="button">Check and continue</button>
         <p id="token-msg" class="msg" role="status"></p>
+      </div>
+
+      <div id="setup-recovery" hidden>
+        <h1>Save your recovery code</h1>
+        <p>This is your master key as the site owner. If everyone forgets the dashboard password, it lets you set a new one without breaking any cards. Keep it in <strong>your</strong> password manager. Supervisors never need it.</p>
+        <code id="recovery-code" class="key"></code>
+        <button id="copy-recovery" class="btn btn-light" type="button">Copy</button>
+        <label for="setup-contact">Your name and phone, shown to supervisors if something needs you (optional)</label>
+        <input id="setup-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
+        <label class="check"><input id="recovery-saved" type="checkbox"> I've saved the recovery code</label>
+        <button id="recovery-next" class="btn btn-primary" type="button" disabled>Finish</button>
       </div>
 
       <button id="setup-cancel" class="link-btn" type="button" hidden>Cancel</button>
@@ -118,9 +144,11 @@
         <button type="button" data-tab="people" class="active">People</button>
         <button type="button" data-tab="shifts">Shifts</button>
         <button type="button" data-tab="cards">Cards</button>
+        <button type="button" data-tab="print">Print &amp; QR</button>
         <button type="button" data-tab="history">History</button>
         <button type="button" data-tab="settings">Settings</button>
         <button type="button" data-tab="help">Help</button>
+        <button type="button" data-tab="owner" hidden>Owner</button>
       </nav>
 
       <!-- People -->
@@ -154,30 +182,68 @@
       <!-- Cards -->
       <section data-panel="cards" hidden>
         <h2 class="section">Add a card</h2>
-        <label for="new-driver">Driver name and ID (shown on the page)</label>
+        <label for="new-driver">Driver name and ID (printed on the card and shown on the page)</label>
         <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)">
         <label for="new-note">Who has this card? (only shown here)</label>
         <input id="new-note" autocomplete="off" placeholder="e.g. Family, School">
         <button id="add-card" class="btn btn-light" type="button">Add card</button>
         <p id="card-msg" class="msg" role="status"></p>
 
-        <div id="card-out" class="panel" hidden>
-          <h3 id="card-out-title"></h3>
-          <p id="card-out-status" class="small"></p>
-          <label for="card-link">Card link: write this to the NFC tag</label>
-          <input id="card-link" readonly>
-          <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
-          <canvas id="qr" class="qr"></canvas>
-          <div class="btn-row">
-            <a id="qr-png" class="btn btn-light">QR as PNG</a>
-            <a id="qr-svg" class="btn btn-light">QR as SVG (3D modelling)</a>
-          </div>
-          <p class="small muted">NFC Tools → Write → Add a record → URL → paste → Write. Lock the tag only after testing it.</p>
-        </div>
-
         <h2 class="section">All cards (<span id="card-count">0</span>)</h2>
         <ul id="card-list" class="rows"></ul>
         <p id="no-cards" class="small muted">No cards yet.</p>
+      </section>
+
+      <!-- Print & QR -->
+      <section data-panel="print" hidden>
+        <p id="print-empty" class="small muted">Add a card first (Cards tab).</p>
+        <div id="print-body">
+          <label for="print-card">Card</label>
+          <select id="print-card"></select>
+          <p id="print-status" class="warn" hidden></p>
+          <p id="print-msg" class="msg bad" hidden></p>
+
+          <div class="card-previews">
+            <figure><div id="preview-front" class="card-preview"></div><figcaption>3D card · front</figcaption></figure>
+            <figure><div id="preview-back" class="card-preview"></div><figcaption>3D card · back</figcaption></figure>
+          </div>
+
+          <button id="dl-all" class="btn btn-primary" type="button">Download everything (ZIP)</button>
+
+          <h2 class="section">3D-printed card</h2>
+          <p class="small">Two-colour print (black + white) with the NFC tag sealed inside. Import both STL files together as one object with two parts.</p>
+          <label for="tag-thickness">NFC sticker thickness (measure at the chip)</label>
+          <select id="tag-thickness">
+            <option value="0.3">Up to 0.3 mm (card 1.2 mm thick)</option>
+            <option value="0.5" selected>Up to 0.5 mm (card 1.4 mm thick)</option>
+            <option value="0.7">Up to 0.7 mm (card 1.6 mm thick)</option>
+          </select>
+          <div class="btn-row">
+            <button id="dl-black" class="btn btn-light" type="button">Black part (STL)</button>
+            <button id="dl-white" class="btn btn-light" type="button">White part (STL)</button>
+            <button id="dl-notes" class="btn btn-light" type="button">Print notes</button>
+          </div>
+
+          <h2 class="section">Paper card</h2>
+          <p class="small">Three copies on a Letter page, front and back side by side. Print at 100%, cut, fold, laminate.</p>
+          <button id="dl-paper" class="btn btn-light" type="button">Paper card (PDF)</button>
+
+          <h2 class="section">QR code</h2>
+          <div class="btn-row">
+            <button id="dl-label" class="btn btn-light" type="button">QR label with name (PNG)</button>
+            <button id="dl-qr-png" class="btn btn-light" type="button">QR only (PNG)</button>
+            <button id="dl-qr-svg" class="btn btn-light" type="button">QR only (SVG)</button>
+          </div>
+
+          <h2 class="section">NFC tag</h2>
+          <p class="small">Write this link to the tag: NFC Tools → Write → Add a record → URL → paste → Write. Lock the tag only after testing it.</p>
+          <input id="card-link" readonly>
+          <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+
+          <h2 class="section">Backup line</h2>
+          <p class="small">Printed on every card. If the page ever can't load, it tells families to call this number. Publish after changing it, then print new cards.</p>
+          <input id="backup" type="tel" autocomplete="off" placeholder="(555) 555-0100">
+        </div>
       </section>
 
       <!-- History -->
@@ -192,13 +258,8 @@
         <p class="small">Shown in History next to what you publish. Saved only on this device.</p>
         <input id="my-name" autocomplete="name">
 
-        <h2 class="section">GitHub connection</h2>
-        <p id="gh-status" class="small"></p>
-        <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
-
         <h2 class="section">Password</h2>
-        <p class="small">To take away someone's access, change the password <strong>and</strong> replace the GitHub token, then delete the old token on GitHub.</p>
-        <label class="check"><input id="pw-revoke" type="checkbox"> Someone who should lose access knows the current password</label>
+        <p class="warn">Changing the password affects everyone who uses this dashboard: once you publish, the old one stops working. Tell them the new one. If it's ever lost, the site owner can reset it.</p>
         <button id="change-password" class="btn btn-light" type="button">Change password</button>
       </section>
 
@@ -210,20 +271,41 @@
         <ul>
           <li><strong>Shift rotation changed:</strong> Shifts → tick who works each shift → Publish.</li>
           <li><strong>New person / someone left:</strong> People → Add person or Remove → check Shifts → Publish.</li>
-          <li><strong>New card:</strong> Cards → Add card → Publish → write the link to the tag (NFC Tools) and use the QR for the print. Test it, then lock the tag.</li>
+          <li><strong>New card:</strong> Cards → Add card → Publish → Print &amp; QR → download the files, write the link to the tag. Test it, then lock the tag.</li>
           <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
-          <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. No need to rewrite the card.</li>
+          <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. The tag doesn't need rewriting, but print a new card face.</li>
           <li><strong>Give someone access:</strong> send them this page's link and tell them the password (in person or by phone).</li>
-          <li><strong>Take away access:</strong> Settings → tick "Someone who should lose access…" → Change password → Publish.</li>
         </ul>
         <h2 class="section">If something's wrong</h2>
         <ul>
-          <li><strong>"Not published" won't go away:</strong> press Publish; read the message under it.</li>
-          <li><strong>GitHub token problem:</strong> Settings → Replace GitHub token (instructions are on that screen).</li>
+          <li><strong>"Not published" won't go away:</strong> press Publish and read the message under it.</li>
+          <li><strong>Publishing isn't working:</strong> ask the site owner.</li>
           <li><strong>Someone else published first:</strong> Lock, sign in again, redo your change.</li>
+          <li><strong>Forgot the password:</strong> ask the site owner to reset it.</li>
         </ul>
         <h2 class="section">Security</h2>
-        <p class="small">All data is encrypted before it leaves this page. Each card can unlock only the contacts and its own driver name. The password never leaves this device.</p>
+        <p class="small">All data is encrypted before it leaves this page. Each card can unlock only the contacts and its own driver's name. The password never leaves this device.</p>
+      </section>
+
+      <!-- Owner (only with #owner in the address) -->
+      <section data-panel="owner" hidden>
+        <p class="small">Only shown when the dashboard is opened as <code>dashboard.html#owner</code>. Supervisors don't need anything here.</p>
+
+        <h2 class="section">GitHub connection</h2>
+        <p id="gh-status" class="small"></p>
+        <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
+
+        <h2 class="section">Recovery code</h2>
+        <p id="recovery-status" class="small"></p>
+        <button id="new-recovery" class="btn btn-light" type="button">Make a new recovery code</button>
+
+        <h2 class="section">Your contact for supervisors</h2>
+        <p class="small">Shown when something needs you, like an expired GitHub token.</p>
+        <input id="owner-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
+
+        <h2 class="section">Take away someone's access</h2>
+        <p class="small">Sets a new password <strong>and</strong> a new GitHub token. After publishing, delete the old token on GitHub (Settings → Developer settings → Fine-grained tokens).</p>
+        <button id="revoke-access" class="btn btn-light" type="button">New password and token</button>
       </section>
     </div>
   </main>

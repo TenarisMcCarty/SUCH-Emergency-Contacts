@@ -10,6 +10,9 @@
 //   "admin"  What the dashboard needs (data key, every card's key and name, the GitHub
 //            token, the change history), locked with a key made from the dashboard
 //            password. Password stretching (PBKDF2, 600,000 rounds) makes guessing slow.
+//   "recovery"  The same as "admin", locked for the site owner's recovery code (a private key
+//            only the owner keeps). Anyone publishing keeps it current using the owner's
+//            public key, so the owner can always reset a lost password without breaking cards.
 //
 // The dashboard makes a brand-new data key on every publish, so a removed card can't
 // read anything published after it was removed.
@@ -55,6 +58,30 @@ function newSalt() {
   return toB64(crypto.getRandomValues(new Uint8Array(16)));
 }
 
+// ---- Owner recovery code (ECDH P-256) ----
+const EC = { name: 'ECDH', namedCurve: 'P-256' };
+
+// A new recovery code (the private key, 43 characters) and its public half.
+async function newRecovery() {
+  const pair = await crypto.subtle.generateKey(EC, true, ['deriveBits']);
+  const jwk = await crypto.subtle.exportKey('jwk', pair.privateKey);
+  return { code: jwk.d, pub: { x: jwk.x, y: jwk.y } };
+}
+
+async function sharedKey(privateKey, pub) {
+  const publicKey = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', ...pub }, EC, false, []);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: publicKey }, privateKey, 256));
+  const hash = await crypto.subtle.digest('SHA-256', new Uint8Array([...bits, ...new TextEncoder().encode('SUCH emergency cards recovery')]));
+  return toB64(new Uint8Array(hash).slice(0, KEY_BYTES));
+}
+
+// Lock a value so only the holder of the recovery code for `pub` can open it.
+async function lockForOwner(pub, value) {
+  const once = await crypto.subtle.generateKey(EC, true, ['deriveBits']);
+  const epk = await crypto.subtle.exportKey('jwk', once.publicKey);
+  return { pub, epk: { x: epk.x, y: epk.y }, ...(await lock(await sharedKey(once.privateKey, pub), value)) };
+}
+
 // ---- Lock / unlock any value. A wrong key or a changed file makes unlock() fail. ----
 
 async function lock(keyText, value) {
@@ -97,6 +124,7 @@ async function buildFile(admin, { data, cards, extra }) {
       kdf: 'PBKDF2-SHA256', iterations: admin.iterations, salt: admin.salt,
       ...(await lock(admin.key, { ...extra, dataKey, cards })),
     },
+    ...(extra.owner && extra.owner.pub ? { recovery: await lockForOwner(extra.owner.pub, { ...extra, dataKey, cards }) } : {}),
   };
 }
 
@@ -106,6 +134,15 @@ async function openCard(cardKey, file) {
   if (!slot) throw new Error('This card is not in the file.');
   const { dataKey, driver } = await unlock(cardKey, slot);
   return { driver, ...(await unlock(dataKey, file.data)) };
+}
+
+// Dashboard: open the file with the owner's recovery code → { cards, data, ...extra }.
+async function openRecovery(code, file) {
+  const r = file.recovery;
+  if (!r) throw new Error('This data has no recovery code.');
+  const privateKey = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', ...r.pub, d: code.trim() }, EC, false, ['deriveBits']);
+  const { dataKey, ...rest } = await unlock(await sharedKey(privateKey, r.epk), r);
+  return { ...rest, data: await unlock(dataKey, file.data) };
 }
 
 // Dashboard: open the file with the password's key → { cards, data, ...extra }.

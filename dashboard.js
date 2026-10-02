@@ -3,6 +3,9 @@
 // Publish saves the encrypted contacts.enc.json straight to GitHub, using the GitHub
 // token that is stored (encrypted) inside that same file. Nothing is kept in this
 // browser except your name for the History tab.
+//
+// Supervisors use dashboard.html. The site owner opens dashboard.html#owner, which adds
+// the Owner tab (GitHub token, recovery code) and the password reset on the sign-in screen.
 
 const REPO = 'TenarisMcCarty/SUCH-Emergency-Contacts';
 const API = 'https://api.github.com';
@@ -12,18 +15,20 @@ const MAX_PEOPLE = 10;
 const DEFAULT_MESSAGE = 'EMERGENCY – need to reach driver {driver}. Please call me back at this number.';
 const SITE = new URL('./', location.href).href; // card links point at the emergency page next to this one
 const COMMON_ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'America/Mexico_City'];
+const OWNER = location.hash === '#owner';
 
 const $ = id => document.getElementById(id);
 
 // Everything below lives only in this tab's memory.
 let admin = null;       // { key, salt, iterations } made from the password
 let github = null;      // { token, addedAt, addedBy }
-let state = null;       // what you're editing: { message, contacts, schedule, cards }
-let published = null;   // { state, text, admin, github } as last published (null = never published)
-                        // (admin/github are null right after upgrading from the first version)
+let owner = null;       // { contact, pub, at } — the site owner's contact and recovery public key
+let state = null;       // what you're editing: { message, contacts, schedule, backup, cards }
+let published = null;   // { state, text, admin, github, owner } as last published (null = never published)
+                        // (admin is null right after an upgrade or password reset: the old key isn't known)
 let sha = null;         // GitHub's id for the current file (needed to replace it)
 let log = [];           // change history
-let pending = new Set(); // changes that aren't in `state`: 'password', 'token'
+let pending = new Set(); // changes that aren't in `state`: upgrade, reset, password, token, recovery
 let deployState = 'checking'; // checking | live | deploying | slow
 let ghProblem = null;   // text of a GitHub problem, if any
 let busy = false;
@@ -53,6 +58,7 @@ const newId = () => toB64(crypto.getRandomValues(new Uint8Array(6)));
 const today = () => new Date().toISOString().slice(0, 10);
 const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const personName = c => c.name.trim() || 'a person with no name';
+const askOwner = () => (OWNER ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
 
 async function copy(text, btn) {
   try {
@@ -69,10 +75,13 @@ async function copy(text, btn) {
   setTimeout(() => (btn.textContent = label), 1500);
 }
 
-function download(link, name, blob) {
-  if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
-  link.href = URL.createObjectURL(blob);
-  link.download = name;
+// Hand a file to the browser to save.
+function saveFile(name, blob) {
+  const a = el('a', { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60 * 1000);
 }
 
 // Your name, for History. Kept on this device only (it's not secret).
@@ -90,6 +99,9 @@ function normalizePhone(text) {
   return /^[2-9]\d{2}[2-9]\d{6}$/.test(digits) ? '+1' + digits : null;
 }
 
+// "+15555550100" → "555-555-0100" (how it's printed on cards)
+const formatPhone = p => (p ? p.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : '');
+
 // A strong password: 5 random words (~64 bits). Rejection sampling keeps every word equally likely.
 function suggestPassword() {
   const words = [];
@@ -99,6 +111,11 @@ function suggestPassword() {
     if (n < limit) words.push(WORDS[n % WORDS.length]);
   }
   return words.join('-');
+}
+
+async function setPassword(password) {
+  const salt = newSalt();
+  admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
 }
 
 // ================= GitHub =================
@@ -128,8 +145,8 @@ async function loadFile() {
 }
 
 function publishError(status) {
-  if (status === 401) return 'The GitHub token has expired or was deleted. Replace it in Settings, then publish again.';
-  if (status === 403 || status === 404) return "The GitHub token isn't allowed to change this repository. Replace it in Settings (the steps show the right permission).";
+  if (status === 401) return `Nothing was published: the site's GitHub connection has expired. ${askOwner()}`;
+  if (status === 403 || status === 404) return `Nothing was published: the site's GitHub connection isn't allowed to save. ${askOwner()}`;
   if (status === 409 || status === 422) return 'Someone else published changes since you signed in, so yours were NOT published. Note your changes, Lock, sign in again and redo them.';
   return `GitHub error ${status}. Nothing was published. Try again in a minute.`;
 }
@@ -138,7 +155,7 @@ function publishError(status) {
 async function checkGitHub() {
   try {
     const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`);
-    if (res.status === 401) ghProblem = 'The GitHub token has expired or was deleted. Publishing won\'t work until you replace it in Settings.';
+    if (res.status === 401) ghProblem = `Publishing won't work right now: the site's GitHub connection has expired. ${askOwner()}`;
     else if (res.ok) {
       const j = await res.json();
       sha = j.sha;
@@ -182,6 +199,11 @@ function show(view) {
   scrollTo(0, 0);
 }
 
+$('owner-flag').hidden = !OWNER;
+$('lost-owner').hidden = !OWNER;
+$('lost-supervisor').hidden = OWNER;
+document.querySelector('[data-tab="owner"]').hidden = !OWNER;
+
 async function start() {
   let file;
   try {
@@ -190,20 +212,18 @@ async function start() {
     return say('loading', e.message, true);
   }
   sha = file && file.sha;
-  if (file) {
-    show('login');
-    if (!JSON.parse(file.text).admin.salt) { // saved by the first version, which used an admin key
-      $('login-title').textContent = 'Upgrade';
-      $('login-intro').hidden = false;
-      $('password-label').textContent = 'Old admin key';
-    }
-    $('login-form').onsubmit = e => { e.preventDefault(); signIn(file); };
-    $('start-over').onclick = () => {
-      if (confirm('Start over? Once you publish, EVERY existing card stops working until it is rewritten with a new link.')) setUp(true);
-    };
-  } else {
-    setUp(false);
+  if (!file) return setUp(false);
+  show('login');
+  if (!JSON.parse(file.text).admin.salt) { // saved by the first version, which used an admin key
+    $('login-title').textContent = 'Upgrade';
+    $('login-intro').hidden = false;
+    $('password-label').textContent = 'Old admin key';
   }
+  $('login-form').onsubmit = e => { e.preventDefault(); signIn(file); };
+  $('use-recovery').onclick = () => resetWithRecovery(file);
+  $('start-over').onclick = () => {
+    if (confirm('Start over? Once you publish, EVERY existing card stops working until it is rewritten with a new link.')) setUp(true);
+  };
 }
 
 async function signIn(file) {
@@ -229,22 +249,43 @@ async function signIn(file) {
   }
 }
 
-// First-time setup (or starting over): password, then GitHub token, then an empty dashboard.
+// Owner: forgot password → open with the recovery code → choose a new password. Cards keep working.
+async function resetWithRecovery(file) {
+  const code = $('recovery-input').value.trim();
+  if (!code) return;
+  say('recovery-msg', 'Checking…');
+  let opened;
+  try {
+    opened = await openRecovery(code, JSON.parse(file.text));
+  } catch (e) {
+    return say('recovery-msg', /no recovery/.test(e.message) ? e.message : 'Wrong recovery code.', true);
+  }
+  $('recovery-input').value = '';
+  say('recovery-msg', '');
+  passwordStep('Reset the password', () => show('login'), async password => {
+    await setPassword(password);
+    enterDashboard(opened, file.text);
+    published.admin = null; // the old password isn't known, so Discard keeps the new one
+    pending.add('reset');
+    refresh();
+  }, { warning: true });
+}
+
+// First-time setup (or starting over): password, GitHub token, recovery code, then an empty dashboard.
 function setUp(startingOver) {
   const cancel = startingOver ? () => show('login') : null;
-  passwordStep('Set up · step 1 of 2', cancel, password => {
-    tokenStep('Set up · step 2 of 2', cancel, async token => {
-      say('token-msg', 'Setting up…');
-      const salt = newSalt();
-      admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
-      say('token-msg', '');
-      enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, log: [], cards: [], data: emptyData() }, null);
+  passwordStep('Set up · step 1 of 3', cancel, password => {
+    tokenStep('Set up · step 2 of 3', cancel, token => {
+      recoveryStep('Set up · step 3 of 3', cancel, async rec => {
+        await setPassword(password);
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: rec, log: [], cards: [], data: emptyData() }, null);
+      });
     });
   });
 }
 
-// First version → this one: open with the old admin key, choose a password, connect GitHub.
-// Contacts and cards carry over unchanged, so cards already written keep working.
+// First version → this one: open with the old admin key, choose a password, connect GitHub, save a
+// recovery code. Contacts and cards carry over unchanged, so cards already written keep working.
 async function upgrade(oldKey, file) {
   if (!isKey(oldKey)) return say('login-msg', 'Enter the 22-character admin key from the old editor.', true);
   let opened;
@@ -257,19 +298,19 @@ async function upgrade(oldKey, file) {
   say('login-msg', '');
   const data = withSchedule(opened.data);
   data.schedule = { ...emptyData().schedule, fallback: data.schedule.fallback };
+  data.backup = '';
   delete data.primary;
   const back = () => show('login');
-  passwordStep('Upgrade · step 1 of 2', back, password => {
-    tokenStep('Upgrade · step 2 of 2', back, async token => {
-      say('token-msg', 'Setting up…');
-      const salt = newSalt();
-      admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
-      say('token-msg', '');
-      const cards = opened.cards.map(c => ({ note: '', ...c }));
-      enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, log: [], cards, data }, file.text);
-      published.admin = published.github = null;
-      pending.add('upgrade');
-      refresh();
+  passwordStep('Upgrade · step 1 of 3', back, password => {
+    tokenStep('Upgrade · step 2 of 3', back, token => {
+      recoveryStep('Upgrade · step 3 of 3', back, async rec => {
+        await setPassword(password);
+        const cards = opened.cards.map(c => ({ note: '', ...c }));
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: rec, log: [], cards, data }, file.text);
+        published.admin = null;
+        pending.add('upgrade');
+        refresh();
+      });
     });
   });
 }
@@ -280,6 +321,7 @@ function emptyData() {
   return {
     message: DEFAULT_MESSAGE,
     contacts,
+    backup: '',
     schedule: {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       fallback: contacts[0].id,
@@ -293,13 +335,18 @@ function emptyData() {
   };
 }
 
-function passwordStep(stepLabel, cancel, done) {
+function showStep(id, label, cancel) {
   show('setup');
-  $('setup-password').hidden = false;
-  $('setup-token').hidden = true;
-  $('setup-step').textContent = stepLabel;
+  for (const s of ['setup-password', 'setup-token', 'setup-recovery']) $(s).hidden = s !== id;
+  $('setup-step').textContent = label;
   $('setup-cancel').hidden = !cancel;
   $('setup-cancel').onclick = cancel;
+}
+
+function passwordStep(label, cancel, done, { warning = false } = {}) {
+  showStep('setup-password', label, cancel);
+  $('pw-intro').hidden = warning;
+  $('pw-warning').hidden = !warning;
   let suggestion = suggestPassword();
   $('suggested').textContent = suggestion;
   $('own-password').value = '';
@@ -312,17 +359,13 @@ function passwordStep(stepLabel, cancel, done) {
   $('pw-next').onclick = () => {
     const own = $('own-password').value.trim();
     if (own && own.length < 20) return say('pw-msg', 'Your own password needs at least 20 characters, or clear it to use the suggested one.', true);
+    say('pw-msg', 'Saving…');
     done(own || suggestion);
   };
 }
 
-function tokenStep(stepLabel, cancel, done) {
-  show('setup');
-  $('setup-password').hidden = true;
-  $('setup-token').hidden = false;
-  $('setup-step').textContent = stepLabel;
-  $('setup-cancel').hidden = !cancel;
-  $('setup-cancel').onclick = cancel;
+function tokenStep(label, cancel, done) {
+  showStep('setup-token', label, cancel);
   $('token-input').value = '';
   say('token-msg', '');
   $('token-next').onclick = async () => {
@@ -335,15 +378,31 @@ function tokenStep(stepLabel, cancel, done) {
     if (!res) return say('token-msg', "Couldn't reach GitHub. Check the internet connection and try again.", true);
     if (res.status === 401) return say('token-msg', 'GitHub says this token is not valid. Copy it again and paste it here.', true);
     if (!res.ok) return say('token-msg', `GitHub error ${res.status}. Check the token's repository access.`, true);
+    say('token-msg', '');
     done(token);
   };
 }
 
+function recoveryStep(label, cancel, done) {
+  showStep('setup-recovery', label, cancel);
+  $('recovery-code').textContent = 'Making…';
+  $('recovery-saved').checked = false;
+  $('recovery-next').disabled = true;
+  $('setup-contact').value = (owner && owner.contact) || '';
+  newRecovery().then(rec => {
+    $('recovery-code').textContent = rec.code;
+    $('copy-recovery').onclick = e => copy(rec.code, e.currentTarget);
+    $('recovery-saved').onchange = () => ($('recovery-next').disabled = !$('recovery-saved').checked);
+    $('recovery-next').onclick = () => done({ contact: $('setup-contact').value.trim(), pub: rec.pub, at: today() });
+  });
+}
+
 function enterDashboard(opened, publishedText) {
   github = opened.github;
+  owner = opened.owner || null;
   log = opened.log || [];
-  state = { ...opened.data, cards: opened.cards };
-  published = publishedText ? { state: clone(state), text: publishedText, admin, github } : null;
+  state = { backup: '', ...opened.data, cards: opened.cards };
+  published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner) } : null;
   pending = new Set();
   deployState = published ? 'checking' : 'none';
   show('dash');
@@ -377,7 +436,10 @@ function renderAll() {
 }
 
 function renderTab() {
-  ({ people: renderPeople, shifts: renderShifts, cards: renderCards, history: renderHistory, settings: renderSettings, help: () => {} })[tab]();
+  ({
+    people: renderPeople, shifts: renderShifts, cards: renderCards, print: renderPrint,
+    history: renderHistory, settings: () => {}, help: () => {}, owner: renderOwner,
+  })[tab]();
 }
 
 // ================= Status (top of the page) =================
@@ -397,6 +459,7 @@ function changes() {
     for (const o of before.contacts) if (!now.has(o.id)) out.push('Removed ' + personName(o));
     if (before.message !== state.message) out.push('Changed the text message');
     if (JSON.stringify(before.schedule) !== JSON.stringify(state.schedule)) out.push('Changed shifts');
+    if ((before.backup || '') !== (state.backup || '')) out.push('Changed the backup line');
     const oldCards = new Map(before.cards.map(c => [c.key, c]));
     const nowCards = new Set(state.cards.map(c => c.key));
     for (const c of state.cards) {
@@ -405,10 +468,13 @@ function changes() {
       else if (o.driver !== c.driver || o.note !== c.note) out.push(`Renamed card: ${cardLabel(c)}`);
     }
     for (const o of before.cards) if (!nowCards.has(o.key)) out.push(`Removed card: ${cardLabel(o)}`);
+    if (((published.owner && published.owner.contact) || '') !== ((owner && owner.contact) || '')) out.push('Changed the owner contact');
   }
-  if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection and shifts');
+  if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection, recovery code and shifts');
+  if (pending.has('reset')) out.push('Password reset with the recovery code');
   if (pending.has('password')) out.push('Changed the password');
   if (pending.has('token')) out.push('Replaced the GitHub token');
+  if (pending.has('recovery')) out.push('Made a new recovery code');
   return out;
 }
 
@@ -588,7 +654,7 @@ function renderCards() {
         el('span', { textContent: [card.note, 'added ' + card.added].filter(Boolean).join(' · ') }),
         el('span', { class: 'badge small ' + (live ? 'live' : 'changes'), textContent: live ? 'Active' : 'Not published yet' })),
       el('div', { class: 'actions' },
-        el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Link / QR', onclick: () => showCard(card) }),
+        el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Print & QR', onclick: () => openPrint(card) }),
         el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Rename', onclick: () => renameCard(card) }),
         el('button', { type: 'button', class: 'btn btn-danger btn-small', textContent: 'Remove', onclick: () => removeCard(card) })));
   }));
@@ -602,77 +668,116 @@ $('add-card').onclick = () => {
   const card = { driver, note: $('new-note').value.trim(), key: newKey(), added: today() };
   state.cards.push(card);
   $('new-driver').value = $('new-note').value = '';
-  say('card-msg', '');
+  say('card-msg', `Added. Publish to switch it on, then get its files in Print & QR.`);
   renderCards();
   refresh();
-  showCard(card);
 };
 
 function renameCard(card) {
-  const driver = prompt('Driver name and ID (shown on the page):', card.driver);
+  const driver = prompt('Driver name and ID (printed on the card and shown on the page):', card.driver);
   if (driver === null || !driver.trim()) return;
   const note = prompt('Who has this card? (only shown here)', card.note);
   card.driver = driver.trim();
   if (note !== null) card.note = note.trim();
   renderCards();
   refresh();
-  if ($('card-out').dataset.key === card.key) showCard(card);
 }
 
 function removeCard(card) {
   if (!confirm(`Remove the card for ${cardLabel(card)}? Once you publish, that card stops working for good.`)) return;
   state.cards = state.cards.filter(c => c !== card);
-  if ($('card-out').dataset.key === card.key) $('card-out').hidden = true;
   renderCards();
   refresh();
 }
 
-function showCard(card) {
-  const link = SITE + '#' + card.key;
-  const fileName = 'card-' + (card.driver + ' ' + card.note).trim().replace(/[^\w-]+/g, '-');
-  $('card-out').dataset.key = card.key;
-  $('card-out-title').textContent = cardLabel(card);
-  $('card-out-status').textContent = isLive(card) ? 'Active.' : 'Starts working once you publish.';
-  $('card-link').value = link;
+// ================= Print & QR =================
 
-  const qr = qrcode(0, 'M'); // 0 = smallest QR that fits; M = survives ~15% damage
-  qr.addData(link);
-  qr.make();
-  drawQR(qr, $('qr'));
-  $('qr').toBlob(png => download($('qr-png'), fileName + '.png', png));
-  download($('qr-svg'), fileName + '.svg', new Blob([qrSvg(qr)], { type: 'image/svg+xml' }));
+let printKey = null; // which card the Print & QR tab shows
 
-  $('card-out').hidden = false;
-  $('card-out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+function openPrint(card) {
+  printKey = card.key;
+  openTab('print');
 }
 
+const printCard = () => state.cards.find(c => c.key === printKey);
+const printInfo = card => ({ link: SITE + '#' + card.key, driver: card.driver, backup: formatPhone(state.backup) });
+const tagThickness = () => Number($('tag-thickness').value);
+
+function renderPrint() {
+  const has = state.cards.length > 0;
+  $('print-empty').hidden = has;
+  $('print-body').hidden = !has;
+  if (!has) return;
+  if (!printCard()) printKey = state.cards[state.cards.length - 1].key;
+  $('print-card').replaceChildren(...state.cards.map(c => el('option', { value: c.key, textContent: cardLabel(c), selected: c.key === printKey })));
+  $('backup').value = formatPhone(state.backup);
+  renderPrintCard();
+}
+
+let printRun = 0;
+async function renderPrintCard() {
+  const run = ++printRun;
+  const card = printCard();
+  $('card-link').value = SITE + '#' + card.key;
+  $('print-status').hidden = isLive(card);
+  $('print-status').textContent = "This card isn't published yet. Its link and files only work after you publish.";
+  $('print-msg').hidden = true;
+  try {
+    await CardMaker.load();
+    if (run !== printRun) return;
+    const info = printInfo(card);
+    const { problems } = CardMaker.layout(info, '3d');
+    $('preview-front').replaceChildren(CardMaker.preview(info, 'front'));
+    $('preview-back').replaceChildren(CardMaker.preview(info, 'back'));
+    if (problems.length) printProblem(problems.join(' '));
+    for (const id of ['dl-black', 'dl-white', 'dl-notes']) $(id).disabled = problems.length > 0;
+  } catch (e) {
+    printProblem(e.message);
+  }
+}
+
+function printProblem(text) {
+  $('print-msg').textContent = text;
+  $('print-msg').hidden = false;
+}
+
+$('print-card').onchange = e => { printKey = e.target.value; renderPrintCard(); };
+$('backup').onchange = e => {
+  const p = e.target.value.trim() ? normalizePhone(e.target.value) : '';
+  if (p === null) return printProblem('The backup line needs a 10-digit US phone number.');
+  state.backup = p;
+  e.target.value = formatPhone(p);
+  refresh();
+  renderPrintCard();
+};
 $('copy-card-link').onclick = e => copy($('card-link').value, e.currentTarget);
 
-const QUIET = 4; // white border around the QR, in squares (scanners need it)
-
-function drawQR(qr, canvas) {
-  const n = qr.getModuleCount();
-  const px = 16;
-  canvas.width = canvas.height = (n + QUIET * 2) * px;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#000';
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++)
-      if (qr.isDark(r, c)) ctx.fillRect((c + QUIET) * px, (r + QUIET) * px, px, px);
+// Make one file (or all of them) for the chosen card and hand it to the browser.
+async function download(what) {
+  const card = printCard();
+  const info = printInfo(card);
+  const base = 'card-' + CardMaker.slug(card.driver + (card.note ? ' ' + card.note : ''));
+  $('print-msg').hidden = true;
+  try {
+    await CardMaker.load();
+    if (what === 'all') return saveFile(base + '.zip', CardMaker.zip(await CardMaker.files(info, tagThickness())));
+    if (what === 'black' || what === 'white' || what === 'notes') {
+      const m = CardMaker.model(info, tagThickness());
+      if (what === 'notes') return saveFile(base + '-print-notes.txt', new Blob([CardMaker.printNotes(info, m)], { type: 'text/plain' }));
+      return saveFile(`${base}-${what.toUpperCase()}.stl`, new Blob([m[what]], { type: 'model/stl' }));
+    }
+    if (what === 'paper') return saveFile(base + '-paper-card.pdf', await CardMaker.paperPdf(info));
+    if (what === 'label') return saveFile(base + '-qr-label.png', await CardMaker.canvasBlob(CardMaker.labelCanvas(info)));
+    if (what === 'qr-png') return saveFile(base + '-qr.png', await CardMaker.canvasBlob(CardMaker.qrCanvas(info.link)));
+    if (what === 'qr-svg') return saveFile(base + '-qr.svg', new Blob([CardMaker.qrSvg(info.link)], { type: 'image/svg+xml' }));
+  } catch (e) {
+    printProblem(e.message);
+  }
 }
 
-// One black square per dark module, on white. 1 unit = 1 module.
-function qrSvg(qr) {
-  const n = qr.getModuleCount();
-  const size = n + QUIET * 2;
-  let d = '';
-  for (let r = 0; r < n; r++)
-    for (let c = 0; c < n; c++)
-      if (qr.isDark(r, c)) d += `M${c + QUIET} ${r + QUIET}h1v1h-1z`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges">` +
-    `<rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>\n`;
+for (const [id, what] of [['dl-all', 'all'], ['dl-black', 'black'], ['dl-white', 'white'], ['dl-notes', 'notes'],
+  ['dl-paper', 'paper'], ['dl-label', 'label'], ['dl-qr-png', 'qr-png'], ['dl-qr-svg', 'qr-svg']]) {
+  $(id).onclick = () => download(what);
 }
 
 // ================= History =================
@@ -684,44 +789,61 @@ function renderHistory() {
   $('no-history').hidden = log.length > 0;
 }
 
-// ================= Settings =================
+// ================= Settings (everyone) =================
 
-function renderSettings() {
-  $('gh-status').textContent = (ghProblem ? ghProblem + ' ' : 'Connected. ') +
-    `Token added ${github.addedAt}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
-}
+const backToDash = () => { show('dash'); renderAll(); };
 
 $('my-name').oninput = e => setMyName(e.target.value.trim());
 
+$('change-password').onclick = () => {
+  passwordStep('Change password', backToDash, async password => {
+    await setPassword(password);
+    pending.add('password');
+    backToDash();
+  }, { warning: true });
+};
+
+// ================= Owner tab =================
+
+function renderOwner() {
+  $('gh-status').textContent = (ghProblem ? ghProblem + ' ' : 'Connected. ') +
+    `Token added ${github.addedAt}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
+  $('recovery-status').textContent = owner && owner.pub
+    ? `Set up ${owner.at || ''}${pending.has('recovery') || pending.has('upgrade') ? ' (not published yet)' : ''}. Keep it in your password manager.`
+    : 'No recovery code yet. Make one so you can always reset a lost password.';
+  $('owner-contact').value = (owner && owner.contact) || '';
+}
+
+$('owner-contact').oninput = e => { owner = { ...(owner || {}), contact: e.target.value.trim() }; refresh(); };
+
 $('replace-token').onclick = () => {
-  tokenStep('Replace GitHub token', () => { show('dash'); renderAll(); }, token => {
+  tokenStep('Replace GitHub token', backToDash, token => {
     github = { token, addedAt: today(), addedBy: myName() };
     pending.add('token');
     ghProblem = null;
-    show('dash');
-    renderAll();
+    backToDash();
   });
 };
 
-$('change-password').onclick = () => {
-  const revoke = $('pw-revoke').checked;
-  const back = () => { show('dash'); renderAll(); };
-  passwordStep(revoke ? 'Change password · step 1 of 2' : 'Change password', back, password => {
-    const finish = async () => {
-      const salt = newSalt();
-      admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
-      pending.add('password');
-      $('pw-revoke').checked = false;
-      back();
-      if (revoke) alert('After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → old "Emergency cards dashboard" token → Delete.');
-    };
-    if (!revoke) return finish();
-    tokenStep('Change password · step 2 of 2: new GitHub token', back, token => {
-      github = { token, addedAt: today(), addedBy: myName() };
-      pending.add('token');
-      finish();
-    });
+$('new-recovery').onclick = () => {
+  recoveryStep('New recovery code', backToDash, rec => {
+    owner = rec;
+    pending.add('recovery');
+    backToDash();
   });
+};
+
+$('revoke-access').onclick = () => {
+  passwordStep('Take away access · step 1 of 2', backToDash, password => {
+    tokenStep('Take away access · step 2 of 2', backToDash, async token => {
+      await setPassword(password);
+      github = { token, addedAt: today(), addedBy: myName() };
+      pending.add('password');
+      pending.add('token');
+      backToDash();
+      alert('After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → the old "Emergency cards dashboard" token → Delete.');
+    });
+  }, { warning: true });
 };
 
 // ================= Publish =================
@@ -766,9 +888,10 @@ async function publish() {
       message: state.message.trim(),
       contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), phone: normalizePhone(c.phone) })),
       schedule: { ...state.schedule, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
+      backup: state.backup || '',
     };
     const newLog = [...log, { at: new Date().toISOString(), who, what }].slice(-200);
-    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, log: newLog } });
+    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog } });
     // Double-check before sending: the new file opens with the password and with every card.
     await openAdmin(admin.key, file);
     for (const card of state.cards) await openCard(card.key, file);
@@ -785,7 +908,7 @@ async function publish() {
     log = newLog;
     pending.clear();
     state = { ...data, cards: state.cards };
-    published = { state: clone(state), text, admin, github };
+    published = { state: clone(state), text, admin, github, owner: clone(owner) };
     deployState = 'deploying';
     ghProblem = null;
     busy = false;
@@ -803,14 +926,15 @@ $('publish').onclick = $('publish-bar-btn').onclick = () => { if (!busy) publish
 $('discard').onclick = () => {
   if (!confirm('Throw away all changes that are not published?')) return;
   state = clone(published.state);
+  owner = clone(published.owner);
   if (published.admin) {
     ({ admin, github } = published);
     pending.clear();
   } else {
-    pending = new Set(['upgrade']); // keep the new password and token; they're needed to publish
+    // After an upgrade or password reset the new password is needed to publish, so keep it.
+    pending = new Set([...pending].filter(p => p === 'upgrade' || p === 'reset'));
   }
   say('publish-msg', '');
-  $('card-out').hidden = true;
   renderAll();
 };
 
