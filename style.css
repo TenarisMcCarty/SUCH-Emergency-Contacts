@@ -1,0 +1,85 @@
+/* style.css — shared by the emergency page and the editor. Big, high-contrast, phone-first. */
+
+:root {
+  --red: #b00020;
+  --green: #0b6b2f;
+  --blue: #0b4ea2;
+  --ink: #111;
+  --muted: #444;
+  --line: #ccc;
+  --soft: #f1f2f4;
+  --bg: #fff;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 18px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); }
+main { max-width: 34rem; margin: 0 auto; padding: 1rem; }
+h1 { margin: .25rem 0 0; font-size: 1.9rem; line-height: 1.2; overflow-wrap: anywhere; }
+h2 { margin: 2rem 0 .5rem; font-size: 1.25rem; }
+h3 { margin: 1.5rem 0 .25rem; font-size: 1.1rem; }
+
+/* ---- Buttons ---- */
+.btn { display: block; width: 100%; padding: .9rem 1rem; border: 0; border-radius: .75rem; font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer; }
+.btn-huge { padding: 1.25rem 1rem; font-size: 1.6rem; margin-top: 1rem; }
+.btn-big { font-size: 1.35rem; }
+.btn-mid { font-size: 1.1rem; margin-top: .75rem; }
+.btn-small { width: auto; flex: none; padding: .6rem 1rem; font-size: 1.05rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.spaced { margin-top: 1.5rem; }
+.spaced-sm { margin-top: .75rem; }
+.red { background: var(--red); color: #fff; }
+.green { background: var(--green); color: #fff; }
+.blue { background: var(--blue); color: #fff; }
+.dark { background: var(--ink); color: #fff; }
+.white { background: #fff; color: var(--red); }
+.light { background: var(--soft); color: var(--ink); border: 2px solid #888; }
+.link-btn { padding: 0; border: 0; background: none; font: inherit; color: var(--blue); text-decoration: underline; cursor: pointer; }
+
+/* ---- Emergency page ---- */
+.banner { background: var(--red); color: #fff; text-align: center; padding: 1rem; }
+.banner p { margin: 0 0 .5rem; font-size: 1.3rem; font-weight: 700; }
+.banner .btn { max-width: 32rem; margin: 0 auto; }
+.label { margin: .5rem 0 0; color: var(--muted); }
+.hint { margin: .6rem 0 0; text-align: center; }
+.small-link { display: block; margin-top: .75rem; text-align: center; color: var(--blue); }
+.status { margin-top: 2rem; text-align: center; font-size: 1.25rem; }
+.error-text { font-size: 1.35rem; font-weight: 700; text-align: center; }
+.note { margin-top: 1.5rem; padding: .75rem; border-radius: .5rem; background: var(--soft); font-size: 1rem; }
+
+/* Lists of contacts (page) and cards (editor) */
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .75rem 0; border-top: 1px solid var(--line); }
+.rows li > div:first-child { flex: 1; min-width: 10rem; }
+.rows strong { display: block; overflow-wrap: anywhere; }
+.rows span { color: var(--muted); font-size: 1rem; }
+.rows .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* ---- Editor ---- */
+.editor h1 { font-size: 1.6rem; }
+.editor section { margin-top: 1rem; }
+label { display: block; margin-top: .75rem; font-weight: 600; }
+input:not([type="radio"]):not([type="checkbox"]), textarea {
+  display: block; width: 100%; margin-top: .25rem; padding: .7rem;
+  font: inherit; color: var(--ink); background: #fff; border: 2px solid #888; border-radius: .5rem;
+}
+textarea { resize: vertical; }
+textarea[readonly], input[readonly] { font: .85rem/1.4 ui-monospace, Menlo, monospace; background: var(--soft); }
+fieldset { margin: 1rem 0 0; padding: .25rem 1rem 1rem; border: 2px solid var(--line); border-radius: .75rem; }
+legend { padding: 0 .25rem; font-weight: 700; }
+label.check { display: flex; align-items: center; gap: .5rem; font-weight: 400; }
+label.check input { width: 1.3rem; height: 1.3rem; }
+details { margin-top: 2rem; }
+summary { font-weight: 600; cursor: pointer; }
+.msg { font-weight: 600; }
+.bad, .field-error { color: var(--red); font-weight: 600; }
+.warn { padding: .6rem .75rem; background: #fff4e5; border-left: 4px solid #e08a00; }
+.small { color: var(--muted); font-size: .95rem; }
+.right { text-align: right; margin: 0; }
+.key { display: block; padding: .75rem; border-radius: .5rem; background: var(--soft); font: 1.3rem/1.4 ui-monospace, Menlo, monospace; word-break: break-all; user-select: all; }
+.panel { margin-top: 1rem; padding: 1rem; border: 2px solid var(--line); border-radius: .75rem; }
+.panel h3 { margin-top: 0; }
+.qr { display: block; width: 100%; max-width: 260px; margin: 1rem auto 0; image-rendering: pixelated; }
+.steps { padding-left: 1.25rem; }
+.steps li { margin-top: .5rem; }

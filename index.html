@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Only this site's own files may run or be fetched. No outside scripts, fonts or trackers. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#b00020">
+  <title>Emergency Contact</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="crypto.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Always visible, even if everything else fails. -->
+  <header class="banner">
+    <p>Life-threatening emergency?</p>
+    <a class="btn btn-big white" href="tel:911">Call 911</a>
+  </header>
+
+  <main>
+    <p id="loading" class="status" role="status">Loading…</p>
+
+    <section id="card" hidden>
+      <p class="label">Emergency contact for:</p>
+      <h1 id="driver"></h1>
+
+      <a id="text-all" class="btn btn-huge green">Text all contacts</a>
+      <p class="hint">Then tap <strong>Send</strong>.<br>The text comes from your phone, so they can call you back.</p>
+      <a id="text-retry" class="small-link" hidden>Didn't get all of them? Try again</a>
+
+      <a id="call-primary" class="btn btn-big blue spaced">Call</a>
+
+      <h2>All contacts</h2>
+      <ul id="contacts" class="rows"></ul>
+
+      <p id="offline-note" class="note" hidden>Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.</p>
+    </section>
+
+    <section id="error" hidden>
+      <p class="error-text">This card couldn't be loaded.</p>
+      <p class="error-text">Call the backup number printed on your card.</p>
+      <button id="retry" class="btn btn-big dark" type="button">Retry</button>
+    </section>
+
+    <noscript>
+      <p class="error-text">This card couldn't be loaded. Call the backup number printed on your card.</p>
+    </noscript>
+  </main>
+</body>
+</html>
