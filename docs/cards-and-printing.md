@@ -28,7 +28,7 @@ The same link is written to the card's **NFC tag** and encoded in its **QR code*
 
 - **The link never changes.** Edits to people, shifts, messages or the driver's name reach the card automatically, so the tag and QR never need redoing for those.
 - **Removing a card** in the dashboard switches its link off for good.
-- **Keep links working:** once a card is printed or handed out, its link must keep working. Don't remove a card that's still in use, and don't "start over" (see the [owner guide](owner-guide.md#8-starting-over-last-resort)) unless you're prepared to remake every card.
+- **Keep links working:** once a card is printed or handed out, its link must keep working. Don't remove a card that's still in use, and don't "start over" (see the [owner guide](owner-guide.md#11-starting-over-last-resort)) unless you're prepared to remake every card.
 
 ---
 
@@ -215,8 +215,8 @@ Do this once, with a real printed card and real phones, before making cards for 
 
 - [ ] **Tag tap** on an iPhone and an Android phone opens the page with the right driver.
 - [ ] **QR scan** with both phones' cameras opens the same page.
-- [ ] **Text all contacts** opens Messages with every number and the message filled in. On a Samsung phone, if some numbers are missing, try **Didn't get all of them? Try again** and note which one worked.
-- [ ] The **big Call button** shows the person on shift now, and every Call button dials the right number.
+- [ ] **Text all contacts** opens Messages with every number and the message filled in, on an iPhone **and** a Samsung phone. If a phone leaves numbers out, report it; the link format can be adjusted.
+- [ ] The **Primary call** shows the person on shift now, and every Call button dials the right number.
 - [ ] **Español** switches the page to Spanish, and the Spanish text message appears.
 - [ ] **Airplane mode** on a phone that has **never** opened the page shows "This card couldn't be loaded". A phone that **has** opened it before shows the saved copy with a note; that's intended.
 - [ ] Change something in the dashboard, publish, and confirm the card shows it within about a minute.

@@ -19,16 +19,13 @@ const TEXT = {
     loading: 'Loading…',
     contactFor: 'Emergency contact for',
     textAll: n => `Text all ${n} contacts`,
-    hint: ['Then tap ', 'Send', '. The text comes from your phone, so they can call you back.'],
-    retryText: "Didn't get all of them? Try again",
-    onShift: 'On shift now',
-    mainContact: 'Main contact',
+    primary: 'Primary call',
     alsoWorking: 'Also working now',
-    offShift: 'Off shift · still emergency contacts',
+    offShift: 'Not scheduled · still emergency contacts',
     others: 'Other contacts',
     call: 'Call',
     callName: name => `Call ${name}`,
-    tzNote: tz => `Shift times are yard time (${tz}).`,
+    tzNote: 'Shift times are Houston time.',
     offline: 'Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.',
     error1: "This card couldn't be loaded.",
     error2: 'Call the backup number printed on your card.',
@@ -44,16 +41,13 @@ const TEXT = {
     loading: 'Cargando…',
     contactFor: 'Contacto de emergencia para',
     textAll: n => `Enviar mensaje a los ${n} contactos`,
-    hint: ['Luego toque ', 'Enviar', '. El mensaje sale de su teléfono, así que podrán devolverle la llamada.'],
-    retryText: '¿No aparecen todos? Intente de nuevo',
-    onShift: 'En turno ahora',
-    mainContact: 'Contacto principal',
+    primary: 'Llamada principal',
     alsoWorking: 'También trabajando ahora',
-    offShift: 'Fuera de turno · también son contactos de emergencia',
+    offShift: 'No programados · también son contactos de emergencia',
     others: 'Otros contactos',
     call: 'Llamar',
     callName: name => `Llamar a ${name}`,
-    tzNote: tz => `Los horarios de turno están en la hora del patio (${tz}).`,
+    tzNote: 'Los horarios de turno están en la hora de Houston.',
     offline: 'Internet débil o sin conexión: se muestra la copia guardada en este teléfono. Los mensajes y las llamadas funcionan con señal normal.',
     error1: 'No se pudo cargar esta tarjeta.',
     error2: 'Llame al número de respaldo impreso en su tarjeta.',
@@ -82,14 +76,8 @@ function applyLanguage() {
   document.documentElement.lang = lang;
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
-    'text-retry': t.retryText, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry };
+    'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry };
   for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
-  if ($('hint')) {
-    const [before, send, after] = t.hint;
-    const strong = document.createElement('strong');
-    strong.textContent = send;
-    $('hint').replaceChildren(before, strong, after);
-  }
   if ($('lang')) {
     $('lang').textContent = t.switchTo;
     $('lang').lang = lang === 'en' ? 'es' : 'en';
@@ -144,17 +132,16 @@ function renderTextButtons() {
   $('text-all').href = apple
     ? `sms:/open?addresses=${numbers.join(',')}&body=${body}`
     : `sms:${numbers.join(',')}?body=${body}`;
-
-  // Some Android apps (e.g. Samsung Messages) want ";" between numbers instead of ",".
-  $('text-retry').href = `sms:${numbers.join(';')}?body=${body}`;
-  $('text-retry').hidden = apple;
 }
+
+// Houston time. (The fallback covers an older cached schedule.js for a few minutes after an update.)
+const yardZone = () => (typeof YARD_TIME_ZONE !== 'undefined' ? YARD_TIME_ZONE : card.schedule.timeZone || 'America/Chicago');
 
 // Who's on shift now gets the big button, then others working, then everyone off shift.
 function renderOrder() {
   const t = T();
-  const { main, also, off } = arrange(card, yardNow(card.schedule.timeZone));
-  $('main-label').textContent = main.shift ? t.onShift : t.mainContact;
+  const { main, also, off } = arrange(card, yardNow(yardZone()));
+  $('main-label').textContent = t.primary;
   $('main-name').textContent = main.contact.name;
   $('main-detail').textContent = detailLine(main, lang);
   $('call-main').textContent = t.callName(main.contact.name);
@@ -166,9 +153,8 @@ function renderOrder() {
   $('off-heading').textContent = card.schedule.shifts.length ? t.offShift : t.others;
   $('off-list').replaceChildren(...off.map(row));
 
-  const tz = card.schedule.timeZone;
-  $('tz-note').hidden = Intl.DateTimeFormat().resolvedOptions().timeZone === tz;
-  $('tz-note').textContent = t.tzNote(tz.replace(/_/g, ' '));
+  $('tz-note').hidden = Intl.DateTimeFormat().resolvedOptions().timeZone === yardZone();
+  $('tz-note').textContent = t.tzNote;
 }
 
 function row(entry) {

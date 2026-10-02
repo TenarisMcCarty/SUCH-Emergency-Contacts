@@ -40,10 +40,11 @@
       <h1 id="driver"></h1>
 
       <a id="text-all" class="btn btn-text">Text all contacts</a>
-      <p id="hint" class="hint">Then tap <strong>Send</strong>. The text comes from your phone, so they can call you back.</p>
-      <a id="text-retry" class="small-link" hidden>Didn't get all of them? Try again</a>
+      <!-- Empty placeholders: an older cached app.js may still look for these for a few minutes after an update. -->
+      <p id="hint" class="retired" hidden></p>
+      <a id="text-retry" class="retired" hidden></a>
 
-      <h2 id="main-label" class="section">On shift now</h2>
+      <h2 id="main-label" class="section">Primary call</h2>
       <div class="main-contact">
         <p id="main-name" class="main-name"></p>
         <p id="main-detail" class="detail"></p>
@@ -56,7 +57,7 @@
       </div>
 
       <div id="off-section">
-        <h2 id="off-heading" class="section">Off shift · still emergency contacts</h2>
+        <h2 id="off-heading" class="section">Not scheduled · still emergency contacts</h2>
         <ul id="off-list" class="rows"></ul>
       </div>
 

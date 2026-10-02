@@ -38,6 +38,7 @@
     <section id="login" class="panel narrow" hidden>
       <h1 id="login-title">Sign in</h1>
       <p id="login-intro" hidden>The current data was made with the first version (copy-and-paste editor). Enter its <strong>admin key</strong> once to upgrade. Your contacts and cards carry over, and cards already written keep working.</p>
+      <p id="owner-intro" class="small" hidden></p>
       <form id="login-form">
         <input type="text" name="username" autocomplete="username" value="Emergency Cards" hidden>
         <label id="password-label" for="password">Password</label>
@@ -51,11 +52,22 @@
           <p>Ask the site owner. They can reset it with their recovery code, and no cards stop working.</p>
         </div>
         <div id="lost-owner" hidden>
+          <p class="small">Forgot your owner password? Use your recovery code. Nothing else changes.</p>
           <label for="recovery-input">Your recovery code</label>
           <input id="recovery-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <button id="use-recovery" class="btn btn-light" type="button">Reset the password</button>
+          <button id="use-recovery" class="btn btn-light" type="button">Use recovery code</button>
           <p id="recovery-msg" class="msg" role="status"></p>
-          <p class="small">No recovery code either? Starting over creates new lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
+
+          <div id="reclaim-box">
+            <h3>Lost the recovery code too?</h3>
+            <p class="small">Reclaim owner access with the supervisors' dashboard password and a <strong>new</strong> GitHub token made on the TenarisMcCarty account. No cards stop working.</p>
+            <label for="reclaim-password">Supervisors' dashboard password</label>
+            <input id="reclaim-password" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <button id="reclaim" class="btn btn-light" type="button">Reclaim owner access</button>
+            <p id="reclaim-msg" class="msg" role="status"></p>
+          </div>
+
+          <p class="small">Nothing left at all? Starting over creates new lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
           <button id="start-over" class="btn btn-danger" type="button">Start over</button>
         </div>
       </details>
@@ -66,7 +78,7 @@
       <p id="setup-step" class="eyebrow"></p>
 
       <div id="setup-password">
-        <h1>Choose the dashboard password</h1>
+        <h1 id="pw-title">Choose the dashboard password</h1>
         <p id="pw-intro">Everyone who manages the cards shares this password. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.</p>
         <p id="pw-warning" class="warn" hidden>Everyone else who uses the dashboard will need the new password once you publish. Tell them before you do.</p>
         <code id="suggested" class="key"></code>
@@ -153,7 +165,7 @@
 
       <!-- People -->
       <section data-panel="people">
-        <p class="small">Everyone here gets the group text. Who gets the big Call button depends on the <strong>Shifts</strong> tab. Families can switch the page to Spanish; fill in the Spanish boxes so roles read naturally there too.</p>
+        <p class="small">Everyone here gets the group text. Who is the <strong>primary call</strong> depends on the <strong>Shifts</strong> tab. Families can switch the page to Spanish; fill in the Spanish boxes so roles read naturally there too.</p>
         <div id="people-list"></div>
         <button id="add-person" class="btn btn-light" type="button">Add person</button>
         <h2 class="section">Text message</h2>
@@ -165,12 +177,10 @@
 
       <!-- Shifts -->
       <section data-panel="shifts" hidden>
-        <p class="small">The big Call button goes to whoever is on the <strong>first</strong> shift in this list that's on right now. Everyone else working comes next, then people who are off.</p>
-        <label for="tz">Yard time zone</label>
-        <select id="tz"></select>
+        <p class="small">The <strong>primary call</strong> is whoever is on the <strong>first</strong> shift in this list that's on right now. Everyone else working comes next, then everyone not scheduled. All times are Houston time (Central).</p>
         <div id="shift-list"></div>
         <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
-        <label for="fallback">If nobody is on shift, the Call button goes to</label>
+        <label for="fallback">If nobody is on shift, the primary call is</label>
         <select id="fallback"></select>
 
         <h2 class="section">Check a time</h2>
@@ -268,7 +278,7 @@
       <!-- Help -->
       <section data-panel="help" hidden class="help">
         <h2 class="section">How it works</h2>
-        <p>Each family or school has a card with an NFC tag and QR code. Tapping or scanning it opens a page with a <strong>Text all</strong> button and Call buttons. The person on shift right now is at the top. Changes you publish here reach every card within about a minute.</p>
+        <p>Each family or school has a card with an NFC tag and QR code. Tapping or scanning it opens a page with a <strong>Text all</strong> button and Call buttons. The person on shift right now is at the top as the <strong>primary call</strong>. Changes you publish here reach every card within about a minute.</p>
         <h2 class="section">Common jobs</h2>
         <ul>
           <li><strong>Shift rotation changed:</strong> Shifts → tick who works each shift → Publish.</li>
@@ -303,6 +313,10 @@
         <h2 class="section">GitHub connection</h2>
         <p id="gh-status" class="small"></p>
         <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
+
+        <h2 class="section">Owner password</h2>
+        <p class="small">Your own password for the owner link. The supervisors' password can't open this tab. (To change the supervisors' password, use Settings.)</p>
+        <button id="change-owner-password" class="btn btn-light" type="button">Change owner password</button>
 
         <h2 class="section">Recovery code</h2>
         <p id="recovery-status" class="small"></p>

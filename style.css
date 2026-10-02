@@ -20,7 +20,7 @@
 }
 
 * { box-sizing: border-box; }
-[hidden] { display: none !important; }
+[hidden], .retired { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; font: 17px/1.45 var(--font); color: var(--text); background: #fff; }
 .wrap { max-width: 36rem; margin: 0 auto; padding: 0 1rem; }

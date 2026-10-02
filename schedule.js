@@ -1,10 +1,11 @@
 // schedule.js — works out who is working right now, from the shifts set in the dashboard.
 // Used by the emergency page (to order the contacts) and by the dashboard (status and preview).
 //
-// Shifts are checked in the yard's time zone, so a family in another time zone still
-// sees the right person.
+// Shifts are always checked in Houston time (YARD_TIME_ZONE), so a family in another
+// time zone still sees the right person.
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const YARD_TIME_ZONE = 'America/Chicago'; // the yard is in Houston: shift times are always Houston time
 
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);

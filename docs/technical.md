@@ -19,7 +19,7 @@ For anyone maintaining or changing the code.
 ## 1. Architecture
 
 - **Static site** on GitHub Pages (`main` branch, repository root). There's no server code, build step, framework or package manager; every file is served as-is (`.nojekyll`).
-- **One data file**, `contacts.enc.json`, fully encrypted in the browser. The emergency page reads it with a card key; the dashboard reads it with the password (or the owner's recovery code) and writes it back through the GitHub REST API.
+- **One data file**, `contacts.enc.json`, fully encrypted in the browser. The emergency page reads it with a card key. The dashboard reads it with the supervisors' password, or the owner password or recovery code, and writes it back through the GitHub REST API.
 - **Two pages:**
   - `index.html` + `app.js`: the emergency page. It loads `crypto.js` and `schedule.js`.
   - `dashboard.html` + `dashboard.js`: the dashboard. It also loads `cardmaker.js` and its dependencies.
@@ -35,13 +35,13 @@ supervisor ──(password)──► dashboard.html ──GitHub API PUT──�
 
 | File | Role | Notes |
 |---|---|---|
-| `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. |
+| `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. |
 | `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
-| `schedule.js` | Shift logic, shared | `yardNow`, `shiftOn`, `arrange` (call order), `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
-| `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, recovery-code ECDH (`newRecovery`, `lockForOwner`, `openRecovery`), `buildFile`, `openCard`, `openAdmin` |
+| `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow`, `shiftOn`, `arrange` (call order), `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
+| `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, recovery-code ECDH (`newRecovery`, `lockForOwner`, `openRecovery`), owner login (`makeOwnerLogin`, `openOwner`), `buildFile`, `openCard`, `openAdmin` |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
 | `dashboard.html` | Dashboard markup | Sign-in, setup steps, tabs, Owner tab |
-| `dashboard.js` | Dashboard logic | GitHub API, sign-in/setup/upgrade/reset flows, editing state, change list, validation, publishing, deploy watching, Print & QR, Owner tab |
+| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (supervisor, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, publishing, deploy watching, Print & QR, Owner tab |
 | `cardmaker.js` | Print files | Card layout, 3D model and STL writer, canvas drawing, PDF writer, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
 | `style.css` | Styling | Tenaris colours from tenaris.com. Frutiger only if installed locally. |
 | `logo.js`, `logo.svg` | Tenaris logo | Outlines from the official media kit: `logo.js` for drawing and 3D, `logo.svg` for the page headers |
@@ -65,7 +65,8 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
   "data":  { "iv": "…", "ct": "…" },               // AES-GCM(dataKey)
   "cards": { "<slotId>": { "iv": "…", "ct": "…" } },  // one per card, AES-GCM(cardKey), sorted by slotId
   "admin": { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" },
-  "recovery": { "pub": { "x": "…", "y": "…" }, "epk": { "x": "…", "y": "…" }, "iv": "…", "ct": "…" }  // optional
+  "recovery": { "pub": { "x": "…", "y": "…" }, "epk": { "x": "…", "y": "…" }, "iv": "…", "ct": "…" },  // once owner access exists
+  "ownerLogin": { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" }  // once owner access exists
 }
 ```
 
@@ -77,7 +78,7 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
   "messageEs": "EMERGENCIA – necesito comunicarme con el conductor {driver}. …",  // optional
   "contacts": [ { "id": "short id", "name": "…", "role": "…", "roleEs": "…", "phone": "+15555550100" } ],  // ids: 8 chars (dashboard) or c0, c1… (upgraded)
   "schedule": {
-    "timeZone": "America/Chicago",
+    "timeZone": "America/Chicago",            // always Houston; kept so older cached app.js versions work
     "fallback": "<contact id>",
     "shifts": [ { "name": "1st shift", "nameEs": "", "start": "06:00", "end": "14:00",
                   "days": [0,1,2,3,4,5,6],      // 0 = Monday … 6 = Sunday
@@ -90,19 +91,32 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
 **Each card entry** (opened with that card's key): `{ "dataKey": "…", "driver": "Jane Doe (1234)" }`.
 The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot:" + cardKey`)).
 
-**`admin`** (opened with PBKDF2-SHA256(password, salt, iterations), 16-byte output):
+**`admin`** (opened with PBKDF2-SHA256(supervisors' password, salt, iterations), 16-byte output):
 
 ```jsonc
 {
   "dataKey": "…",
   "cards":  [ { "driver": "…", "note": "Family", "key": "<cardKey>", "added": "2026-10-02" } ],
   "github": { "token": "github_pat_…", "addedAt": "2026-10-02", "addedBy": "…" },
-  "owner":  { "contact": "…", "pub": { "x": "…", "y": "…" }, "at": "2026-10-02" },   // may be absent
+  "owner":  { "contact": "…", "pub": { "x": "…", "y": "…" }, "at": "2026-10-02", "login": { …same as ownerLogin… } },  // may be absent
+  "adminKey": { "key": "…", "salt": "…", "iterations": 600000 },  // the supervisors'-password key, for the owner (via recovery)
   "log":    [ { "at": "ISO time", "who": "…", "what": ["Changed shifts", "…"] } ]  // last 200
 }
 ```
 
 **`recovery`** has the same plaintext as `admin`. It's encrypted with the AES key = first 16 bytes of SHA-256(ECDH-P256(recovery private key, `epk`) ‖ `"SUCH emergency cards recovery"`). `pub` is the owner's public key; the recovery code is its private scalar `d` (43 characters, base64url). `epk` is a one-time public key made on each publish.
+
+**`ownerLogin`** is `{ "code": "<recovery code>" }`, AES-GCM-encrypted with PBKDF2-SHA256(owner password). It lives inside the admin payload (`owner.login`), so every publish, including a supervisor's, carries it forward unchanged. `buildFile` copies it to the top level, where owner sign-in reads it before anything else is unlocked. The recovery code itself is never stored anywhere a supervisor can read it.
+
+**Sign-in paths:**
+
+| Path | Opens | Then |
+|---|---|---|
+| Supervisors' password | `admin` | normal session |
+| Owner password | `ownerLogin` → code → `recovery` | owner session; `adminKey` lets the owner publish |
+| Recovery code | `recovery` | choose a new owner password (new `ownerLogin`) |
+| Owner link without `ownerLogin` | `admin` with the supervisors' password | create the owner password and recovery code |
+| Reclaim | `admin` with the supervisors' password | requires a new token whose `GET /user` login is the repository owner and which differs from the stored token; then create a new owner password and recovery code |
 
 **First-version data (version 2)** came from the original copy-and-paste editor:
 
@@ -206,7 +220,13 @@ An automated suite was used during development. It isn't included in this reposi
 
 - **Shift logic:** unit tests for overnight shifts, weekdays, 24-hour shifts, people on two shifts, time zones and daylight saving, and Spanish times and shift names.
 - **Dashboard flows:**
-  - first-time setup (password, token, recovery code) and validation errors
+  - first-time setup (supervisors' password, token checked against the repository owner, owner password, recovery code) and validation errors
+  - owner sign-in with the owner password, and the supervisors' password refused on the owner link
+  - owner access set up on data that had none (like the live site's data)
+  - the owner setting a new supervisors' password without knowing the old one
+  - owner access surviving supervisor publishes and supervisor password changes
+  - reclaiming owner access (another account's token and the old token both refused)
+  - the recovery code never readable with the supervisors' password
   - publishing: Updating → Live, history, generic commit messages
   - Discard
   - removing a card (data key rotated, removed card refused)
@@ -214,8 +234,7 @@ An automated suite was used during development. It isn't included in this reposi
   - expired token, both as a supervisor ("ask the owner") and as the owner (replace it)
   - supervisor password change
   - owner "take away access"
-  - password reset with the recovery code
-  - adding a recovery code to existing data
+  - owner password reset with the recovery code
   - upgrading from first-version data
 - **Emergency page:**
   - iPhone and Android link formats
@@ -225,7 +244,7 @@ An automated suite was used during development. It isn't included in this reposi
   - HTML in names shown as text
   - English/Spanish: auto-detection, toggle, remembered choice, Spanish message and roles
   - offline copy and recovery once back online
-  - an older cached `index.html` with the new `app.js`
+  - deploy mixes: an older cached `index.html` with the new `app.js`, and the reverse
 - **Encryption:** the published file was opened independently with Python's `cryptography` library: the password via PBKDF2, the card entries, and the recovery block via ECDH. It was also checked that no readable names, numbers or tokens appear in the file.
 - **Print files:**
   - both STL parts watertight (every edge paired)

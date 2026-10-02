@@ -4,8 +4,9 @@
 // token that is stored (encrypted) inside that same file. Nothing is kept in this
 // browser except your name for the History tab.
 //
-// Supervisors use dashboard.html. The site owner opens dashboard.html#owner, which adds
-// the Owner tab (GitHub token, recovery code) and the password reset on the sign-in screen.
+// Supervisors use dashboard.html with the shared dashboard password. The site owner opens
+// dashboard.html#owner and signs in with their own owner password (or recovery code); only then
+// does the Owner tab (GitHub token, owner password, recovery code, access) appear.
 
 const REPO = 'TenarisMcCarty/SUCH-Emergency-Contacts';
 const API = 'https://api.github.com';
@@ -15,15 +16,18 @@ const MAX_PEOPLE = 10;
 const DEFAULT_MESSAGE = 'EMERGENCY – need to reach driver {driver}. Please call me back at this number.';
 const DEFAULT_MESSAGE_ES = 'EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.';
 const SITE = new URL('./', location.href).href; // card links point at the emergency page next to this one
-const COMMON_ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'America/Mexico_City'];
-const OWNER = location.hash === '#owner';
+const OWNER = location.hash === '#owner'; // the owner link: shows the owner sign-in
 
 const $ = id => document.getElementById(id);
 
 // Everything below lives only in this tab's memory.
-let admin = null;       // { key, salt, iterations } made from the password
+let admin = null;       // { key, salt, iterations } made from the supervisors' password
+let role = 'supervisor'; // 'owner' after signing in with the owner password, recovery code or setup
+let ownerAuth = null;   // owner session only: { key, salt, iterations } made from the owner password
+let ownerCode = null;   // owner session only: the recovery code (never published in readable form)
+let mustPublish = false; // the session began with changes that can't be discarded
 let github = null;      // { token, addedAt, addedBy }
-let owner = null;       // { contact, pub, at } — the site owner's contact and recovery public key
+let owner = null;       // { contact, pub, at, login } — owner's contact, recovery public key, locked owner login
 let state = null;       // what you're editing: { message, contacts, schedule, backup, cards }
 let published = null;   // { state, text, admin, github, owner } as last published (null = never published)
                         // (admin is null right after an upgrade or password reset: the old key isn't known)
@@ -59,7 +63,7 @@ const newId = () => toB64(crypto.getRandomValues(new Uint8Array(6)));
 const today = () => new Date().toISOString().slice(0, 10);
 const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const personName = c => c.name.trim() || 'a person with no name';
-const askOwner = () => (OWNER ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
+const askOwner = () => (role === 'owner' ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
 
 async function copy(text, btn) {
   try {
@@ -202,10 +206,16 @@ function show(view) {
   scrollTo(0, 0);
 }
 
-$('owner-flag').hidden = !OWNER;
 $('lost-owner').hidden = !OWNER;
 $('lost-supervisor').hidden = OWNER;
-document.querySelector('[data-tab="owner"]').hidden = !OWNER;
+
+// The Owner tab and badge appear only after signing in as the owner (owner password, recovery code or setup).
+function applyRole() {
+  $('owner-flag').hidden = role !== 'owner';
+  document.querySelector('[data-tab="owner"]').hidden = role !== 'owner';
+}
+
+const OWNER_PW_INTRO = "Only you use this, on the owner link. It opens the Owner tab; the supervisors' password can't. Use the suggested one unless you have a good reason not to.";
 
 async function start() {
   let file;
@@ -216,19 +226,35 @@ async function start() {
   }
   sha = file && file.sha;
   if (!file) return setUp(false);
+  const data = JSON.parse(file.text);
+  const firstVersion = !data.admin.salt;
+  const ownerLogin = OWNER && !firstVersion && !!data.ownerLogin;
   show('login');
-  if (!JSON.parse(file.text).admin.salt) { // saved by the first version, which used an admin key
+  if (firstVersion) { // saved by the first version, which used an admin key
     $('login-title').textContent = 'Upgrade';
     $('login-intro').hidden = false;
     $('password-label').textContent = 'Old admin key';
+  } else if (ownerLogin) {
+    $('login-title').textContent = 'Owner sign-in';
+    $('password-label').textContent = 'Owner password';
+    $('owner-intro').textContent = 'This is the owner sign-in. Supervisors use the normal dashboard link.';
+    $('owner-intro').hidden = false;
+  } else if (OWNER) {
+    $('login-title').textContent = 'Set up owner access';
+    $('password-label').textContent = "Supervisors' dashboard password";
+    $('owner-intro').textContent = "Owner access isn't set up yet. Sign in once with the supervisors' dashboard password, then choose your own owner password.";
+    $('owner-intro').hidden = false;
   }
-  $('login-form').onsubmit = e => { e.preventDefault(); signIn(file); };
-  $('use-recovery').onclick = () => resetWithRecovery(file);
+  $('reclaim-box').hidden = !data.ownerLogin;
+  $('login-form').onsubmit = e => { e.preventDefault(); (ownerLogin ? ownerSignIn : signIn)(file); };
+  $('use-recovery').onclick = () => useRecovery(file);
+  $('reclaim').onclick = () => reclaimOwner(file);
   $('start-over').onclick = () => {
     if (confirm('Start over? Once you publish, EVERY existing card stops working until it is rewritten with a new link.')) setUp(true);
   };
 }
 
+// Sign in with the supervisors' password (or, on the owner link before owner access exists, set it up).
 async function signIn(file) {
   const password = $('password').value.trim();
   if (!password) return;
@@ -246,14 +272,44 @@ async function signIn(file) {
     admin = { key, salt: data.admin.salt, iterations: data.admin.iterations };
     $('password').value = '';
     say('login-msg', '');
-    enterDashboard(opened, file.text);
+    if (!OWNER) return enterDashboard(opened, file.text);
+    owner = opened.owner || null; // keeps the owner's contact details in the next steps
+    ownerAccessSteps('Owner access · step 1 of 2', 'Owner access · step 2 of 2', () => show('login'), async (rec, auth) => {
+      enterDashboard(opened, file.text, { mustPublish: true });
+      await becomeOwner(rec, auth);
+      pending.add('owner-access');
+      refresh();
+    });
   } catch (e) {
     say('login-msg', "Couldn't unlock: " + e.message, true);
   }
 }
 
-// Owner: forgot password → open with the recovery code → choose a new password. Cards keep working.
-async function resetWithRecovery(file) {
+// Owner sign-in: owner password → recovery code → everything, including the supervisors' password key.
+async function ownerSignIn(file) {
+  const password = $('password').value.trim();
+  if (!password) return;
+  say('login-msg', 'Unlocking…');
+  let result;
+  try {
+    result = await openOwner(password, JSON.parse(file.text));
+  } catch {
+    return say('login-msg', 'Wrong owner password. (Supervisors sign in on the normal dashboard link, without #owner.)', true);
+  }
+  $('password').value = '';
+  say('login-msg', '');
+  admin = result.opened.adminKey;
+  ownerAuth = result.auth;
+  ownerCode = result.code;
+  enterDashboard(result.opened, file.text);
+  role = 'owner';
+  applyRole();
+  published.ownerAuth = ownerAuth;
+  published.ownerCode = ownerCode;
+}
+
+// Owner forgot the owner password: the recovery code opens everything; choose a new owner password.
+async function useRecovery(file) {
   const code = $('recovery-input').value.trim();
   if (!code) return;
   say('recovery-msg', 'Checking…');
@@ -265,30 +321,81 @@ async function resetWithRecovery(file) {
   }
   $('recovery-input').value = '';
   say('recovery-msg', '');
-  passwordStep('Reset the password', () => show('login'), async password => {
-    await setPassword(password);
-    enterDashboard(opened, file.text);
-    published.admin = null; // the old password isn't known, so Discard keeps the new one
-    pending.add('reset');
-    refresh();
-  }, { warning: true });
+  const back = () => show('login');
+  passwordStep('Recovery · new owner password', back, async ownerPassword => {
+    const auth = await ownerAuthFrom(ownerPassword);
+    const finish = async () => {
+      enterDashboard(opened, file.text, { mustPublish: true });
+      ownerAuth = auth;
+      ownerCode = code;
+      role = 'owner';
+      applyRole();
+      owner = { ...(opened.owner || {}), login: await makeOwnerLogin(auth, code) };
+      pending.add('owner-password');
+      refresh();
+    };
+    if (opened.adminKey) { admin = opened.adminKey; return finish(); }
+    // Older data doesn't carry the supervisors' password key: set a new supervisors' password too.
+    passwordStep("Recovery · new supervisors' password", back, async password => {
+      await setPassword(password);
+      await finish();
+      pending.add('password');
+      refresh();
+    }, { warning: true });
+  }, { title: 'Choose a new owner password', intro: OWNER_PW_INTRO });
 }
 
-// First-time setup (or starting over): password, GitHub token, recovery code, then an empty dashboard.
-function setUp(startingOver) {
-  const cancel = startingOver ? () => show('login') : null;
-  passwordStep('Set up · step 1 of 3', cancel, password => {
-    tokenStep('Set up · step 2 of 3', cancel, token => {
-      recoveryStep('Set up · step 3 of 3', cancel, async rec => {
-        await setPassword(password);
-        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: rec, log: [], cards: [], data: emptyData() }, null);
-      });
+// Owner lost both the owner password and the recovery code: the supervisors' password plus a NEW
+// GitHub token from the repository's own account (which supervisors can't make) restores owner access.
+async function reclaimOwner(file) {
+  const password = $('reclaim-password').value.trim();
+  if (!password) return;
+  say('reclaim-msg', 'Checking…');
+  const data = JSON.parse(file.text);
+  let key, opened;
+  try {
+    key = await passwordKey(password, data.admin.salt, data.admin.iterations);
+    opened = await openAdmin(key, data);
+  } catch {
+    return say('reclaim-msg', "Wrong dashboard password.", true);
+  }
+  $('reclaim-password').value = '';
+  say('reclaim-msg', '');
+  owner = opened.owner || null; // keeps the owner's contact details in the next steps
+  const back = () => show('login');
+  tokenStep('Reclaim owner access · step 1 of 3: a new GitHub token', back, token => {
+    if (opened.github && token === opened.github.token) {
+      return say('token-msg', 'Use a NEW token: make one on GitHub now. That proves you control the TenarisMcCarty account.', true);
+    }
+    ownerAccessSteps('Reclaim owner access · step 2 of 3', 'Reclaim owner access · step 3 of 3', back, async (rec, auth) => {
+      admin = { key, salt: data.admin.salt, iterations: data.admin.iterations };
+      enterDashboard(opened, file.text, { mustPublish: true });
+      github = { token, addedAt: today(), addedBy: myName() };
+      await becomeOwner(rec, auth);
+      pending.add('owner-access');
+      pending.add('token');
+      refresh();
     });
   });
 }
 
-// First version → this one: open with the old admin key, choose a password, connect GitHub, save a
-// recovery code. Contacts and cards carry over unchanged, so cards already written keep working.
+// First-time setup (or starting over): supervisors' password, GitHub token, owner password, recovery code.
+function setUp(startingOver) {
+  const cancel = startingOver ? () => show('login') : null;
+  passwordStep('Set up · step 1 of 4', cancel, password => {
+    tokenStep('Set up · step 2 of 4', cancel, token => {
+      ownerAccessSteps('Set up · step 3 of 4', 'Set up · step 4 of 4', cancel, async (rec, auth) => {
+        await setPassword(password);
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards: [], data: emptyData() }, null);
+        await becomeOwner(rec, auth);
+        refresh();
+      });
+    });
+  }, { title: "Choose the supervisors' dashboard password" });
+}
+
+// First version → this one: open with the old admin key, then set up passwords, GitHub and owner access.
+// Contacts and cards carry over unchanged, so cards already written keep working.
 async function upgrade(oldKey, file) {
   if (!isKey(oldKey)) return say('login-msg', 'Enter the 22-character admin key from the old editor.', true);
   let opened;
@@ -305,18 +412,18 @@ async function upgrade(oldKey, file) {
   data.messageEs = DEFAULT_MESSAGE_ES;
   delete data.primary;
   const back = () => show('login');
-  passwordStep('Upgrade · step 1 of 3', back, password => {
-    tokenStep('Upgrade · step 2 of 3', back, token => {
-      recoveryStep('Upgrade · step 3 of 3', back, async rec => {
+  passwordStep('Upgrade · step 1 of 4', back, password => {
+    tokenStep('Upgrade · step 2 of 4', back, token => {
+      ownerAccessSteps('Upgrade · step 3 of 4', 'Upgrade · step 4 of 4', back, async (rec, auth) => {
         await setPassword(password);
         const cards = opened.cards.map(c => ({ note: '', ...c }));
-        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: rec, log: [], cards, data }, file.text);
-        published.admin = null;
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards, data }, file.text, { mustPublish: true });
+        await becomeOwner(rec, auth);
         pending.add('upgrade');
         refresh();
       });
     });
-  });
+  }, { title: "Choose the supervisors' dashboard password" });
 }
 
 function emptyData() {
@@ -328,7 +435,7 @@ function emptyData() {
     contacts,
     backup: '',
     schedule: {
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: YARD_TIME_ZONE,
       fallback: contacts[0].id,
       shifts: [
         { name: '1st shift', start: '06:00', end: '14:00', days: [...every], people: [] },
@@ -348,8 +455,12 @@ function showStep(id, label, cancel) {
   $('setup-cancel').onclick = cancel;
 }
 
-function passwordStep(label, cancel, done, { warning = false } = {}) {
+const DEFAULT_PW_INTRO = 'Everyone who manages the cards shares this password. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.';
+
+function passwordStep(label, cancel, done, { warning = false, title = 'Choose the dashboard password', intro = DEFAULT_PW_INTRO } = {}) {
   showStep('setup-password', label, cancel);
+  $('pw-title').textContent = title;
+  $('pw-intro').textContent = intro;
   $('pw-intro').hidden = warning;
   $('pw-warning').hidden = !warning;
   let suggestion = suggestPassword();
@@ -369,6 +480,8 @@ function passwordStep(label, cancel, done, { warning = false } = {}) {
   };
 }
 
+const REPO_OWNER = REPO.split('/')[0];
+
 function tokenStep(label, cancel, done) {
   showStep('setup-token', label, cancel);
   $('token-input').value = '';
@@ -377,17 +490,23 @@ function tokenStep(label, cancel, done) {
     const token = $('token-input').value.trim();
     if (!/^(github_pat_|ghp_)\w+$/.test(token)) return say('token-msg', "That doesn't look like a GitHub token. It should start with github_pat_.", true);
     say('token-msg', 'Checking with GitHub…');
-    const res = await fetch(`${API}/repos/${REPO}`, {
-      headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store',
-    }).catch(() => null);
+    const ask = path => fetch(API + path, { headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json' }, cache: 'no-store' }).catch(() => null);
+    const res = await ask(`/repos/${REPO}`);
     if (!res) return say('token-msg', "Couldn't reach GitHub. Check the internet connection and try again.", true);
     if (res.status === 401) return say('token-msg', 'GitHub says this token is not valid. Copy it again and paste it here.', true);
     if (!res.ok) return say('token-msg', `GitHub error ${res.status}. Check the token's repository access.`, true);
+    // The token must belong to the account that owns the repository.
+    const me = await ask('/user');
+    const login = me && me.ok ? (await me.json()).login : null;
+    if (!login || login.toLowerCase() !== REPO_OWNER.toLowerCase()) {
+      return say('token-msg', `This token belongs to ${login ? 'GitHub user ' + login : 'another account'}. Make it while signed in to GitHub as ${REPO_OWNER}.`, true);
+    }
     say('token-msg', '');
     done(token);
   };
 }
 
+// Returns { code, pub, contact, at }. The code is the owner's secret: it is never stored in `owner`.
 function recoveryStep(label, cancel, done) {
   showStep('setup-recovery', label, cancel);
   $('recovery-code').textContent = 'Making…';
@@ -398,20 +517,46 @@ function recoveryStep(label, cancel, done) {
     $('recovery-code').textContent = rec.code;
     $('copy-recovery').onclick = e => copy(rec.code, e.currentTarget);
     $('recovery-saved').onchange = () => ($('recovery-next').disabled = !$('recovery-saved').checked);
-    $('recovery-next').onclick = () => done({ contact: $('setup-contact').value.trim(), pub: rec.pub, at: today() });
+    $('recovery-next').onclick = () => done({ code: rec.code, pub: rec.pub, contact: $('setup-contact').value.trim(), at: today() });
   });
 }
 
-function enterDashboard(opened, publishedText) {
+// Owner password, then recovery code → done(rec, ownerAuth).
+function ownerAccessSteps(label1, label2, cancel, done) {
+  passwordStep(label1, cancel, ownerPassword => {
+    recoveryStep(label2, cancel, async rec => done(rec, await ownerAuthFrom(ownerPassword)));
+  }, { title: 'Choose your owner password', intro: OWNER_PW_INTRO });
+}
+
+async function ownerAuthFrom(password) {
+  const salt = newSalt();
+  return { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
+}
+
+// After the owner steps: remember the owner's secrets in memory and record the public parts in `owner`.
+async function becomeOwner(rec, auth) {
+  ownerAuth = auth;
+  ownerCode = rec.code;
+  owner = { contact: rec.contact, pub: rec.pub, at: rec.at, login: await makeOwnerLogin(auth, rec.code) };
+  role = 'owner';
+  applyRole();
+}
+
+// mustPublish: the session started with changes that can't be undone (upgrade, owner access, recovery),
+// so Discard is hidden; publish them or Lock.
+function enterDashboard(opened, publishedText, { mustPublish: must = false } = {}) {
   github = opened.github;
   owner = opened.owner || null;
   log = opened.log || [];
   state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, ...opened.data, cards: opened.cards };
+  state.schedule.timeZone = YARD_TIME_ZONE;
   for (const c of state.contacts) c.roleEs = c.roleEs || '';
-  published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner) } : null;
+  published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner), ownerAuth, ownerCode } : null;
+  mustPublish = must;
   pending = new Set();
   deployState = published ? 'checking' : 'none';
   show('dash');
+  applyRole();
   $('my-name').value = myName();
   renderAll();
   checkGitHub();
@@ -477,9 +622,10 @@ function changes() {
     for (const o of before.cards) if (!nowCards.has(o.key)) out.push(`Removed card: ${cardLabel(o)}`);
     if (((published.owner && published.owner.contact) || '') !== ((owner && owner.contact) || '')) out.push('Changed the owner contact');
   }
-  if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection, recovery code and shifts');
-  if (pending.has('reset')) out.push('Password reset with the recovery code');
-  if (pending.has('password')) out.push('Changed the password');
+  if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection, owner access and shifts');
+  if (pending.has('owner-access')) out.push('Set up owner access (your owner password and recovery code)');
+  if (pending.has('owner-password')) out.push('Changed the owner password');
+  if (pending.has('password')) out.push("Changed the supervisors' password");
   if (pending.has('token')) out.push('Replaced the GitHub token');
   if (pending.has('recovery')) out.push('Made a new recovery code');
   return out;
@@ -504,7 +650,7 @@ function refresh() {
   $('changes').hidden = !list.length;
   $('change-list').replaceChildren(...list.map(t => el('li', { textContent: t })));
   $('publish').disabled = $('discard').disabled = busy;
-  $('discard').hidden = !published;
+  $('discard').hidden = !published || mustPublish;
   $('publish-bar').hidden = !list.length;
   $('publish-bar-text').textContent = `${list.length} change${list.length > 1 ? 's' : ''} not published`;
   $('publish-bar-btn').disabled = busy;
@@ -522,9 +668,8 @@ function refresh() {
 
 // Who the cards point to at this moment (with your unpublished changes included).
 function renderNow() {
-  const tz = state.schedule.timeZone;
-  const now = yardNow(tz);
-  $('now-time').textContent = `(yard time ${DAYS[now.day]} ${timeLabel(`${Math.floor(now.minutes / 60)}:${now.minutes % 60}`)})`;
+  const now = yardNow(YARD_TIME_ZONE);
+  $('now-time').textContent = `(Houston time ${DAYS[now.day]} ${timeLabel(`${Math.floor(now.minutes / 60)}:${now.minutes % 60}`)})`;
   const ready = state.contacts.filter(c => c.name.trim());
   if (!ready.length) {
     $('now-main').textContent = 'Add people to see who the cards will call.';
@@ -532,7 +677,7 @@ function renderNow() {
     return;
   }
   const { main, also } = arrange({ contacts: ready, schedule: state.schedule }, now);
-  $('now-main').textContent = `Big Call button: ${main.contact.name}` + (main.shift ? ` (${main.shift.name}, until ${timeLabel(main.shift.end)})` : ' (nobody is on shift, so the fallback person)');
+  $('now-main').textContent = `Primary call: ${main.contact.name}` + (main.shift ? ` (${main.shift.name}, until ${timeLabel(main.shift.end)})` : ' (nobody is on shift, so the fallback person)');
   $('now-also').textContent = also.length ? 'Also working: ' + also.map(a => `${a.contact.name} (${a.shift.name})`).join(', ') : '';
 }
 setInterval(() => state && renderNow(), 30 * 1000);
@@ -587,13 +732,10 @@ $('message-es').oninput = e => { state.messageEs = e.target.value; refresh(); };
 
 function renderShifts() {
   const s = state.schedule;
-  const all = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone') : COMMON_ZONES;
-  const zones = [...new Set([s.timeZone, ...COMMON_ZONES, ...all])];
-  $('tz').replaceChildren(...zones.map(z => el('option', { value: z, textContent: z.replace(/_/g, ' '), selected: z === s.timeZone })));
   $('shift-list').replaceChildren(...s.shifts.map(shiftBox));
   $('fallback').replaceChildren(...state.contacts.map(c => el('option', { value: c.id, textContent: personName(c), selected: c.id === s.fallback })));
   if (!$('preview-day').options.length) {
-    const now = yardNow(s.timeZone);
+    const now = yardNow(YARD_TIME_ZONE);
     $('preview-day').replaceChildren(...DAYS.map((d, i) => el('option', { value: i, textContent: d, selected: i === now.day })));
   }
   renderPreview();
@@ -639,7 +781,6 @@ $('add-shift').onclick = () => {
   renderShifts();
   refresh();
 };
-$('tz').onchange = e => { state.schedule.timeZone = e.target.value; refresh(); renderPreview(); };
 $('fallback').onchange = e => { state.schedule.fallback = e.target.value; refresh(); renderPreview(); };
 $('preview-day').onchange = $('preview-time').onchange = () => renderPreview();
 
@@ -650,9 +791,9 @@ function renderPreview() {
   if (!ready.length) return $('preview').replaceChildren(el('li', { textContent: 'Add people first.' }));
   const { main, also, off } = arrange({ contacts: ready, schedule: state.schedule }, { day: Number($('preview-day').value), minutes: h * 60 + m });
   $('preview').replaceChildren(
-    el('li', { class: 'preview-main' }, el('strong', { textContent: 'Big Call button: ' + main.contact.name }), main.shift ? ` (${main.shift.name})` : ' (fallback, nobody on shift)'),
+    el('li', { class: 'preview-main' }, el('strong', { textContent: 'Primary call: ' + main.contact.name }), main.shift ? ` (${main.shift.name})` : ' (fallback, nobody on shift)'),
     ...also.map(a => el('li', { textContent: `Also working: ${a.contact.name} (${a.shift.name})` })),
-    ...off.map(o => el('li', { class: 'muted', textContent: `Off shift: ${o.contact.name}` })));
+    ...off.map(o => el('li', { class: 'muted', textContent: `Not scheduled: ${o.contact.name}` })));
 }
 
 // ================= Cards =================
@@ -815,7 +956,7 @@ $('change-password').onclick = () => {
     await setPassword(password);
     pending.add('password');
     backToDash();
-  }, { warning: true });
+  }, { warning: true, title: "Choose the new supervisors' password" });
 };
 
 // ================= Owner tab =================
@@ -823,9 +964,8 @@ $('change-password').onclick = () => {
 function renderOwner() {
   $('gh-status').textContent = (ghProblem ? ghProblem + ' ' : 'Connected. ') +
     `Token added ${github.addedAt}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
-  $('recovery-status').textContent = owner && owner.pub
-    ? `Set up ${owner.at || ''}${pending.has('recovery') || pending.has('upgrade') ? ' (not published yet)' : ''}. Keep it in your password manager.`
-    : 'No recovery code yet. Make one so you can always reset a lost password.';
+  const unpublished = ['recovery', 'upgrade', 'owner-access'].some(p => pending.has(p));
+  $('recovery-status').textContent = `Set up ${owner.at || ''}${unpublished ? ' (not published yet)' : ''}. Keep it in your password manager.`;
   $('owner-contact').value = (owner && owner.contact) || '';
 }
 
@@ -840,16 +980,26 @@ $('replace-token').onclick = () => {
   });
 };
 
+$('change-owner-password').onclick = () => {
+  passwordStep('Change owner password', backToDash, async ownerPassword => {
+    ownerAuth = await ownerAuthFrom(ownerPassword);
+    owner = { ...owner, login: await makeOwnerLogin(ownerAuth, ownerCode) };
+    pending.add('owner-password');
+    backToDash();
+  }, { title: 'Choose a new owner password', intro: OWNER_PW_INTRO });
+};
+
 $('new-recovery').onclick = () => {
-  recoveryStep('New recovery code', backToDash, rec => {
-    owner = rec;
+  recoveryStep('New recovery code', backToDash, async rec => {
+    ownerCode = rec.code;
+    owner = { contact: rec.contact, pub: rec.pub, at: rec.at, login: await makeOwnerLogin(ownerAuth, rec.code) };
     pending.add('recovery');
     backToDash();
   });
 };
 
 $('revoke-access').onclick = () => {
-  passwordStep('Take away access · step 1 of 2', backToDash, password => {
+  passwordStep("Take away access · step 1 of 2: new supervisors' password", backToDash, password => {
     tokenStep('Take away access · step 2 of 2', backToDash, async token => {
       await setPassword(password);
       github = { token, addedAt: today(), addedBy: myName() };
@@ -858,7 +1008,7 @@ $('revoke-access').onclick = () => {
       backToDash();
       alert('After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → the old "Emergency cards dashboard" token → Delete.');
     });
-  }, { warning: true });
+  }, { warning: true, title: "Choose the new supervisors' password" });
 };
 
 // ================= Publish =================
@@ -907,11 +1057,12 @@ async function publish() {
       message: state.message.trim(),
       messageEs: state.messageEs.trim(),
       contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), roleEs: c.roleEs.trim(), phone: normalizePhone(c.phone) })),
-      schedule: { ...state.schedule, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
+      schedule: { ...state.schedule, timeZone: YARD_TIME_ZONE, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
       backup: state.backup || '',
     };
     const newLog = [...log, { at: new Date().toISOString(), who, what }].slice(-200);
-    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog } });
+    // adminKey lets the owner (via the recovery block) publish without knowing the supervisors' password.
+    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog, adminKey: admin } });
     // Double-check before sending: the new file opens with the password and with every card.
     await openAdmin(admin.key, file);
     for (const card of state.cards) await openCard(card.key, file);
@@ -928,7 +1079,8 @@ async function publish() {
     log = newLog;
     pending.clear();
     state = { ...data, cards: state.cards };
-    published = { state: clone(state), text, admin, github, owner: clone(owner) };
+    published = { state: clone(state), text, admin, github, owner: clone(owner), ownerAuth, ownerCode };
+    mustPublish = false;
     deployState = 'deploying';
     ghProblem = null;
     busy = false;
@@ -947,13 +1099,8 @@ $('discard').onclick = () => {
   if (!confirm('Throw away all changes that are not published?')) return;
   state = clone(published.state);
   owner = clone(published.owner);
-  if (published.admin) {
-    ({ admin, github } = published);
-    pending.clear();
-  } else {
-    // After an upgrade or password reset the new password is needed to publish, so keep it.
-    pending = new Set([...pending].filter(p => p === 'upgrade' || p === 'reset'));
-  }
+  ({ admin, github, ownerAuth, ownerCode } = published);
+  pending.clear();
   say('publish-msg', '');
   renderAll();
 };

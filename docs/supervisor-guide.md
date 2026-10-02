@@ -30,7 +30,8 @@ You don't need a GitHub account, and you don't need to install anything. The das
 3. When you're done, press **Lock** (top right). This forgets everything on that device. If you have changes you haven't published, the browser warns you first.
 
 - **"Wrong password."** Check for typos. The suggested passwords are five lowercase words joined by hyphens, like `maple-orbit-canyon-lantern-fizzy`.
-- **Forgot the password?** Ask the site owner. They can reset it with their recovery code, and no cards stop working.
+- **Forgot the password?** Ask the site owner. They can set a new one without knowing the old one, and no cards stop working.
+- **The owner link** (`dashboard.html#owner`) is only for the site owner; the supervisors' password doesn't work there.
 
 > Nothing you type is sent anywhere until you press **Publish**, and the password itself never leaves your device.
 
@@ -52,7 +53,7 @@ The box at the top of the dashboard always shows the current state.
 
 Below the badge:
 
-- **Right now (yard time …):** who the cards would call at this moment: the big Call button and anyone else working. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
+- **Right now (Houston time …):** who the cards would call at this moment: the primary call and anyone else working. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
 - **Facts line:** how many people and cards there are, and when the last change was published and by whom.
 
 When there are unpublished changes, a dark bar with a **Publish** button also stays at the bottom of the screen.
@@ -82,27 +83,27 @@ This is the group text the family sends to everyone. `{driver}` is replaced with
 - **Text message** is used on the English page. Default: *EMERGENCY – need to reach driver {driver}. Please call me back at this number.*
 - **In Spanish** is used when the family has the page in Spanish. Default: *EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.*
 
-The family sees the message in their Messages app and can edit it before tapping Send.
+The family sees the message in their Messages app and can edit it before tapping Send. It's sent from their own phone, so the yard can call them back.
 
 ---
 
 ## 4. Shifts
 
-This tab decides **who gets the big Call button** at any moment.
+This tab decides **who is the primary call** (the big Call button on the card page) at any moment.
 
 ### How the order works
 
 1. The dashboard looks down the shift list **from the top** and finds the first shift that is on right now.
-2. The first person ticked on that shift (in the order of the People list) gets the **big Call button**.
+2. The first person ticked on that shift (in the order of the People list) is the **primary call**.
 3. Everyone else on a shift that's on right now is listed under **Also working now**.
-4. Everyone else is listed under **Off shift · still emergency contacts**.
-5. If **nobody** is on shift, the big button goes to the person chosen in **If nobody is on shift, the Call button goes to**.
+4. Everyone else is listed under **Not scheduled · still emergency contacts**.
+5. If **nobody** is on shift, the primary call is the person chosen in **If nobody is on shift, the primary call is**.
 
-Keep the rotating shifts (1st, 2nd, 3rd) **above** the Day shift. Then the shift lead gets the big button and the day staff appear as "Also working".
+Keep the rotating shifts (1st, 2nd, 3rd) **above** the Day shift. Then the shift lead is the primary call and the day staff appear as "Also working".
 
 ### Settings on this tab
 
-- **Yard time zone:** shift times are always read in this time zone, even if a family is somewhere else. The card page then adds a note: "Shift times are yard time (America/Chicago)".
+- **All times are Houston time** (Central), even if a family is somewhere else. Their card page then adds a note: "Shift times are Houston time."
 - **Each shift has:**
   - **Name** and an optional **Name in Spanish**. The usual names (1st shift, 2nd shift, 3rd shift, Day (8–5), Day, Night) translate automatically; the grey hint shows the automatic Spanish.
   - **Starts** and **Ends**. A shift that ends earlier than it starts runs past midnight, e.g. 22:00–06:00. It counts as belonging to the day it **starts**: a Friday 22:00–06:00 shift covers Saturday 02:00. A shift that starts and ends at the same time runs 24 hours.
@@ -121,7 +122,7 @@ The defaults for a new setup are:
 
 ### Check a time
 
-Pick a **Day** and **Time** to see exactly who a card would show then: the big Call button, also working, and off shift. Use it after every rotation change.
+Pick a **Day** and **Time** to see exactly who a card would show then: the primary call, also working, and not scheduled. Use it after every rotation change.
 
 ---
 
@@ -196,7 +197,7 @@ Every publish adds an entry with the date and time, who published (the name in S
 ## 9. Settings: your name and the password
 
 - **Your name:** shown in History next to what you publish. It's saved only in this browser on this device; it isn't secret.
-- **Change password:** sets a new dashboard password for **everyone**.
+- **Change password:** sets a new supervisors' password for **everyone** (you don't need the old one; you're already signed in).
   1. Press **Change password**.
   2. Save the suggested password (five random words), or type your own of at least 20 characters.
   3. Tick **I've saved the password…**, then press **Next**.
@@ -241,7 +242,8 @@ Send them the dashboard link and tell them the password, in person or by phone. 
 
 | What you see | What to do |
 |---|---|
-| "Wrong password." | Check spelling. Still stuck? Ask the site owner to reset it. |
+| "Wrong password." | Check spelling. Still stuck? Ask the site owner to set a new one. |
+| "Wrong owner password." | You're on the owner link. Supervisors use the normal dashboard link (without `#owner`). |
 | "Publishing won't work right now: the site's GitHub connection has expired. Ask the site owner … to fix it." | Only the site owner can fix this. You can keep editing; publish once they've fixed it. |
 | "Nothing was published: …" | Read the rest of the message. It says whether to try again or ask the site owner. |
 | "Someone else published changes since you signed in…" | Note your changes, **Lock**, sign in again and redo them. |

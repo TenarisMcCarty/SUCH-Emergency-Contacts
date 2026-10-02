@@ -13,6 +13,9 @@
 //   "recovery"  The same as "admin", locked for the site owner's recovery code (a private key
 //            only the owner keeps). Anyone publishing keeps it current using the owner's
 //            public key, so the owner can always reset a lost password without breaking cards.
+//   "ownerLogin"  The owner's recovery code, locked with the owner's own password. Signing in
+//            with the owner password unlocks the code, which opens "recovery". The supervisors'
+//            password can't open it.
 //
 // The dashboard makes a brand-new data key on every publish, so a removed card can't
 // read anything published after it was removed.
@@ -125,7 +128,22 @@ async function buildFile(admin, { data, cards, extra }) {
       ...(await lock(admin.key, { ...extra, dataKey, cards })),
     },
     ...(extra.owner && extra.owner.pub ? { recovery: await lockForOwner(extra.owner.pub, { ...extra, dataKey, cards }) } : {}),
+    ...(extra.owner && extra.owner.login ? { ownerLogin: extra.owner.login } : {}),
   };
+}
+
+// The owner password locks the recovery code. ownerAuth = { key, salt, iterations } from the owner password.
+async function makeOwnerLogin(ownerAuth, code) {
+  return { kdf: 'PBKDF2-SHA256', iterations: ownerAuth.iterations, salt: ownerAuth.salt, ...(await lock(ownerAuth.key, { code })) };
+}
+
+// Owner sign-in: owner password → recovery code → everything. Throws on a wrong password.
+async function openOwner(password, file) {
+  const login = file.ownerLogin;
+  if (!login) throw new Error('Owner access is not set up.');
+  const key = await passwordKey(password, login.salt, login.iterations);
+  const { code } = await unlock(key, login);
+  return { code, auth: { key, salt: login.salt, iterations: login.iterations }, opened: await openRecovery(code, file) };
 }
 
 // Emergency page: open the file with a card key → { driver, message, contacts, schedule }.

@@ -5,7 +5,7 @@ What a family sees after tapping their card or scanning its QR code, and the rul
 **Contents**
 
 1. [What's on the page](#1-whats-on-the-page)
-2. [Who gets the big Call button](#2-who-gets-the-big-call-button)
+2. [Who is the primary call](#2-who-is-the-primary-call)
 3. [The group text](#3-the-group-text)
 4. [English and Spanish](#4-english-and-spanish)
 5. [Weak or no internet](#5-weak-or-no-internet)
@@ -23,27 +23,26 @@ From top to bottom:
 | Header | Tenaris logo, "Driver emergency contact", and a language button (**Español** / **English**) |
 | Red banner | "Life-threatening emergency?" with a **Call 911** button. It's built into the page, so it shows even if everything else fails. |
 | Driver | "Emergency contact for" and the driver's name from the card |
-| **Text all N contacts** | Opens the phone's Messages app with a group text to every contact, pre-filled with the message and the driver's name. "Then tap Send. The text comes from your phone, so they can call you back." |
-| "Didn't get all of them? Try again" | Android phones only: the same group text in a second format that some apps (e.g. Samsung Messages) need |
-| **On shift now** | The person who should be called first right now: name, role, which shift and until when, and a big **Call** button. It's titled **Main contact** when nobody is on shift. |
+| **Text all N contacts** | Opens the phone's Messages app with a group text to every contact, pre-filled with the message and the driver's name. The family taps Send. |
+| **Primary call** | The person who should be called first right now: name, role, which shift and until when, and a big **Call** button |
 | **Also working now** | Others on a shift right now, each with a **Call** button |
-| **Off shift · still emergency contacts** | Everyone else, each with a **Call** button. It's titled **Other contacts** if no shifts are set up. |
-| Time-zone note | "Shift times are yard time (America/Chicago)." Only shown when the phone is in a different time zone from the yard. |
+| **Not scheduled · still emergency contacts** | Everyone else, each with a **Call** button. It's titled **Other contacts** if no shifts are set up. |
+| Time-zone note | "Shift times are Houston time." Only shown when the phone is set to a time zone other than Houston's (Central). |
 | Offline note | Only shown when the page opened from the phone's saved copy (see [section 5](#5-weak-or-no-internet)) |
 
 Phone numbers aren't written on the page; the buttons dial or text them. The page re-sorts itself every minute, so it stays correct if it's left open across a shift change.
 
 ---
 
-## 2. Who gets the big Call button
+## 2. Who is the primary call
 
-The order follows the **Shifts** tab in the dashboard, read in the **yard's time zone**:
+The order follows the **Shifts** tab in the dashboard, always in **Houston time** (Central):
 
 1. Go down the shift list from the top. The **first shift that is on right now** wins.
-2. On that shift, the first person ticked (in People-list order) gets the **big Call button**.
+2. On that shift, the first person ticked (in People-list order) is the **primary call**.
 3. Anyone else on a shift that's on right now goes under **Also working now**. A person on two shifts appears only once, under the earlier shift.
-4. Everyone else goes under **Off shift · still emergency contacts**, in People-list order.
-5. If no shift is on, the big button goes to the **fallback person** (Shifts → "If nobody is on shift, the Call button goes to"), shown as **Main contact**.
+4. Everyone else goes under **Not scheduled · still emergency contacts**, in People-list order.
+5. If no shift is on, the primary call is the **fallback person** (Shifts → "If nobody is on shift, the primary call is").
 
 **Shift timing rules:**
 
@@ -51,7 +50,7 @@ The order follows the **Shifts** tab in the dashboard, read in the **yard's time
 - A shift ending earlier than it starts runs past midnight and belongs to the day it **starts**. A 22:00–06:00 shift ticked for Friday covers Friday 22:00 to Saturday 06:00.
 - A shift with the same start and end time runs all day on its ticked days.
 
-With the default shifts, a weekday at 09:00 gives: big button = 1st-shift lead; also working = the Day (8–5) staff; off shift = everyone else.
+With the default shifts, a weekday at 09:00 gives: primary call = 1st-shift lead; also working = the Day (8–5) staff; not scheduled = everyone else.
 
 ---
 
@@ -66,7 +65,6 @@ With the default shifts, a weekday at 09:00 gives: big button = 1st-shift lead; 
   |---|---|
   | iPhone / iPad | `sms:/open?addresses=+1…,+1…&body=…` |
   | Android | `sms:+1…,+1…?body=…` |
-  | Retry link (Android) | `sms:+1…;+1…?body=…` |
 
   These formats are the common ones but are still to be confirmed on real phones (see the [trial checklist](cards-and-printing.md#trial-checklist)).
 
@@ -78,6 +76,7 @@ Everything the family sees is available in English and Spanish:
 
 - the header and the 911 banner
 - every heading, button and note, and the error screen
+- the headings **Llamada principal** (primary call), **También trabajando ahora** (also working now) and **No programados · también son contactos de emergencia** (not scheduled · still emergency contacts)
 - shift times ("hasta las 2:00 p. m.")
 - the pre-filled text message
 
