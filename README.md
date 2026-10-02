@@ -1,126 +1,115 @@
 # SUCH Emergency Contacts
 
-An emergency contact page for the families (and schools) of HLO drivers. Drivers can't carry phones, so each family gets a card with an NFC tag and a QR code. Tapping or scanning it opens a page that shows:
+Emergency contact cards for the families (and schools) of Tenaris HLO drivers.
 
-- **Call 911** at the top.
-- **Text all**: one group text to every emergency contact, naming the driver.
-- **On shift now**: a big Call button for whoever is on shift at that moment.
-- **Also working now**, then **Off shift · still emergency contacts**, each with its own Call button.
+Drivers can't carry phones while working, so each family gets a card with an **NFC tag** and a **QR code**. Tapping the card or scanning the code opens a web page that lets the family reach the right people at the yard in one or two taps. The page works in **English and Spanish**.
+
+The page shows:
+
+1. **Call 911** banner at the top.
+2. **Text all contacts** button: one group text to every emergency contact, naming the driver. It's sent from the family's own phone, so the yard can call them back.
+3. **On shift now**: a big Call button for whoever is on shift at that moment.
+4. **Also working now**: others on duty right now, each with a Call button.
+5. **Off shift · still emergency contacts**: everyone else, each with a Call button.
+
+Supervisors keep the contacts, shifts and cards up to date in a web **dashboard**. Changes reach every card within about a minute, and no card ever needs reprinting for a contact change.
+
+---
 
 ## Links
 
-- **Supervisors:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html
-- **Site owner:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html#owner (adds the Owner tab and password reset)
-- **Emergency page:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/ (only works from a card's link)
-
-## Who does what
-
-| | Supervisors | Site owner |
-|---|---|---|
-| Needs | dashboard link + password | owner link + password + **recovery code** + GitHub |
-| People, shifts, cards, publish | ✓ | ✓ |
-| Print & QR (all card files) | ✓ | ✓ |
-| Change the password (everyone needs the new one) | ✓ | ✓ |
-| GitHub token, recovery code, take away access | | ✓ (Owner tab) |
-| Reset a forgotten password (no cards break) | ask the owner | ✓ (recovery code on the sign-in screen) |
-
-To hand it off, send supervisors the dashboard link and tell them the password. The **Help** tab covers every job they do.
-
-## First-time setup (owner, once)
-
-Already set up with the first version (the copy-and-paste editor)? Open the owner link and enter that **admin key** once. The steps below follow; contacts and cards carry over, and written cards keep working.
-
-1. Open the owner link.
-2. **Password:** save the suggested password.
-3. **GitHub token:** follow the steps on screen (about 2 minutes, signed in to GitHub as TenarisMcCarty).
-4. **Recovery code:** save it in *your* password manager and add your contact details for supervisors.
-5. Fill in **People** and **Shifts**, add a card, set the **Backup line** in Print & QR, then **Publish**.
-
-## Print & QR
-
-Pick a card and download its files, or **Download everything (ZIP)**:
-
-| File | For |
+| Who | Link |
 |---|---|
-| `…-BLACK.stl`, `…-WHITE.stl` | 3D-printed card, two filament colours, NFC tag sealed inside |
-| `…-print-notes.txt` | Slicer settings, the exact pause height for inserting the tag, and the link to write |
-| `…-paper-card.pdf` | Three paper copies on a Letter page: print at 100%, cut, fold, laminate |
-| `…-qr-label.png` | 4 × 6 in label: logo, name, QR, instructions, 911 line, backup line |
-| `…-qr.png`, `…-qr.svg` | Just the QR code |
+| Families (via their card) | `https://tenarismccarty.github.io/SUCH-Emergency-Contacts/#<card key>`: each card has its own link |
+| Supervisors | https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html |
+| Site owner | https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html#owner |
 
-Write the card link to the tag with NFC Tools (Write → Add a record → URL). Lock the tag only after testing.
+The plain site address (without a card key) shows "This card couldn't be loaded". That's expected, since the page only works from a card's own link.
 
-### 3D-printed card
+---
 
-- **Size:** 85.6 × 53.98 mm, the same as a credit card. **Thickness:** 1.2, 1.4 or 1.6 mm, set by the NFC sticker thickness you pick in Print & QR.
-- **Front:** dark, with the Tenaris logo, "EMERGENCY CONTACT" and the driver's name. A white band carries the instructions and the 911 line.
-- **Back:** white, with the QR code, a contactless symbol right over the hidden tag, "TAP PHONE HERE" and the backup line.
-- **Core:** white, so white areas stay bright. Thin white PLA over a black core looks grey.
-- **Pocket:** 25.6 mm wide, for a 25 mm NTAG215 sticker. The print notes give the pause height.
-- **In Bambu Studio:** import both STLs together and load them as **one object with two parts**. Black part → black filament, white → white. Print QR side down.
-- **Long names** shrink, or wrap to two lines. If a name still can't print cleanly, the dashboard says so; shorten it with Cards → Rename.
+## Documentation
 
-The files were checked digitally:
+| Guide | For | What's in it |
+|---|---|---|
+| [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in, people, shifts, cards, printing, publishing, history, changing the password, fixing common problems |
+| [Owner guide](docs/owner-guide.md) | Site owner | First-time setup, the GitHub token, the recovery code, resetting a lost password, taking away access, starting over |
+| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card (specs and Bambu Studio steps), the paper card, QR labels, testing |
+| [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the call order is chosen, English/Spanish, offline behaviour, error messages |
+| [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
+| [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
 
-- each part is watertight
-- the colours fill every layer with no gaps or overlaps
-- the pocket is sealed
-- the QR decodes from the model itself
+---
 
-Nothing has been physically printed yet, so print and scan-test one card before making a batch.
+## Quick start
 
-## English and Spanish
+### Supervisors
 
-Everything families see after tapping or scanning comes in English and Spanish. That covers the 911 banner, buttons, headings, shift times, notes, the error screen and the pre-filled text message.
+1. Open the supervisor link and sign in with the dashboard password (ask the site owner for it).
+2. Make your change: **People**, **Shifts** or **Cards**.
+3. Press **Publish**. The status at the top turns **Live** when every card has it.
 
-- **Which language opens:** phones set to Spanish open the page in Spanish. A button in the header switches language, and the phone remembers the choice.
-- **Dashboard fields:** **People** has a Spanish text message and an optional Spanish role per person. **Shifts** has an optional Spanish name per shift.
-- **Shift names:** common names like "1st shift" and "Day (8–5)" translate automatically. Anything else left blank shows in English.
-- **Printed cards:** still English only.
+The dashboard's **Help** tab lists the common jobs. The [supervisor guide](docs/supervisor-guide.md) covers everything step by step.
 
-## Shifts
+### Site owner
 
-The default shifts are 1st 6:00–14:00, 2nd 14:00–22:00, 3rd 22:00–6:00 (all week), and Day 8:00–17:00 (Mon–Fri). Change them any time. The big Call button goes to the person on the **first** shift in the list that's on right now. If nobody is on shift, it goes to the fallback person. Times use the yard's time zone, wherever the family is. **Check a time** on the Shifts tab shows who a card would call at any moment.
+Open the owner link. It adds an **Owner** tab (GitHub token, recovery code, your contact details, taking away access) and a password reset on the sign-in screen. If the Owner tab says **"No recovery code yet"**, make one now and publish. See the [owner guide](docs/owner-guide.md).
 
-## How it's protected
+### Making a new card
 
-- The site and repo are public, but all data is in `contacts.enc.json`, encrypted (AES-GCM, the browser's Web Crypto). Without a card, the password or the recovery code, it's unreadable.
-- Each card has its own key, kept only in the card's link after `#`, which browsers never send to any server. A card unlocks only the contacts, the shifts and its own driver's name. A lost card can be removed on its own.
-- Every publish uses a fresh encryption key, so a removed card sees nothing published after it was removed.
-- The dashboard password is stretched (PBKDF2, 600,000 rounds) and should be the suggested 5-word one: the public file can be attacked offline, and it holds the GitHub token.
-- The recovery copy is encrypted to the owner's public key (ECDH P-256). Anyone can publish without knowing the recovery code, and only the owner can open it.
-- The GitHub token can change only this repository. Commit messages are always "Update emergency card data", so no names appear in the public history.
-- The pages run only this site's own files, plus GitHub's API on the dashboard. There are no trackers or cookies, and search engines are asked not to index the pages.
-- **Limits:**
-  - Anyone with the password can publish, and so can change the site. Take access away from the Owner tab.
-  - Old file versions stay in the repo's history. An old password, a removed card or an old recovery code can still open those old versions, but nothing newer.
-  - The Owner tab is hidden from supervisors to keep things simple, not to stop them reaching it. The password already lets them publish.
+**Cards** → **Add card** → **Publish** → **Print & QR** → download the files → write the link to the NFC tag → test with a phone → lock the tag. See [Cards and printing](docs/cards-and-printing.md).
 
-## Weak signal
+---
 
-After a phone has opened the page once, it keeps a copy (`sw.js`). If the internet is down or slow, the saved copy opens with a note. Texting and calling only need normal cell signal. **Tip:** ask families to tap the card once when they receive it.
+## Features at a glance
 
-## Trial checklist (real phones)
+- **Shift-aware calling:** the big Call button follows the shift schedule, in the yard's time zone.
+- **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
+- **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
+- **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
+- **Print & QR generator:** from a card's data, the dashboard makes:
+  - a two-colour 3D-printable card (2 STL files, NFC tag sealed inside)
+  - a paper card PDF and a QR label
+  - plain QR images
+  - all of these in one ZIP
+- **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
+- **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or the password, the data file is unreadable.
+- **Recovery code:** the site owner can reset a forgotten password without breaking any cards.
 
-- Tag tap and QR scan both open the page with the right driver, on iPhone and Android.
-- **Text all** opens Messages with every number. On Samsung, if some are missing, try **Didn't get all of them?** and note which one worked.
-- The big Call button shows the person on shift now. Call buttons dial correctly.
-- Change something, publish, and check the card shows it within about a minute.
-- Print one 3D card and check that the QR scans and the tag reads through the card. Only then lock the tag.
+---
 
-## Files
+## Repository contents
 
 | File | What it is |
 |---|---|
-| `index.html`, `app.js` | Emergency page |
-| `dashboard.html`, `dashboard.js` | Dashboard |
-| `cardmaker.js` | Makes the STL, PDF, PNG, SVG and ZIP files in the browser |
-| `crypto.js` | Encryption, shared by all pages |
-| `schedule.js` | Who's on shift now |
-| `sw.js` | Offline copy on the phone |
-| `style.css` | Tenaris styling (colours from tenaris.com; Frutiger only if it's installed) |
-| `logo.js`, `logo.svg` | Tenaris logo outlines from the official media kit |
-| `dejavu-sans-bold.ttf` | Lettering on the cards (DejaVu Sans Bold, Latin subset) |
-| `qrcode.js`, `opentype.js`, `earcut.js`, `words.js` | QR encoder, font reader, shape filler, password word list. Unmodified copies from npm/EFF with checksums verified; licences in `THIRD-PARTY-NOTICES.txt` |
-| `contacts.enc.json` | Encrypted data, written by Publish |
-| `.nojekyll` | Tells GitHub Pages to serve the files as they are |
+| `index.html`, `app.js` | The emergency page families see |
+| `dashboard.html`, `dashboard.js` | The dashboard for supervisors and the owner |
+| `cardmaker.js` | Makes the print files (STL, PDF, PNG, SVG, ZIP) in the browser |
+| `crypto.js` | Encryption, shared by both pages |
+| `schedule.js` | Works out who is on shift; Spanish shift names and times |
+| `sw.js` | Keeps an offline copy of the emergency page on phones |
+| `style.css` | Styling for both pages (Tenaris colours) |
+| `contacts.enc.json` | The encrypted data. **Written only by the dashboard's Publish button; never edit it by hand.** |
+| `logo.js`, `logo.svg` | Tenaris logo outlines (from the official Tenaris media kit) |
+| `dejavu-sans-bold.ttf` | Lettering used on printed cards (DejaVu Sans Bold, Latin subset) |
+| `qrcode.js`, `opentype.js`, `earcut.js` | Third-party libraries: QR encoder, font reader, shape triangulation (unmodified npm releases) |
+| `words.js` | Word list for suggested passwords (EFF Large Wordlist, minus 4 hyphenated words) |
+| `THIRD-PARTY-NOTICES.txt` | Licences and credits for everything above that came from elsewhere |
+| `.nojekyll` | Tells GitHub Pages to serve the files exactly as they are |
+| `docs/` | This documentation |
+
+Hosting is **GitHub Pages**, from the `main` branch, repository root. There is no server, build step or database.
+
+---
+
+## Status and known limits
+
+- **Not yet tested on real phones or a real printer:**
+  - the group-text links (iPhone and Samsung)
+  - NFC reading through the 3D-printed card
+  - a physical print of the 3D card
+
+  Run the trial checklist in [Cards and printing](docs/cards-and-printing.md#trial-checklist) before making a batch.
+- **Printed cards are English only.** Spanish text is about 30% longer and doesn't fit at a size a 0.4 mm nozzle prints cleanly.
+- **The paper card is laid out for US Letter paper.**
+- Anyone with the dashboard password can publish changes. See [Security](docs/security.md) for what that means and how to take access away.
