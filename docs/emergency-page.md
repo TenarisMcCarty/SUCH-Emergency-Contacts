@@ -23,7 +23,7 @@ From top to bottom:
 |---|---|
 | Header | Tenaris logo, "Driver emergency contact", and a language button (**Español** / **English**) |
 | Red banner | "Life-threatening emergency?" with a **Call 911** button. It's built into the page, so it shows even if everything else fails. |
-| Driver | "Emergency contact for" and the driver's name from the card |
+| Driver | "Emergency contact for" as the big heading, in dark capitals, with the driver's name from the card underneath, smaller and in gray. The family knows who the card is for, so the name doesn't need to stand out. |
 | **Text All Yard Supervisors (Preferred)** | (Spanish: *Enviar mensaje a todos los supervisores del patio (preferido)*.) Opens the phone's Messages app with a group text to every contact, pre-filled with the message and the driver's name. The family taps Send. |
 | **Primary call** | The person who should be called first right now: name, role, which shift and until when, and a big **Call** button. If supervisors switch WhatsApp on, a **WhatsApp** button sits under it ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)). |
 | **Also working now** | Others on a shift right now, each with a **Call** button |
@@ -31,7 +31,7 @@ From top to bottom:
 | **Yard** | The yard address (302 McCarty St, Houston, TX 77029, unless supervisors change it) with a **Directions** button. Hidden if supervisors empty the address. |
 | Time-zone note | "Shift times are Houston time." Only shown when the phone is set to a time zone other than Houston's (Central). |
 | Offline note | Only shown when the page opened from the phone's saved copy (see [section 5](#5-weak-or-no-internet)) |
-| Bottom links | **Save numbers to Contacts** and **Add to home screen**, small, at the very bottom so they never get in the way of calling |
+| Bottom link | **Save yard numbers to Contacts**, small, at the very bottom so it never gets in the way of calling ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)) |
 
 Phone numbers aren't written on the page; the buttons dial or text them. The page re-sorts itself every minute, so it stays correct if it's left open across a shift change.
 
@@ -140,7 +140,8 @@ The family never sees a technical error message. The backup number is printed on
 
 - The card key stays on the phone; the part of the link after `#` is never sent to any server.
 - The page uses no cookies, trackers or analytics, and loads nothing from other websites.
-- It stores the language choice, the offline copy (the encrypted data and the page files) and the link of the last card opened, so the home-screen icon can open it ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)).
+- It stores the language choice, the offline copy (the encrypted data and the page files) and the link of the last card opened, so a home-screen icon can open it ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)).
+- **Save yard numbers to Contacts** makes the contact on the phone itself. Nothing is sent anywhere.
 - The **WhatsApp** and **Directions** buttons open WhatsApp and the maps app. Like any link, those apps then see what's in the link: the yard's number and the text message, or the yard address.
 
 ---
@@ -157,16 +158,18 @@ The family never sees a technical error message. The backup number is printed on
 
 - Shown under the contacts with a **Directions** button (**Cómo llegar** in Spanish). It opens Apple Maps on iPhone and Google Maps everywhere else.
 
-**Save numbers to Contacts**
+**Save yard numbers to Contacts** (Spanish: *Guardar números del patio en Contactos*)
 
-- Downloads one contacts file with everyone on the list, each named "*Name* (Tenaris)", with their role, the yard address and "Emergency contact for driver *…*". When the yard calls a family back, their phone then shows who is calling.
-- iPhone shows **Add All Contacts**; Android opens the file in the Contacts app. To be confirmed on real phones (see the [trial checklist](cards-and-printing.md#trial-checklist)).
-- The saved numbers don't update themselves. The card page is always current; the saved contacts are a backup.
+- Saves **one** contact, **Tenaris Yard Supervisors** (Spanish page: *Supervisores del patio Tenaris*), with everyone's number in it. Each number is labelled with the person's name and role, e.g. *Jane Doe – 1st shift lead* (the Spanish role on the Spanish page). The contact also has the yard address and a note: "Emergency contact for driver *…*", then each name and number.
+- It's one contact, not one per person, because an iPhone only saves the first contact in a file. When anyone from the yard calls the family back, their phone shows **Tenaris Yard Supervisors**.
+- **iPhone:** the contact opens straight away. Scroll down and tap **Create New Contact**.
+- **Android:** the phone downloads *tenaris-yard-supervisors.vcf*. Tap **Open**, and the Contacts app adds it. Some Android phones show every number as "Mobile" instead of the person's name; the note says whose number is whose.
+- Both are to be confirmed on real phones (see the [trial checklist](cards-and-printing.md#trial-checklist)).
+- The saved numbers don't update themselves. The card page is always current; the saved contact is a backup. To refresh it, delete the old contact and save it again.
 
-**Add to home screen**
+**Home screen**
 
-- Puts a Tenaris icon named **Emergency** on the phone's home screen that opens the card's page, like an app.
-- Android (Chrome) shows its own **Install** prompt. On iPhone, and where no prompt appears, the page shows the steps instead: *Tap Share (the square with an arrow), then Add to Home Screen* or *Open the browser menu (⋮), then tap Add to Home screen*.
-- The link is hidden when the page was already opened from the home screen.
+- The page has no button for this. A family can still add it from the browser: on iPhone, **Share** (the square with an arrow), then **Add to Home Screen**; on Android, the menu (⋮), then **Add to Home screen** or **Install**. The icon is the Tenaris mark, named **Emergency**.
+- Chrome on Android doesn't pop up its own install offer on this page.
 - If the phone drops the card key from the link, the page opens the last card opened on that phone. A phone used for several drivers' cards (a school, say) should open each card from its card, not the icon.
 - Search engines are asked not to index the page.

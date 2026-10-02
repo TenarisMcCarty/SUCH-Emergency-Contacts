@@ -19,14 +19,14 @@ For anyone maintaining or changing the code.
 ## 1. Architecture
 
 - **Static site** on GitHub Pages (`main` branch, repository root). There's no server code, build step, framework or package manager; every file is served as-is (`.nojekyll`).
-- **One data file**, `contacts.enc.json`, fully encrypted in the browser. The emergency page reads it with a card key. The dashboard reads it with the supervisors' password, or the owner password or recovery code, and writes it back through the GitHub REST API.
+- **One data file**, `contacts.enc.json`, fully encrypted in the browser. The emergency page reads it with a card key. The dashboard reads it with a supervisor's own email and password, the shared supervisors' password, or the owner password or recovery code, and writes it back through the GitHub REST API.
 - **Two pages:**
   - `index.html` + `app.js`: the emergency page. It loads `crypto.js` and `schedule.js`.
   - `dashboard.html` + `dashboard.js`: the dashboard. It also loads `cardmaker.js` and its dependencies.
 
 ```
 family phone ──(card link #key)──► index.html ──fetch──► contacts.enc.json ──decrypt with card key──► page
-supervisor ──(password)──► dashboard.html ──GitHub API PUT──► contacts.enc.json (commit) ──► GitHub Pages
+supervisor ──(email + password)──► dashboard.html ──GitHub API PUT──► contacts.enc.json (commit) ──► GitHub Pages
 ```
 
 ---
@@ -36,13 +36,13 @@ supervisor ──(password)──► dashboard.html ──GitHub API PUT──�
 | File | Role | Notes |
 |---|---|---|
 | `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. |
-| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, WhatsApp button, yard address and directions link, Save to Contacts (vCard 3.0, made in the browser), Add to home screen, remembering the last card key, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
+| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, WhatsApp button, yard address and directions link, Save to Contacts (one vCard 3.0 contact with labelled numbers, made in the browser; opened directly on iPhone, downloaded elsewhere), remembering the last card key, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
 | `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow`, `shiftOn`, `arrange` (call order), `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
-| `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, recovery-code ECDH (`newRecovery`, `lockForOwner`, `openRecovery`), owner login (`makeOwnerLogin`, `openOwner`), `buildFile`, `openCard`, `openAdmin` |
+| `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, ECDH (`newRecovery`, `lockForOwner`), `openCard`; version 4: `personSlot`, `newSignIn`, `openLogin`, `openWithWrap`, `openForSignIn`, `openWithCode`, `openWithOwnerPassword`, `fromVersion3`, `buildFile4`; version 3, kept unchanged for older cached dashboards: `buildFile`, `openAdmin`, `openOwner`, `openRecovery`, `makeOwnerLogin`. Loaded by both pages into one global scope, so new names must not clash with `app.js` or `dashboard.js`. |
 | `manifest.json`, `icon-*.png`, `apple-touch-icon.png` | Home-screen app | Name "Emergency", Tenaris mark on charcoal. `start_url` is `./` (no card key), so `app.js` falls back to the last card key saved in `localStorage` when the link has no `#`. |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
-| `dashboard.html` | Dashboard markup | Sign-in, setup steps, tabs, Owner tab |
-| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (supervisor, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing, deploy watching, Print & QR, Owner tab |
+| `dashboard.html` | Dashboard markup | Sign-in (Email, password, Forgot password?), setup steps (including the one-time temporary password), tabs, Owner tab |
+| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing (with a self-check), deploy watching, Print & QR, Owner tab (people who can sign in, shared password, token, owner password, recovery code). Elements added for personal sign-ins are optional, for cache mixes with an older `dashboard.html`. |
 | `cardmaker.js` | Print files | Card layout, 3D model and STL writer, canvas drawing, PDF writer, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
 | `style.css` | Styling | Brand colours and type ([Tenaris brand](#tenaris-brand)). Frutiger if installed locally, otherwise Source Sans 3. |
 | `logo.svg` | Tenaris signature | The official full-colour artwork from tenaris.com, unchanged (only a `<title>` added). Used in both page headers and for the home-screen icons. |
@@ -60,17 +60,26 @@ supervisor ──(password)──► dashboard.html ──GitHub API PUT──�
 
 ## The data file (contacts.enc.json)
 
-Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are **base64url without padding**. Keys are 16 bytes, which is 22 characters.
+Version 4, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are **base64url without padding**. AES keys are 16 bytes, which is 22 characters. `data` and `cards` are exactly as in version 3, so every `app.js`, old or new, reads both versions.
 
 ```jsonc
 {
-  "version": 3,
-  "data":  { "iv": "…", "ct": "…" },               // AES-GCM(dataKey)
-  "cards": { "<slotId>": { "iv": "…", "ct": "…" } },  // one per card, AES-GCM(cardKey), sorted by slotId
-  "admin": { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" },
-  "recovery": { "pub": { "x": "…", "y": "…" }, "epk": { "x": "…", "y": "…" }, "iv": "…", "ct": "…" },  // once owner access exists
-  "ownerLogin": { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" }  // once owner access exists
+  "version": 4,
+  "data":  { "iv": "…", "ct": "…" },                  // AES-GCM(dataKey)
+  "cards": { "<slotId>": { "iv": "…", "ct": "…" } },     // one per card, AES-GCM(cardKey), sorted by slotId
+  "admin": { "iv": "…", "ct": "…" },                  // AES-GCM(K), the admin key: new on every publish
+  "wraps": {                                          // {} when the shared password is switched off
+    "password": { "login": { …login… }, "wrap": { …wrap… } }   // the shared supervisors' password
+  },
+  "people": { "<personSlot>": { "login": { …login… }, "wrap": { …wrap… } } },  // one per personal sign-in, sorted
+  "recovery": { …wrap… },                             // K for the owner's recovery code (once owner access exists)
+  "ownerLogin": { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" }
 }
+// login = { "kdf": "PBKDF2-SHA256", "iterations": 600000, "salt": "…", "iv": "…", "ct": "…" }
+//         AES-GCM(PBKDF2-SHA256(password, salt)) of { "d": "<P-256 private key>", "pub": { "x", "y" } }
+// wrap  = { "pub": { "x", "y" }, "epk": { "x", "y" }, "iv": "…", "ct": "…" }
+//         AES-GCM of { "k": "<K>" } with key = first 16 bytes of SHA-256(ECDH-P256(d, epk) ‖ "SUCH emergency cards recovery");
+//         pub is the sign-in's public key, epk a one-time public key made on each publish (lockForOwner in crypto.js)
 ```
 
 **`data`** (opened with the data key):
@@ -97,7 +106,9 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
 **Each card entry** (opened with that card's key): `{ "dataKey": "…", "driver": "Jane Doe (1234)" }`.
 The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot:" + cardKey`)).
 
-**`admin`** (opened with PBKDF2-SHA256(supervisors' password, salt, iterations), 16-byte output):
+**Each person entry** is filed under `personSlot`: the first 16 characters of base64url(SHA-256(`"person:" + email.trim().toLowerCase()`)). Its `login` holds that person's private key, locked with their own password.
+
+**`admin`** (opened with K):
 
 ```jsonc
 {
@@ -105,25 +116,33 @@ The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot
   "cards":  [ { "driver": "…", "note": "Family", "key": "<cardKey>", "added": "2026-10-02" } ],
   "github": { "token": "github_pat_…", "addedAt": "2026-10-02", "addedBy": "…" },
   "owner":  { "contact": "…", "pub": { "x": "…", "y": "…" }, "at": "2026-10-02", "login": { …same as ownerLogin… } },  // may be absent
-  "adminKey": { "key": "…", "salt": "…", "iterations": 600000 },  // the supervisors'-password key, for the owner (via recovery)
-  "log":    [ { "at": "ISO time", "who": "…", "what": ["Changed shifts", "…"] } ],  // last 200
+  "shared": { "pub": { "x", "y" }, "login": { …login… } },  // the shared password's sign-in, or null when switched off
+  "people": [ { "email": "jane.doe@example.com", "name": "Jane Doe", "pub": { "x", "y" }, "login": { …login… },
+                "mustChange": true, "addedAt": "2026-10-02", "addedBy": "…" } ],
+  "log":    [ { "at": "ISO time", "who": "Jane Doe", "email": "…", "via": "person", "what": ["Changed shifts", "…"] } ],  // last 200
+                // via: "person" (who = the name the owner gave), "shared" or "owner" (who = typed in Settings); email only for "person"
   "confirmed": { "<contact id>": "2026-10-02" }  // when each number was last checked; may be absent
 }
 ```
 
-**`recovery`** has the same plaintext as `admin`. It's encrypted with the AES key = first 16 bytes of SHA-256(ECDH-P256(recovery private key, `epk`) ‖ `"SUCH emergency cards recovery"`). `pub` is the owner's public key; the recovery code is its private scalar `d` (43 characters, base64url). `epk` is a one-time public key made on each publish.
+Whoever publishes rebuilds the whole file from the admin block: a new data key and a new K, K wrapped to `shared.pub`, to each `people[].pub` and to `owner.pub`, and every `login` copied unchanged. So publishing needs only public keys, and a person removed from `people` never receives a later K.
 
-**`ownerLogin`** is `{ "code": "<recovery code>" }`, AES-GCM-encrypted with PBKDF2-SHA256(owner password). It lives inside the admin payload (`owner.login`), so every publish, including a supervisor's, carries it forward unchanged. `buildFile` copies it to the top level, where owner sign-in reads it before anything else is unlocked. The recovery code itself is never stored anywhere a supervisor can read it.
+**`ownerLogin`** is `{ "code": "<recovery code>" }`, AES-GCM-encrypted with PBKDF2-SHA256(owner password). It lives inside the admin block (`owner.login`) and `buildFile4` copies it to the top level, where owner sign-in reads it before anything else is unlocked. The recovery code is the owner's P-256 private scalar `d` (43 characters); `recovery` wraps K for its public key `owner.pub`.
+
+**Passwords and key pairs:** adding a person, resetting their password, a person changing their own password, and setting a new shared password all make a **new key pair**. Re-locking the old private key wouldn't do: old file versions stay public, so an old (or temporary) password would keep opening the old `login`, and its private key would keep opening every later wrap.
 
 **Sign-in paths:**
 
 | Path | Opens | Then |
 |---|---|---|
-| Supervisors' password | `admin` | normal session |
-| Owner password | `ownerLogin` → code → `recovery` | owner session; `adminKey` lets the owner publish |
-| Recovery code | `recovery` | choose a new owner password (new `ownerLogin`) |
-| Owner link without `ownerLogin` | `admin` with the supervisors' password | create the owner password and recovery code |
-| Reclaim | `admin` with the supervisors' password | requires a new token whose `GET /user` login is the repository owner and which differs from the stored token; then create a new owner password and recovery code |
+| Email + password | `people[personSlot(email)].login` → d → `wrap` → K → `admin` | normal session; History uses the person's `name`; `mustChange` forces a new password (and a publish) first |
+| Shared password (Email empty) | `wraps.password.login` → d → `wrap` → K → `admin` | normal session |
+| Owner password | `ownerLogin` → code → `recovery` → K → `admin` | owner session |
+| Recovery code | `recovery` → K → `admin` | choose a new owner password (new `ownerLogin`) |
+| Owner link without `ownerLogin` | either supervisor sign-in | create the owner password and recovery code |
+| Reclaim | either supervisor sign-in | requires a new token whose `GET /user` login is the repository owner and which differs from the stored token; then create a new owner password and recovery code |
+
+**Version 3 data** (before personal sign-ins): no `wraps` or `people`; `admin` is `{ "kdf", "iterations", "salt", "iv", "ct" }`, AES-GCM-encrypted directly with PBKDF2-SHA256(supervisors' password), and `recovery` holds a copy of the whole admin block (with `adminKey`, the password-derived key) instead of K. The dashboard still opens it (`openForSignIn`, `openWithCode`): it reads it as "shared password on, nobody else", turning the shared password into a sign-in locked with the same password key (same salt), so the same password keeps working. The next publish writes version 4. An older cached `dashboard.js` can't open version 4: it shows its "Upgrade / Old admin key" screen or "Wrong password", and can't publish. `buildFile`, `openAdmin`, `openOwner` and `openRecovery` stay in `crypto.js` unchanged, so an older cached `dashboard.js` paired with the new `crypto.js` behaves exactly as before.
 
 **First-version data (version 2)** came from the original copy-and-paste editor:
 
@@ -145,8 +164,8 @@ The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot
 **Publishing:**
 
 1. Validate: names, US phone numbers, no duplicate phones, both messages, shift names and days.
-2. `buildFile`: new data key; encrypt `data`; one entry per card; the admin block (new log entry appended); the recovery block if the owner has a public key.
-3. Self-check: the new file must open with the password **and** with every card key, or nothing is sent.
+2. `buildFile4`: new data key and admin key K; encrypt `data`; one entry per card; the admin block (new log entry appended); K wrapped for the shared password (if on), each person and the owner.
+3. Self-check: the new file must open with every card key, and with every private key the tab knows (the sign-in used, the owner's recovery code, sign-ins made in this session), at least one; and there must be one `people` entry per person. Otherwise nothing is sent.
 4. `PUT …/contents/contacts.enc.json` with `{ message: "Update emergency card data", content: base64, branch: "main", sha }`.
    - **409 / 422:** someone else published since sign-in. It's refused, and nothing is overwritten.
    - **401 / 403 / 404:** token problem. Supervisors are told to ask the owner.
@@ -233,7 +252,7 @@ Try every change on the test copy first ([above](#the-test-copy-staging)), and g
    - the slot-id formula
    - the encryption of card entries
 2. **Only ever add to the data format.** Phones may run a cached older `app.js`, so never rename or remove fields it reads: `message`, `contacts[].{id,name,role,phone}`, `schedule`, `cards`, and the card-entry fields. New fields must be optional on read.
-3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`. A dashboard tab still running an older `dashboard.js` drops fields it doesn't know (e.g. `address`, `whatsapp`, `confirmed`) if it publishes, so re-check them after a deploy that adds fields.
+3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`. A dashboard tab still running an older `dashboard.js` drops fields it doesn't know (e.g. `address`, `whatsapp`, `confirmed`) if it publishes, so re-check them after a deploy that adds fields. A `dashboard.js` from before version 4 can't open a version 4 file at all; the new `dashboard.js` says "just updated, reload" if it meets an older cached `crypto.js`.
 4. **If you change emergency-page files:** add new ones to `PATHS` in `sw.js`, and optionally bump `CACHE` so phones drop old copies.
 5. **Never hand-edit `contacts.enc.json`.** The dashboard's `sha` check would refuse the next publish anyway, but a broken file would break every card.
 6. **Keep names out of commit messages.** They're public.
@@ -263,6 +282,8 @@ An automated suite was used during development. It isn't included in this reposi
   - supervisor password change
   - owner "take away access"
   - owner password reset with the recovery code
+  - personal sign-ins: a version 3 file opens and its first publish writes version 4 (same shared password, owner password, recovery code and card); the owner adds a person and the temporary password shown signs in; a new password is required first, Discard is hidden, and it only takes effect after publishing; the person publishes and History shows their name (not a typed one); changing one's own password leaves every other sign-in untouched; reset; remove (the removed person's private key opens nothing newer, and they can't sign in); switching the shared password off (refused at sign-in, people still work) and back on; reclaiming owner access with a personal sign-in; **Forgot password?** writes the right email
+  - older cached code: a pre-version-4 `dashboard.js` can't sign in to a version 4 file and publishes nothing; the new `dashboard.js` with an older `crypto.js` or `dashboard.html` behaves safely
   - upgrading from first-version data
   - 90-day number checks: missing dates count from the last publish, **Still right**, a changed number counts as checked, dates kept only in the admin block
   - shift gaps: overnight and weekend gaps merged across Sunday→Monday, listed Monday first, ✓ when covered
@@ -278,16 +299,16 @@ An automated suite was used during development. It isn't included in this reposi
   - deploy mixes: an older cached `index.html` with the new `app.js`, and the reverse
   - WhatsApp link (number and message, English and Spanish), hidden when off or on older data
   - yard address with Apple Maps (iPhone) / Google Maps (others) links
-  - the vCard: one per person, escaping, Spanish roles, address and note
+  - the vCard: one contact, every number labelled (itemN.TEL + X-ABLabel), escaping, Spanish name and roles, address and note; iPhone opens it, Android downloads it
   - the manifest loads under the CSP, Chrome's installability check passes, the plain address reopens the last card, and a wrong key isn't remembered
-- **Encryption:** the published file was opened independently with Python's `cryptography` library: the password via PBKDF2, the card entries, and the recovery block via ECDH. It was also checked that no readable names, numbers or tokens appear in the file.
+- **Encryption:** the published file was opened independently with Python's `cryptography` library: each sign-in's `login` via PBKDF2, its `wrap` and the recovery block via ECDH P-256, the admin block and the card entries via AES-GCM. It was also checked that no readable names, emails, numbers or tokens appear in any published version.
 - **Print files:**
   - both STL parts watertight (every edge paired)
   - black + white areas tile each layer exactly, and the volume equals the card minus the sealed pocket
   - the QR decodes (with zxing-cpp) from the STL's back face, the PDF's embedded image, the label and the PNG
   - the ZIP is valid
 
-**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, Add to home screen, WhatsApp), a physical 3D print, and a paper print.
+**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, WhatsApp), a physical 3D print, and a paper print.
 
 ---
 

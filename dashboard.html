@@ -40,17 +40,23 @@
       <h1 id="login-title">Sign in</h1>
       <p id="login-intro" hidden>The current data was made with the first version (copy-and-paste editor). Enter its <strong>admin key</strong> once to upgrade. Your contacts and cards carry over, and cards already written keep working.</p>
       <p id="owner-intro" class="small" hidden></p>
-      <form id="login-form">
-        <input type="text" name="username" autocomplete="username" value="Emergency Cards" hidden>
+      <form id="login-form" novalidate>
+        <div id="email-box" hidden>
+          <label for="email">Email</label>
+          <input id="email" name="username" type="email" autocomplete="username" autocapitalize="off" spellcheck="false">
+          <p id="email-hint" class="small muted">Leave Email empty to use the shared supervisors' password.</p>
+        </div>
         <label id="password-label" for="password">Password</label>
         <input id="password" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
         <button class="btn btn-primary" type="submit">Unlock</button>
         <p id="login-msg" class="msg" role="status"></p>
+        <p id="forgot-row" class="small"><a id="forgot" href="mailto:salil@tenaris.com?subject=Emergency%20Cards%3A%20password%20reset">Forgot password?</a></p>
       </form>
       <details class="minor">
         <summary>Lost the password?</summary>
         <div id="lost-supervisor">
-          <p>Ask the site owner. They can reset it with their recovery code, and no cards stop working.</p>
+          <p><strong>Your own password:</strong> press <strong>Forgot password?</strong> above. It writes an email to the site owner, who sends you a temporary password. You choose a new one when you sign in.</p>
+          <p><strong>The shared supervisors' password:</strong> ask the site owner. Either way, no cards stop working.</p>
         </div>
         <div id="lost-owner" hidden>
           <p class="small">Forgot your owner password? Use your recovery code. Nothing else changes.</p>
@@ -61,8 +67,12 @@
 
           <div id="reclaim-box">
             <h3>Lost the recovery code too?</h3>
-            <p class="small">Reclaim owner access with the supervisors' dashboard password and a <strong>new</strong> GitHub token made on the TenarisMcCarty account. No cards stop working.</p>
-            <label for="reclaim-password">Supervisors' dashboard password</label>
+            <p class="small">Reclaim owner access with a supervisor sign-in (your own, or the supervisors' shared password) and a <strong>new</strong> GitHub token made on the TenarisMcCarty account. No cards stop working.</p>
+            <div id="reclaim-email-box" hidden>
+              <label for="reclaim-email">Email (leave empty for the shared password)</label>
+              <input id="reclaim-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </div>
+            <label id="reclaim-label" for="reclaim-password">Supervisors' dashboard password</label>
             <input id="reclaim-password" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
             <button id="reclaim" class="btn btn-light" type="button">Reclaim owner access</button>
             <p id="reclaim-msg" class="msg" role="status"></p>
@@ -122,6 +132,16 @@
         <input id="setup-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
         <label class="check"><input id="recovery-saved" type="checkbox"> I've saved the recovery code</label>
         <button id="recovery-next" class="btn btn-primary" type="button" disabled>Finish</button>
+      </div>
+
+      <div id="setup-temp" hidden>
+        <h1 id="temp-title">Temporary password</h1>
+        <p>For <strong id="temp-for"></strong>. Give it to them in person or by phone, never by email or chat. It's shown only this once.</p>
+        <code id="temp-password" class="key"></code>
+        <button id="copy-temp" class="btn btn-light" type="button">Copy</button>
+        <p class="small">They sign in on the normal dashboard link with their email and this password, and must then choose their own password and publish. Until you publish, the temporary password doesn't work.</p>
+        <label class="check"><input id="temp-saved" type="checkbox"> I've copied it or written it down</label>
+        <button id="temp-next" class="btn btn-primary" type="button" disabled>Done</button>
       </div>
 
       <button id="setup-cancel" class="link-btn" type="button" hidden>Cancel</button>
@@ -277,13 +297,26 @@
 
       <!-- Settings -->
       <section data-panel="settings" hidden>
-        <h2 class="section">Your name</h2>
-        <p class="small">Shown in History next to what you publish. Saved only on this device.</p>
-        <input id="my-name" autocomplete="name">
+        <div id="me-box" hidden>
+          <h2 class="section">Signed in as</h2>
+          <p id="me-text"></p>
+          <p class="small">History shows this name next to what you publish. If it's wrong, ask the site owner.</p>
+          <h2 class="section">Your password</h2>
+          <p class="small">Changes only your own password. Nobody else is affected. It takes effect when you publish.</p>
+          <button id="change-my-password" class="btn btn-light" type="button">Change my password</button>
+        </div>
 
-        <h2 class="section">Password</h2>
-        <p class="warn">Changing the password affects everyone who uses this dashboard: once you publish, the old one stops working. Tell them the new one. If it's ever lost, the site owner can reset it.</p>
-        <button id="change-password" class="btn btn-light" type="button">Change password</button>
+        <div id="name-box">
+          <h2 class="section">Your name</h2>
+          <p class="small">Shown in History next to what you publish. Saved only on this device.</p>
+          <input id="my-name" autocomplete="name">
+        </div>
+
+        <div id="shared-box">
+          <h2 class="section">Shared password</h2>
+          <p class="warn">Changing the shared supervisors' password affects everyone who signs in with it: once you publish, the old one stops working. Tell them the new one. People with their own sign-in aren't affected. If it's ever lost, the site owner can reset it.</p>
+          <button id="change-password" class="btn btn-light" type="button">Change the shared password</button>
+        </div>
       </section>
 
       <!-- Help -->
@@ -297,7 +330,7 @@
           <li><strong>New card:</strong> Cards → Add card → Publish → Print &amp; QR → download the files, write the link to the tag. Test it, then lock the tag.</li>
           <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
           <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. The tag doesn't need rewriting, but print a new card face.</li>
-          <li><strong>Give someone access:</strong> send them this page's link and tell them the password (in person or by phone).</li>
+          <li><strong>Give someone access:</strong> ask the site owner to add them. They get their own sign-in and a temporary password.</li>
           <li><strong>"Number not checked":</strong> call or text that person to make sure the number still works, then press <strong>Still right</strong> → Publish. Each number is due every 90 days; changing a number counts as checking it.</li>
           <li><strong>Spanish:</strong> families can switch the card page to Spanish (phones set to Spanish open it in Spanish). Fill in the Spanish boxes in People and Shifts so roles and shift names read naturally; anything left blank shows in English.</li>
         </ul>
@@ -306,7 +339,7 @@
           <li><strong>"Not published" won't go away:</strong> press Publish and read the message under it.</li>
           <li><strong>Publishing isn't working:</strong> ask the site owner.</li>
           <li><strong>Someone else published first:</strong> Lock, sign in again, redo your change.</li>
-          <li><strong>Forgot the password:</strong> ask the site owner to reset it.</li>
+          <li><strong>Forgot your password:</strong> press <strong>Forgot password?</strong> on the sign-in screen to email the site owner, who resets it.</li>
         </ul>
         <h2 class="section">Security</h2>
         <p class="small">All data is encrypted before it leaves this page. Each card can unlock only the contacts and its own driver's name. The password never leaves this device.</p>
@@ -321,6 +354,23 @@
       <!-- Owner (only with #owner in the address) -->
       <section data-panel="owner" hidden>
         <p class="small">Only shown when the dashboard is opened as <code>dashboard.html#owner</code>. Supervisors don't need anything here. Details: <a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/owner-guide.md" target="_blank" rel="noopener noreferrer">owner guide</a>.</p>
+
+        <h2 class="section">People who can sign in</h2>
+        <p class="small">Each person signs in on the normal dashboard link with their own email and password, and History shows their name. Adding someone or resetting their password gives you a temporary password to hand over; they choose their own at first sign-in. Then publish.</p>
+        <ul id="account-list" class="rows"></ul>
+        <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
+        <div class="field-row">
+          <label>Email <input id="new-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="jane.doe@tenaris.com"></label>
+          <label>Name (shown in History) <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
+        </div>
+        <button id="add-account" class="btn btn-light" type="button">Add person</button>
+        <p id="account-msg" class="msg" role="status"></p>
+        <p id="token-advice" class="warn small" hidden><span id="token-advice-text"></span> <button id="token-advice-btn" class="link-btn" type="button">Replace GitHub token</button></p>
+
+        <h2 class="section">Shared supervisors' password</h2>
+        <p id="shared-status" class="small"></p>
+        <button id="shared-off" class="btn btn-light" type="button">Turn off the shared password</button>
+        <button id="shared-on" class="btn btn-light" type="button" hidden>Set a new shared password</button>
 
         <h2 class="section">GitHub connection</h2>
         <p id="gh-status" class="small"></p>
@@ -339,7 +389,7 @@
         <input id="owner-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
 
         <h2 class="section">Take away someone's access</h2>
-        <p class="small">Sets a new password <strong>and</strong> a new GitHub token. After publishing, delete the old token on GitHub (Settings → Developer settings → Fine-grained tokens).</p>
+        <p class="small">Someone with their own sign-in: <strong>Remove</strong> them above, then replace the GitHub token. Someone who knows the shared password: this button sets a new shared password <strong>and</strong> a new GitHub token (just the token if the shared password is off). After publishing, delete the old token on GitHub (Settings → Developer settings → Fine-grained tokens).</p>
         <button id="revoke-access" class="btn btn-light" type="button">New password and token</button>
       </section>
     </div>

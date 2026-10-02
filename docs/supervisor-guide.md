@@ -3,7 +3,7 @@
 How to keep the emergency cards up to date. You need two things from the site owner:
 
 - **The dashboard link:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html
-- **The dashboard password**
+- **Your sign-in:** your email and a temporary password (you choose your own the first time). Until the owner switches it off, the **shared supervisors' password** also works.
 
 You don't need a GitHub account, and you don't need to install anything. The dashboard works in any up-to-date browser on a phone or computer.
 
@@ -26,14 +26,27 @@ You don't need a GitHub account, and you don't need to install anything. The das
 ## 1. Signing in
 
 1. Open the dashboard link.
-2. Type the password and press **Unlock**. Your browser's password manager can save it.
+2. Type your **Email** and **Password** and press **Unlock**. Your browser's password manager can save them.
+   - **Shared supervisors' password:** leave **Email** empty and type the shared password. (Before anyone has their own sign-in, there's no Email box at all.)
 3. When you're done, press **Lock** (top right). This forgets everything on that device. If you have changes you haven't published, the browser warns you first.
 
-- **"Wrong password."** Check for typos. The suggested passwords are five lowercase words joined by hyphens, like `maple-orbit-canyon-lantern-fizzy`.
-- **Forgot the password?** Ask the site owner. They can set a new one without knowing the old one, and no cards stop working.
-- **The owner link** (`dashboard.html#owner`) is only for the site owner; the supervisors' password doesn't work there.
+### Your first sign-in
 
-> Nothing you type is sent anywhere until you press **Publish**, and the password itself never leaves your device.
+The site owner gives you a **temporary password** (five words joined by hyphens), in person or by phone.
+
+1. Sign in with your email and the temporary password.
+2. **Choose your own password.** Save the suggested one in your password manager (or type your own of at least 20 characters), tick **I've saved the password…**, then **Next**.
+3. The dashboard opens with one change waiting: "*Your name* chose a new password". Press **Publish**. **Until you publish, your new password doesn't work** and the temporary one stays in use. If you Lock without publishing, you'll be asked to choose a password again next time.
+
+### Problems signing in
+
+- **"Wrong email or password."** Check both for typos. The suggested passwords are five lowercase words joined by hyphens, like `maple-orbit-canyon-lantern-fizzy`.
+- **Forgot your password?** Type your email, then press **Forgot password?** under Unlock. It writes an email to the site owner asking for a reset; press Send. The owner gives you a new temporary password in person or by phone, and you choose a new password when you sign in. No cards stop working.
+- **"The shared supervisors' password is switched off."** Sign in with your own email and password. No sign-in yet? Ask the site owner.
+- **Forgot the shared password?** Ask the site owner.
+- **The owner link** (`dashboard.html#owner`) is only for the site owner; supervisor sign-ins don't work there.
+
+> Nothing you type is sent anywhere until you press **Publish**, and your password itself never leaves your device.
 
 ---
 
@@ -204,7 +217,7 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
    - no two people share a phone number
    - both text messages are filled in
    - every shift has a name and at least one day
-3. The first time you publish on a device, the dashboard asks for **your name**, for the History tab. You can change it later in **Settings**.
+3. With your own sign-in, History shows your name automatically. With the shared password, the first time you publish on a device the dashboard asks for **your name**, for the History tab; you can change it later in **Settings**.
 4. The badge goes **Publishing → Updating → Live**.
 
 **If someone else published first:** two people may edit at the same time. If another person publishes after you signed in, your publish is refused with *"Someone else published changes since you signed in, so yours were NOT published."* Nothing is overwritten. Note your changes, press **Lock**, sign in again (you'll see their changes), and redo yours.
@@ -215,19 +228,25 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
 ## 8. History
 
-Every publish adds an entry with the date and time, who published (the name in Settings), and what changed, e.g. "Edited Bob Two", "Changed shifts", "Added card: Jane Doe (1234) (Family)". The newest is at the top, and the last 200 entries are kept. History is stored encrypted with the data, so the public can't read it.
+Every publish adds an entry with the date and time, who published, and what changed. With a personal sign-in, "who" is the name the site owner gave that sign-in. With the shared password, it's the name typed in Settings, marked *(shared password)*; the owner's entries are marked *(owner)*. Examples of what changed: "Edited Bob Two", "Changed shifts", "Added card: Jane Doe (1234) (Family)". The newest is at the top, and the last 200 entries are kept. History is stored encrypted with the data, so the public can't read it.
 
 ---
 
 ## 9. Settings: your name and the password
 
-- **Your name:** shown in History next to what you publish. It's saved only in this browser on this device; it isn't secret.
-- **Change password:** sets a new supervisors' password for **everyone** (you don't need the old one; you're already signed in).
-  1. Press **Change password**.
+**Signed in with your own email:**
+
+- **Signed in as:** your name and email. History uses this name. If it's wrong, ask the site owner.
+- **Change my password:** changes only your own password; nobody else is affected.
+  1. Press **Change my password**.
   2. Save the suggested password (five random words), or type your own of at least 20 characters.
   3. Tick **I've saved the password…**, then press **Next**.
-  4. **Publish.** The old password stops working the moment you publish.
-  5. Tell everyone else who uses the dashboard the new password, in person or by phone.
+  4. **Publish.** Your old password stops working the moment you publish.
+
+**Signed in with the shared password:**
+
+- **Your name:** shown in History next to what you publish. It's saved only in this browser on this device; it isn't secret.
+- **Change the shared password:** sets a new shared password for **everyone** who uses it (you don't need the old one; you're already signed in). Personal sign-ins aren't affected. The steps are the same as above; then tell everyone who uses it the new password, in person or by phone.
 
 ---
 
@@ -259,7 +278,7 @@ Every publish adds an entry with the date and time, who published (the name in S
 **Cards** → **Rename** → **Publish.** The page shows the corrected name within about a minute. Reprint the card face; the tag stays the same.
 
 **Giving someone dashboard access**
-Send them the dashboard link and tell them the password, in person or by phone. Don't email the password.
+Ask the site owner to add them. The owner gives them a temporary password in person or by phone, and they choose their own at first sign-in.
 
 ---
 
@@ -267,7 +286,10 @@ Send them the dashboard link and tell them the password, in person or by phone. 
 
 | What you see | What to do |
 |---|---|
-| "Wrong password." | Check spelling. Still stuck? Ask the site owner to set a new one. |
+| "Wrong email or password." / "Wrong password." | Check spelling. Still stuck? Press **Forgot password?** (your own sign-in) or ask the site owner (shared password). |
+| "The shared supervisors' password is switched off." | Sign in with your own email and password. |
+| Asked to choose a password right after signing in | You signed in with a temporary password. Choose your own, then **Publish** ([section 1](#your-first-sign-in)). |
+| "The dashboard was just updated…", or it asks for an "Old admin key" | The site was just updated. Wait a few minutes and reload. |
 | "Wrong owner password." | You're on the owner link. Supervisors use the normal dashboard link (without `#owner`). |
 | "Publishing won't work right now: the site's GitHub connection has expired. Ask the site owner … to fix it." | Only the site owner can fix this. You can keep editing; publish once they've fixed it. |
 | "Nothing was published: …" | Read the rest of the message. It says whether to try again or ask the site owner. |

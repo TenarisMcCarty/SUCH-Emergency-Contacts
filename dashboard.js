@@ -1,12 +1,13 @@
 // dashboard.js — the admin dashboard (dashboard.html).
-// Sign in with the shared password → edit people, shifts and cards → Publish.
+// Sign in → edit people, shifts and cards → Publish.
 // Publish saves the encrypted contacts.enc.json straight to GitHub, using the GitHub
 // token that is stored (encrypted) inside that same file. Nothing is kept in this
-// browser except your name for the History tab.
+// browser except your name for the History tab (shared-password and owner sign-ins).
 //
-// Supervisors use dashboard.html with the shared dashboard password. The site owner opens
-// dashboard.html#owner and signs in with their own owner password (or recovery code); only then
-// does the Owner tab (GitHub token, owner password, recovery code, access) appear.
+// Supervisors use dashboard.html with their own email and password (or, until the owner switches it
+// off, the shared supervisors' password with Email left empty). The site owner opens dashboard.html#owner
+// and signs in with their own owner password (or recovery code); only then does the Owner tab
+// (people who can sign in, shared password, GitHub token, owner password, recovery code) appear.
 
 // The repository this copy of the site is published from: the live site, or the test copy ("-staging").
 const REPO = 'TenarisMcCarty/' + (location.hostname.endsWith('.github.io') ? location.pathname.split('/')[1] : 'SUCH-Emergency-Contacts');
@@ -19,23 +20,33 @@ const DEFAULT_MESSAGE = 'EMERGENCY – need to reach driver {driver}. Please cal
 const DEFAULT_MESSAGE_ES = 'EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.';
 const SITE = new URL('./', location.href).href; // card links point at the emergency page next to this one
 const OWNER = location.hash === '#owner'; // the owner link: shows the owner sign-in
+const RESET_TO = 'salil@tenaris.com'; // "Forgot password?" emails go here
 
 const $ = id => document.getElementById(id);
+// For a few minutes after an update, GitHub's cache can pair this script with an older dashboard.html,
+// so elements added for personal sign-ins are optional.
+const onClick = (id, fn) => { if ($(id)) $(id).onclick = fn; };
+const showIf = (id, on) => { if ($(id)) $(id).hidden = !on; };
 
 // Everything below lives only in this tab's memory.
-let admin = null;       // { key, salt, iterations } made from the supervisors' password
 let role = 'supervisor'; // 'owner' after signing in with the owner password, recovery code or setup
+let me = '';            // your email if you signed in with your own sign-in ('' = shared password or owner)
+let shared = null;      // the shared supervisors' password: { pub, login } (a key pair, private half locked
+                        // with the password), or null when switched off
+let accounts = [];      // people with their own sign-in: [{ email, name, pub, login, mustChange, addedAt, addedBy }]
+const keyRing = new Map(); // private keys this tab knows, by public key x (for the check before publishing)
+let tokenAdvice = '';   // why the GitHub token should be replaced (after removing someone), shown in the Owner tab
 let ownerAuth = null;   // owner session only: { key, salt, iterations } made from the owner password
 let ownerCode = null;   // owner session only: the recovery code (never published in readable form)
 let mustPublish = false; // the session began with changes that can't be discarded
 let github = null;      // { token, addedAt, addedBy }
 let owner = null;       // { contact, pub, at, login } — owner's contact, recovery public key, locked owner login
 let state = null;       // what you're editing: { message, contacts, schedule, backup, cards }
-let published = null;   // { state, text, admin, github, owner } as last published (null = never published)
-                        // (admin is null right after an upgrade or password reset: the old key isn't known)
+let published = null;   // { state, text, github, owner, shared, accounts, … } as last published (null = never published)
+                        // (shared is undefined when the file didn't say: very old data)
 let sha = null;         // GitHub's id for the current file (needed to replace it)
 let log = [];           // change history
-let pending = new Set(); // changes that aren't in `state`: upgrade, reset, password, token, recovery
+let pending = new Set(); // changes that aren't in `state`: upgrade, owner access, password, token, recovery
 let deployState = 'checking'; // checking | live | deploying | slow
 let ghProblem = null;   // text of a GitHub problem, if any
 let busy = false;
@@ -123,10 +134,28 @@ function suggestPassword() {
   return words.join('-');
 }
 
-async function setPassword(password) {
+// A new sign-in for a password: a new key pair, its private half locked with the password → { pub, login }.
+// (A new pair every time, so an old password, still in the repository history, opens nothing published later.)
+async function makeSignIn(password) {
   const salt = newSalt();
-  admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
+  const s = await newSignIn({ key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS });
+  keyRing.set(s.pub.x, s.d);
+  return { pub: s.pub, login: s.login };
 }
+
+// A new shared supervisors' password (also switches it back on).
+async function setPassword(password) {
+  shared = await makeSignIn(password);
+}
+
+// The email typed on a sign-in screen, lower case: '' = none (the shared password), null = not an email address.
+// "Emergency Cards" is what password managers saved as the user name before there were personal sign-ins.
+function typedEmail(id = 'email') {
+  const text = $(id) ? $(id).value.trim().toLowerCase() : '';
+  if (!text || text === 'emergency cards') return '';
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text) ? text : null;
+}
+
 
 // ================= GitHub =================
 
@@ -219,6 +248,18 @@ if ($('test-flag')) $('test-flag').hidden = !TEST;
 if ($('repo-name')) $('repo-name').textContent = REPO.split('/')[1];
 if (TEST) document.title = 'Test · ' + document.title;
 $('lost-supervisor').hidden = OWNER;
+showIf('forgot-row', !OWNER);
+
+// "Forgot password?" writes an email to the site owner asking for a reset, for the email typed above.
+function updateForgot() {
+  if (!$('forgot')) return;
+  const email = $('email') ? $('email').value.trim() : '';
+  const subject = 'Emergency Cards: password reset' + (email ? ' for ' + email : '');
+  const body = `Hello,\n\nPlease reset my Emergency Cards dashboard password.\n\nMy email: ${email || '(the email I sign in with)'}\n\nThank you.`;
+  $('forgot').href = `mailto:${RESET_TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+if ($('email')) $('email').addEventListener('input', updateForgot);
+updateForgot();
 
 // The Owner tab and badge appear only after signing in as the owner (owner password, recovery code or setup).
 function applyRole() {
@@ -229,6 +270,9 @@ function applyRole() {
 const OWNER_PW_INTRO = "Only you use this, on the owner link. It opens the Owner tab; the supervisors' password can't. Use the suggested one unless you have a good reason not to.";
 
 async function start() {
+  if (typeof buildFile4 !== 'function') { // an older cached crypto.js, right after an update
+    return say('loading', 'The dashboard was just updated. Wait a few minutes, then reload this page.', true);
+  }
   let file;
   try {
     file = await loadFile();
@@ -238,9 +282,17 @@ async function start() {
   sha = file && file.sha;
   if (!file) return setUp(false);
   const data = JSON.parse(file.text);
-  const firstVersion = !data.admin.salt;
+  const v4 = data.version >= 4;
+  const firstVersion = !v4 && !data.admin.salt;
   const ownerLogin = OWNER && !firstVersion && !!data.ownerLogin;
+  const sharedOn = !v4 || !!(data.wraps && data.wraps.password);
+  // Email is only asked for once someone has a personal sign-in (or the shared password is off).
+  const emails = v4 && (!sharedOn || Object.keys(data.people || {}).length > 0);
   show('login');
+  showIf('email-box', emails && !firstVersion && !ownerLogin);
+  showIf('reclaim-email-box', emails);
+  if (emails && $('reclaim-label')) $('reclaim-label').textContent = 'Password (yours, or the shared one)';
+  if ($('email-hint')) $('email-hint').textContent = sharedOn ? "Leave Email empty to use the shared supervisors' password." : 'The email the site owner added for you.';
   if (firstVersion) { // saved by the first version, which used an admin key
     $('login-title').textContent = 'Upgrade';
     $('login-intro').hidden = false;
@@ -252,8 +304,10 @@ async function start() {
     $('owner-intro').hidden = false;
   } else if (OWNER) {
     $('login-title').textContent = 'Set up owner access';
-    $('password-label').textContent = "Supervisors' dashboard password";
-    $('owner-intro').textContent = "Owner access isn't set up yet. Sign in once with the supervisors' dashboard password, then choose your own owner password.";
+    $('password-label').textContent = emails ? 'Password' : "Supervisors' dashboard password";
+    $('owner-intro').textContent = emails
+      ? "Owner access isn't set up yet. Sign in once with your email and password (or the supervisors' shared password, Email empty), then choose your own owner password."
+      : "Owner access isn't set up yet. Sign in once with the supervisors' dashboard password, then choose your own owner password.";
     $('owner-intro').hidden = false;
   }
   $('reclaim-box').hidden = !data.ownerLogin;
@@ -265,25 +319,35 @@ async function start() {
   };
 }
 
-// Sign in with the supervisors' password (or, on the owner link before owner access exists, set it up).
+// Sign in with an email and password, or the supervisors' shared password (Email empty).
+// On the owner link before owner access exists, this then sets up owner access.
 async function signIn(file) {
+  const email = typedEmail();
   const password = $('password').value.trim();
   if (!password) return;
+  if (email === null) return say('login-msg', "Enter your whole email address, or leave Email empty to use the shared supervisors' password.", true);
   say('login-msg', 'Unlocking…');
   try {
     const data = JSON.parse(file.text);
-    if (!data.admin.salt) return upgrade(password, file);
-    const key = await passwordKey(password, data.admin.salt, data.admin.iterations);
-    let opened;
+    if (!(data.version >= 4) && !data.admin.salt) return upgrade(password, file);
+    let result;
     try {
-      opened = await openAdmin(key, data);
-    } catch {
-      return say('login-msg', 'Wrong password.', true);
+      result = await openForSignIn(email, password, data);
+    } catch (e) {
+      if (e.code === 'shared-off') return say('login-msg', "The shared supervisors' password is switched off. Sign in with your own email and password.", true);
+      if (e.code === 'no-people') return say('login-msg', "Nobody has a personal sign-in yet. Leave Email empty and use the supervisors' shared password.", true);
+      return say('login-msg', email ? 'Wrong email or password.' : 'Wrong password.', true);
     }
-    admin = { key, salt: data.admin.salt, iterations: data.admin.iterations };
+    const { opened, keys } = result;
+    keyRing.set(keys.pub.x, keys.d);
+    const account = email && (opened.people || []).find(a => a.email === email);
+    if (email && !account) return say('login-msg', "Your sign-in isn't set up properly. Ask the site owner to reset your password.", true);
     $('password').value = '';
     say('login-msg', '');
-    if (!OWNER) return enterDashboard(opened, file.text);
+    if (!OWNER) {
+      if (account && account.mustChange) return firstPassword(opened, file.text, email);
+      return enterDashboard(opened, file.text, { me: email });
+    }
     owner = opened.owner || null; // keeps the owner's contact details in the next steps
     ownerAccessSteps('Owner access · step 1 of 2', 'Owner access · step 2 of 2', () => show('login'), async (rec, auth) => {
       enterDashboard(opened, file.text, { mustPublish: true });
@@ -296,27 +360,46 @@ async function signIn(file) {
   }
 }
 
-// Owner sign-in: owner password → recovery code → everything, including the supervisors' password key.
+const FIRST_PW_INTRO = 'The site owner gave you a temporary password. Choose your own now: only you will know it. Use the suggested one unless you have a good reason not to.';
+
+// First sign-in with a temporary password: choose your own before anything else. It takes effect when you publish,
+// so the dashboard opens with that change waiting and no Discard.
+function firstPassword(opened, publishedText, email) {
+  passwordStep('First sign-in', () => show('login'), async password => {
+    const s = await makeSignIn(password); // before the dashboard opens, so it opens with the change waiting
+    enterDashboard(opened, publishedText, { mustPublish: true, me: email });
+    useMySignIn(s);
+    refresh();
+    say('publish-msg', 'Publish now to save your new password. Until you do, only the temporary password works.');
+  }, { title: 'Choose your own password', intro: FIRST_PW_INTRO });
+}
+
+// Your own sign-in gets a new key pair, locked with the new password. Nobody else is affected.
+async function changeMyPassword(password) {
+  useMySignIn(await makeSignIn(password));
+}
+function useMySignIn(s) {
+  accounts = accounts.map(a => (a.email === me ? { ...a, pub: s.pub, login: s.login, mustChange: false } : a));
+}
+
+// Owner sign-in: owner password → recovery code → everything.
 async function ownerSignIn(file) {
   const password = $('password').value.trim();
   if (!password) return;
   say('login-msg', 'Unlocking…');
   let result;
   try {
-    result = await openOwner(password, JSON.parse(file.text));
+    result = await openWithOwnerPassword(password, JSON.parse(file.text));
   } catch {
     return say('login-msg', 'Wrong owner password. (Supervisors sign in on the normal dashboard link, without #owner.)', true);
   }
   $('password').value = '';
   say('login-msg', '');
-  admin = result.opened.adminKey;
   ownerAuth = result.auth;
   ownerCode = result.code;
   enterDashboard(result.opened, file.text);
   role = 'owner';
   applyRole();
-  published.ownerAuth = ownerAuth;
-  published.ownerCode = ownerCode;
 }
 
 // Owner forgot the owner password: the recovery code opens everything; choose a new owner password.
@@ -326,7 +409,7 @@ async function useRecovery(file) {
   say('recovery-msg', 'Checking…');
   let opened;
   try {
-    opened = await openRecovery(code, JSON.parse(file.text));
+    opened = await openWithCode(code, JSON.parse(file.text));
   } catch (e) {
     return say('recovery-msg', /no recovery/.test(e.message) ? e.message : 'Wrong recovery code.', true);
   }
@@ -336,39 +419,41 @@ async function useRecovery(file) {
   passwordStep('Recovery · new owner password', back, async ownerPassword => {
     const auth = await ownerAuthFrom(ownerPassword);
     const finish = async () => {
-      enterDashboard(opened, file.text, { mustPublish: true });
       ownerAuth = auth;
       ownerCode = code;
+      enterDashboard(opened, file.text, { mustPublish: true });
       role = 'owner';
       applyRole();
       owner = { ...(opened.owner || {}), login: await makeOwnerLogin(auth, code) };
       pending.add('owner-password');
       refresh();
     };
-    if (opened.adminKey) { admin = opened.adminKey; return finish(); }
+    if (opened.shared !== undefined) return finish();
     // Older data doesn't carry the supervisors' password key: set a new supervisors' password too.
     passwordStep("Recovery · new supervisors' password", back, async password => {
-      await setPassword(password);
       await finish();
-      pending.add('password');
+      await setPassword(password);
       refresh();
     }, { warning: true });
   }, { title: 'Choose a new owner password', intro: OWNER_PW_INTRO });
 }
 
-// Owner lost both the owner password and the recovery code: the supervisors' password plus a NEW
-// GitHub token from the repository's own account (which supervisors can't make) restores owner access.
+// Owner lost both the owner password and the recovery code: a supervisor sign-in (own email and password, or the
+// shared password) plus a NEW GitHub token from the repository's own account (which supervisors can't make)
+// restores owner access.
 async function reclaimOwner(file) {
+  const email = typedEmail('reclaim-email');
   const password = $('reclaim-password').value.trim();
   if (!password) return;
+  if (email === null) return say('reclaim-msg', 'Enter a whole email address, or leave Email empty for the shared password.', true);
   say('reclaim-msg', 'Checking…');
-  const data = JSON.parse(file.text);
-  let key, opened;
+  let opened;
   try {
-    key = await passwordKey(password, data.admin.salt, data.admin.iterations);
-    opened = await openAdmin(key, data);
+    const result = await openForSignIn(email, password, JSON.parse(file.text));
+    opened = result.opened;
+    keyRing.set(result.keys.pub.x, result.keys.d);
   } catch {
-    return say('reclaim-msg', "Wrong dashboard password.", true);
+    return say('reclaim-msg', email ? 'Wrong email or password.' : 'Wrong dashboard password.', true);
   }
   $('reclaim-password').value = '';
   say('reclaim-msg', '');
@@ -379,7 +464,6 @@ async function reclaimOwner(file) {
       return say('token-msg', 'Use a NEW token: make one on GitHub now. That proves you control the TenarisMcCarty account.', true);
     }
     ownerAccessSteps('Reclaim owner access · step 2 of 3', 'Reclaim owner access · step 3 of 3', back, async (rec, auth) => {
-      admin = { key, salt: data.admin.salt, iterations: data.admin.iterations };
       enterDashboard(opened, file.text, { mustPublish: true });
       github = { token, addedAt: today(), addedBy: myName() };
       await becomeOwner(rec, auth);
@@ -397,7 +481,7 @@ function setUp(startingOver) {
     tokenStep('Set up · step 2 of 4', cancel, token => {
       ownerAccessSteps('Set up · step 3 of 4', 'Set up · step 4 of 4', cancel, async (rec, auth) => {
         await setPassword(password);
-        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards: [], data: emptyData() }, null);
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards: [], data: emptyData(), shared, people: [] }, null);
         await becomeOwner(rec, auth);
         refresh();
       });
@@ -428,7 +512,7 @@ async function upgrade(oldKey, file) {
       ownerAccessSteps('Upgrade · step 3 of 4', 'Upgrade · step 4 of 4', back, async (rec, auth) => {
         await setPassword(password);
         const cards = opened.cards.map(c => ({ note: '', ...c }));
-        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards, data }, file.text, { mustPublish: true });
+        enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, owner: null, log: [], cards, data, shared, people: [] }, file.text, { mustPublish: true });
         await becomeOwner(rec, auth);
         pending.add('upgrade');
         refresh();
@@ -460,7 +544,7 @@ function emptyData() {
 
 function showStep(id, label, cancel) {
   show('setup');
-  for (const s of ['setup-password', 'setup-token', 'setup-recovery']) $(s).hidden = s !== id;
+  for (const s of ['setup-password', 'setup-token', 'setup-recovery', 'setup-temp']) showIf(s, s === id);
   $('setup-step').textContent = label;
   $('setup-cancel').hidden = !cancel;
   $('setup-cancel').onclick = cancel;
@@ -555,10 +639,15 @@ async function becomeOwner(rec, auth) {
 
 // mustPublish: the session started with changes that can't be undone (upgrade, owner access, recovery),
 // so Discard is hidden; publish them or Lock.
-function enterDashboard(opened, publishedText, { mustPublish: must = false } = {}) {
+// me: your email, if you signed in with your own sign-in.
+function enterDashboard(opened, publishedText, { mustPublish: must = false, me: email = '' } = {}) {
   github = opened.github;
   owner = opened.owner || null;
   log = opened.log || [];
+  shared = opened.shared || null;
+  accounts = opened.people || [];
+  me = email;
+  tokenAdvice = '';
   state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, whatsapp: false, ...opened.data, address: savedAddress(opened.data), cards: opened.cards };
   state.schedule.timeZone = YARD_TIME_ZONE;
   // When each number was last checked (kept with the dashboard data, not on the cards).
@@ -569,7 +658,8 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false } = {
     c.roleEs = c.roleEs || '';
     c.confirmed = checked[c.id] || lastPublish;
   }
-  published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner), ownerAuth, ownerCode } : null;
+  published = publishedText ? snapshot(publishedText) : null;
+  if (published && opened.shared === undefined) published.shared = undefined; // very old data: not known
   mustPublish = must;
   pending = new Set();
   deployState = published ? 'checking' : 'none';
@@ -579,6 +669,11 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false } = {
   renderAll();
   checkGitHub();
   watchDeploy();
+}
+
+// What was last published (for the change list and Discard).
+function snapshot(text) {
+  return { state: clone(state), text, github, owner: clone(owner), ownerAuth, ownerCode, shared: clone(shared), accounts: clone(accounts) };
 }
 
 $('lock').onclick = () => location.reload(); // forgets every key (warns about unpublished changes)
@@ -615,7 +710,7 @@ function renderAll() {
 function renderTab() {
   ({
     people: renderPeople, shifts: renderShifts, cards: renderCards, print: renderPrint,
-    history: renderHistory, settings: () => {}, help: () => {}, owner: renderOwner,
+    history: renderHistory, settings: renderSettings, help: () => {}, owner: renderOwner,
   })[tab]();
 }
 
@@ -650,13 +745,32 @@ function changes() {
     }
     for (const o of before.cards) if (!nowCards.has(o.key)) out.push(`Removed card: ${cardLabel(o)}`);
     if (((published.owner && published.owner.contact) || '') !== ((owner && owner.contact) || '')) out.push('Changed the owner contact');
+    out.push(...accountChanges());
   }
   if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection, owner access and shifts');
   if (pending.has('owner-access')) out.push('Set up owner access (your owner password and recovery code)');
   if (pending.has('owner-password')) out.push('Changed the owner password');
-  if (pending.has('password')) out.push("Changed the supervisors' password");
+  if (published) {
+    const was = published.shared, now = shared;
+    if (was === undefined) { if (now) out.push("Changed the supervisors' password"); } // very old data
+    else if (!now !== !was) out.push(now ? 'Switched the shared password back on' : 'Switched off the shared password');
+    else if (now && now.pub.x !== was.pub.x) out.push("Changed the supervisors' password");
+  }
   if (pending.has('token')) out.push('Replaced the GitHub token');
   if (pending.has('recovery')) out.push('Made a new recovery code');
+  return out;
+}
+
+// Personal sign-ins added, reset, changed or removed since the last publish.
+function accountChanges() {
+  const out = [];
+  const before = new Map(published.accounts.map(a => [a.email, a]));
+  for (const a of accounts) {
+    const o = before.get(a.email);
+    if (!o) out.push(`Added a sign-in for ${a.name} (${a.email})`);
+    else if (o.pub.x !== a.pub.x) out.push(a.mustChange ? `Reset the password for ${a.name}` : `${a.name} chose a new password`);
+  }
+  for (const o of published.accounts) if (!accounts.some(a => a.email === o.email)) out.push(`Removed the sign-in for ${o.name} (${o.email})`);
   return out;
 }
 
@@ -1029,9 +1143,12 @@ for (const [id, what] of [['dl-all', 'all'], ['dl-black', 'black'], ['dl-white',
 
 // ================= History =================
 
+// Personal sign-ins: the name the owner gave them. Shared password and owner: the name typed in Settings.
+const VIA = { shared: ' (shared password)', owner: ' (owner)' };
+
 function renderHistory() {
   $('history-list').replaceChildren(...log.slice().reverse().map(entry => el('li', {},
-    el('p', { class: 'eyebrow', textContent: `${when(entry.at)}${entry.who ? ' · ' + entry.who : ''}` }),
+    el('p', { class: 'eyebrow', textContent: `${when(entry.at)}${entry.who ? ' · ' + entry.who + (VIA[entry.via] || '') : ''}` }),
     el('ul', {}, ...entry.what.map(t => el('li', { textContent: t }))))));
   $('no-history').hidden = log.length > 0;
 }
@@ -1040,15 +1157,34 @@ function renderHistory() {
 
 const backToDash = () => { show('dash'); renderAll(); };
 
+// Your own sign-in: your name (set by the owner) and your password. Shared password: a typed name, and the
+// shared password (which the owner can also switch off).
+function renderSettings() {
+  const account = me && accounts.find(a => a.email === me);
+  showIf('name-box', !account);
+  showIf('me-box', !!account);
+  if (account && $('me-text')) $('me-text').textContent = `${account.name} (${account.email})`;
+  showIf('shared-box', !account && !!shared);
+}
+
 $('my-name').oninput = e => setMyName(e.target.value.trim());
 
 $('change-password').onclick = () => {
-  passwordStep('Change password', backToDash, async password => {
+  passwordStep('Change the shared password', backToDash, async password => {
     await setPassword(password);
-    pending.add('password');
     backToDash();
   }, { warning: true, title: "Choose the new supervisors' password" });
 };
+
+const MY_PW_INTRO = 'Only your own sign-in changes. Nobody else is affected. Use the suggested one unless you have a good reason not to.';
+
+onClick('change-my-password', () => {
+  passwordStep('Change my password', backToDash, async password => {
+    await changeMyPassword(password);
+    backToDash();
+    say('publish-msg', 'Publish to save your new password. Until you do, your old one still works.');
+  }, { title: 'Choose your new password', intro: MY_PW_INTRO });
+});
 
 // ================= Owner tab =================
 
@@ -1058,18 +1194,124 @@ function renderOwner() {
   const unpublished = ['recovery', 'upgrade', 'owner-access'].some(p => pending.has(p));
   $('recovery-status').textContent = `Set up ${owner.at || ''}${unpublished ? ' (not published yet)' : ''}. Keep it in your password manager.`;
   $('owner-contact').value = (owner && owner.contact) || '';
+  renderAccounts();
 }
+
+// People who can sign in with their own email and password, the shared password, and token advice.
+function renderAccounts() {
+  if (!$('account-list')) return;
+  const before = new Map((published ? published.accounts : []).map(a => [a.email, a]));
+  $('account-list').replaceChildren(...accounts.map(a => {
+    const o = before.get(a.email);
+    const status = !o ? 'Not published yet' : o.pub.x !== a.pub.x ? 'New password not published yet' : a.mustChange ? 'Not signed in yet' : 'Active';
+    return el('li', {},
+      el('div', {},
+        el('strong', { textContent: a.name }),
+        el('span', { textContent: a.email }),
+        el('span', { textContent: `Added ${a.addedAt}${a.addedBy ? ' by ' + a.addedBy : ''}` }),
+        el('span', { class: 'badge small ' + (status === 'Active' ? 'live' : 'changes'), textContent: status })),
+      el('div', { class: 'actions' },
+        el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Reset password', onclick: () => resetAccount(a) }),
+        el('button', { type: 'button', class: 'btn btn-danger btn-small', textContent: 'Remove', onclick: () => removeAccount(a) })));
+  }));
+  showIf('no-accounts', !accounts.length);
+  if ($('shared-status')) {
+    $('shared-status').textContent = shared
+      ? 'On: anyone who knows it can sign in by leaving Email empty.' + (accounts.length ? '' : ' To switch it off, first add at least one person above.')
+      : 'Off: only people listed above (and you, on the owner link) can sign in.';
+  }
+  showIf('shared-off', !!shared);
+  if ($('shared-off')) $('shared-off').disabled = !accounts.length;
+  showIf('shared-on', !shared);
+  showIf('token-advice', !!tokenAdvice);
+  if ($('token-advice-text')) $('token-advice-text').textContent = tokenAdvice;
+}
+
+onClick('add-account', async () => {
+  const email = typedEmail('new-email');
+  const name = $('new-name').value.trim();
+  if (!email) return say('account-msg', email === null ? "That doesn't look like an email address." : 'Enter their email address.', true);
+  if (!name) return say('account-msg', 'Enter their name, the way History should show it.', true);
+  if (accounts.some(a => a.email === email)) return say('account-msg', `${email} already has a sign-in. Use Reset password instead.`, true);
+  say('account-msg', '');
+  await issuePassword('Add person', { email, name, addedAt: today(), addedBy: myName() || 'the owner' }, () => {
+    $('new-email').value = $('new-name').value = '';
+    say('account-msg', `Added ${name}. Publish to switch on their sign-in.`);
+  });
+});
+
+function resetAccount(a) {
+  if (!confirm(`Reset the password for ${a.name}?\n\nYou'll get a new temporary password to give them. Their current password stops working once you publish.`)) return;
+  issuePassword('Reset password', a, () => say('account-msg', `New temporary password for ${a.name}. Publish to switch it on.`));
+}
+
+// A new key pair and temporary password (5 random words) for someone. The password is shown once; their
+// sign-in changes only when the owner confirms, and they must choose their own password at first sign-in.
+async function issuePassword(label, account, done) {
+  const password = suggestPassword();
+  const s = await makeSignIn(password);
+  showStep('setup-temp', label, backToDash);
+  $('temp-title').textContent = `Temporary password for ${account.name}`;
+  $('temp-for').textContent = `${account.name} (${account.email})`;
+  $('temp-password').textContent = password;
+  $('temp-saved').checked = false;
+  $('temp-next').disabled = true;
+  $('copy-temp').onclick = e => copy(password, e.currentTarget);
+  $('temp-saved').onchange = () => ($('temp-next').disabled = !$('temp-saved').checked);
+  $('temp-next').onclick = () => {
+    const entry = { email: account.email, name: account.name, pub: s.pub, login: s.login, mustChange: true, addedAt: account.addedAt, addedBy: account.addedBy };
+    accounts = accounts.some(a => a.email === entry.email) ? accounts.map(a => (a.email === entry.email ? entry : a)) : [...accounts, entry];
+    $('temp-password').textContent = ''; // shown once
+    done();
+    backToDash();
+  };
+}
+
+function removeAccount(a) {
+  if (!confirm(`Remove the sign-in for ${a.name} (${a.email})?\n\nOnce you publish, they can't open anything published after that.`)) return;
+  accounts = accounts.filter(x => x.email !== a.email);
+  tokenAdvice = `${a.name} could have seen the GitHub token while signed in. Replace it, and after publishing delete the old token on GitHub.` +
+    (shared ? " If they also know the shared supervisors' password, use New password and token below instead." : '');
+  say('account-msg', `Removed ${a.name}. Publish to switch off their sign-in.`);
+  renderAccounts();
+  refresh();
+}
+
+onClick('shared-off', () => {
+  if (!accounts.length) return;
+  if (!confirm("Switch off the shared supervisors' password?\n\nOnce you publish, it stops working: everyone must sign in with their own email and password. Check that every supervisor has their own sign-in first.\n\nYou can switch it back on later by setting a new shared password.")) return;
+  shared = null;
+  tokenAdvice = 'Anyone who knew the shared password could have seen the GitHub token. Replace it, and after publishing delete the old token on GitHub.';
+  renderAccounts();
+  refresh();
+});
+
+const SHARED_PW_INTRO = "Anyone who knows this password can sign in by leaving Email empty. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.";
+
+onClick('shared-on', () => {
+  passwordStep('Shared password', backToDash, async password => {
+    await setPassword(password);
+    backToDash();
+  }, { title: "Choose a new shared supervisors' password", intro: SHARED_PW_INTRO });
+});
 
 $('owner-contact').oninput = e => { owner = { ...(owner || {}), contact: e.target.value.trim() }; refresh(); };
 
-$('replace-token').onclick = () => {
+function replaceToken() {
+  const advised = !!tokenAdvice;
   tokenStep('Replace GitHub token', backToDash, token => {
     github = { token, addedAt: today(), addedBy: myName() };
     pending.add('token');
     ghProblem = null;
+    tokenAdvice = '';
     backToDash();
+    if (advised) alert(DELETE_OLD_TOKEN);
   });
-};
+}
+$('replace-token').onclick = replaceToken;
+onClick('token-advice-btn', replaceToken);
+
+const DELETE_OLD_TOKEN = 'After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → the old "Emergency cards dashboard" token → Delete.';
 
 $('change-owner-password').onclick = () => {
   passwordStep('Change owner password', backToDash, async ownerPassword => {
@@ -1089,17 +1331,18 @@ $('new-recovery').onclick = () => {
   });
 };
 
+// A new shared password and a new GitHub token. With the shared password switched off, just the token.
 $('revoke-access').onclick = () => {
-  passwordStep("Take away access · step 1 of 2: new supervisors' password", backToDash, password => {
-    tokenStep('Take away access · step 2 of 2', backToDash, async token => {
-      await setPassword(password);
-      github = { token, addedAt: today(), addedBy: myName() };
-      pending.add('password');
-      pending.add('token');
-      backToDash();
-      alert('After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → the old "Emergency cards dashboard" token → Delete.');
-    });
-  }, { warning: true, title: "Choose the new supervisors' password" });
+  const newToken = password => tokenStep(password ? 'Take away access · step 2 of 2' : 'Take away access: new GitHub token', backToDash, async token => {
+    if (password) await setPassword(password);
+    github = { token, addedAt: today(), addedBy: myName() };
+    pending.add('token');
+    tokenAdvice = '';
+    backToDash();
+    alert(DELETE_OLD_TOKEN);
+  });
+  if (!shared) return newToken(null);
+  passwordStep("Take away access · step 1 of 2: new supervisors' password", backToDash, newToken, { warning: true, title: "Choose the new supervisors' password" });
 };
 
 // ================= Publish =================
@@ -1120,7 +1363,21 @@ function problems() {
     if (!s.name.trim()) out.push(['shifts', 'Every shift needs a name.']);
     if (!s.days.length) out.push(['shifts', `${s.name || 'A shift'} has no days ticked.`]);
   }
+  if (!shared && !accounts.length) out.push(['owner', "Nobody but you could sign in: add a person or set a shared password (Owner tab)."]);
   return out;
+}
+
+// Before sending: the new file must open with every card, and with every private key this tab knows
+// (your own sign-in, the owner's recovery code, sign-ins made in this session). At least one must.
+async function checkFile(file) {
+  let opened = 0;
+  const ways = [...Object.values(file.people), ...(file.wraps.password ? [file.wraps.password] : [])];
+  for (const { wrap } of ways) {
+    if (keyRing.has(wrap.pub.x)) { await openWithWrap(keyRing.get(wrap.pub.x), wrap, file); opened++; }
+  }
+  if (file.recovery && ownerCode) { await openWithWrap(ownerCode, file.recovery, file); opened++; }
+  if (!opened || Object.keys(file.people).length !== accounts.length) throw new Error('The new file failed its check, so nothing was published. Lock, sign in again and redo your changes.');
+  for (const card of state.cards) await openCard(card.key, file);
 }
 
 async function publish() {
@@ -1129,7 +1386,9 @@ async function publish() {
     openTab(issues[0][0]);
     return say('publish-msg', 'Fix these first: ' + issues.map(i => i[1]).join(' '), true);
   }
-  let who = myName();
+  // Your own sign-in: History shows the name the owner gave you. Otherwise the name typed in Settings.
+  const account = me && accounts.find(a => a.email === me);
+  let who = account ? account.name : myName();
   if (!who) {
     who = (prompt('Your name, for the History tab:') || '').trim();
     if (!who) {
@@ -1154,12 +1413,11 @@ async function publish() {
       whatsapp: !!state.whatsapp,
     };
     const confirmed = Object.fromEntries(state.contacts.map(c => [c.id, c.confirmed || today()]));
-    const newLog = [...log, { at: new Date().toISOString(), who, what }].slice(-200);
-    // adminKey lets the owner (via the recovery block) publish without knowing the supervisors' password.
-    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog, adminKey: admin, confirmed } });
-    // Double-check before sending: the new file opens with the password and with every card.
-    await openAdmin(admin.key, file);
-    for (const card of state.cards) await openCard(card.key, file);
+    const via = account ? 'person' : role === 'owner' ? 'owner' : 'shared';
+    const newLog = [...log, { at: new Date().toISOString(), who, ...(account ? { email: account.email } : {}), via, what }].slice(-200);
+    // Every sign-in is carried forward by its public key, so publishing needs nobody else's password.
+    const file = await buildFile4({ data, cards: state.cards, extra: { github, owner, log: newLog, confirmed, shared, people: accounts } });
+    await checkFile(file);
     const text = JSON.stringify(file, null, 2) + '\n';
 
     const res = await gh(`/repos/${REPO}/contents/${FILE}`, {
@@ -1173,7 +1431,7 @@ async function publish() {
     log = newLog;
     pending.clear();
     state = { ...data, address: savedAddress(data), contacts: data.contacts.map(c => ({ ...c, confirmed: confirmed[c.id] })), cards: state.cards };
-    published = { state: clone(state), text, admin, github, owner: clone(owner), ownerAuth, ownerCode };
+    published = snapshot(text);
     mustPublish = false;
     deployState = 'deploying';
     ghProblem = null;
@@ -1193,7 +1451,10 @@ $('discard').onclick = () => {
   if (!confirm('Throw away all changes that are not published?')) return;
   state = clone(published.state);
   owner = clone(published.owner);
-  ({ admin, github, ownerAuth, ownerCode } = published);
+  shared = published.shared ? clone(published.shared) : null;
+  accounts = clone(published.accounts);
+  ({ github, ownerAuth, ownerCode } = published);
+  tokenAdvice = '';
   pending.clear();
   say('publish-msg', '');
   renderAll();

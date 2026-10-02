@@ -19,6 +19,18 @@
 //
 // The dashboard makes a brand-new data key on every publish, so a removed card can't
 // read anything published after it was removed.
+//
+// Version 4 (personal sign-ins) keeps "data" and "cards" exactly as above. Each publish also makes a
+// random admin key K: "admin" is locked with K, and K is wrapped once for every way in, always to an
+// ECDH P-256 public key, so whoever publishes needs nobody's password:
+//   "wraps.password"  The shared supervisors' password, if it's on: { login, wrap }. "login" is a private
+//            key locked with the password (PBKDF2), "wrap" is K locked for its public key.
+//   "people"  One { login, wrap } per person, filed under personSlot(email), with their own password.
+//   "recovery"  K, locked for the owner's recovery code. "ownerLogin" is unchanged.
+// Changing a password makes a new key pair, so an old password (still in the repository history)
+// can't open anything published afterwards. Someone removed never receives a later K.
+// The version 3 functions below (buildFile, openAdmin, openOwner, openRecovery) stay unchanged for
+// dashboard tabs still running older code; they can't open a version 4 file.
 
 const KEY_BYTES = 16; // 128-bit keys, written as 22 characters
 
@@ -167,4 +179,100 @@ async function openRecovery(code, file) {
 async function openAdmin(adminKey, file) {
   const { dataKey, ...rest } = await unlock(adminKey, file.admin);
   return { ...rest, data: await unlock(dataKey, file.data) };
+}
+
+// ================= Version 4: personal sign-ins =================
+// (Names here must not clash with app.js or dashboard.js: all these scripts share one global scope.)
+
+// Which "people" entry belongs to an email: a one-way fingerprint, so the public file shows no emails.
+async function personSlot(email) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('person:' + email.trim().toLowerCase()));
+  return toB64(new Uint8Array(hash)).slice(0, 16);
+}
+
+// A new sign-in (a person's, or the shared password's): a new key pair, its private half locked with
+// auth = { key, salt, iterations } made from the password. → { d, pub, login }
+async function newSignIn(auth) {
+  const { code: d, pub } = await newRecovery();
+  return { d, pub, login: { kdf: 'PBKDF2-SHA256', iterations: auth.iterations, salt: auth.salt, ...(await lock(auth.key, { d, pub })) } };
+}
+
+// A sign-in's private key from its password → { d, pub }. Throws on a wrong password.
+async function openLogin(password, login) {
+  return unlock(await passwordKey(password, login.salt, login.iterations), login);
+}
+
+// Open a version 4 file with a private key and the wrap made for its public key → { ...admin, data }.
+async function openWithWrap(d, wrap, file) {
+  const privateKey = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', ...wrap.pub, d: d.trim() }, EC, false, ['deriveBits']);
+  const { k } = await unlock(await sharedKey(privateKey, wrap.epk), wrap);
+  const { dataKey, ...rest } = await unlock(k, file.admin);
+  return { ...rest, data: await unlock(dataKey, file.data) };
+}
+
+// A version 3 admin block, read as version 4: the shared password becomes a sign-in locked with the same
+// password key (same salt), so the same password keeps working; nobody has a personal sign-in yet.
+// auth: the password key, if known (else the adminKey the block carries). shared stays undefined if neither.
+async function fromVersion3({ adminKey, ...opened }, auth) {
+  const s = (auth || adminKey) ? await newSignIn(auth || adminKey) : null;
+  return { opened: { ...opened, people: [], ...(s ? { shared: { pub: s.pub, login: s.login } } : {}) }, keys: s && { d: s.d, pub: s.pub } };
+}
+
+// Dashboard sign-in with an email and password, either format. email '' = the shared supervisors' password.
+// → { opened, keys } where keys = { d, pub } is the private key that opened it. Throws on a wrong password;
+// error.code 'shared-off' = the shared password is switched off, 'no-people' = nobody has a personal sign-in.
+async function openForSignIn(email, password, file) {
+  if (!(file.version >= 4)) {
+    if (email) throw Object.assign(new Error('Nobody has a personal sign-in yet.'), { code: 'no-people' });
+    const a = file.admin;
+    const auth = { key: await passwordKey(password, a.salt, a.iterations), salt: a.salt, iterations: a.iterations };
+    return fromVersion3(await openAdmin(auth.key, file), auth);
+  }
+  const entry = email ? (file.people || {})[await personSlot(email)] : (file.wraps || {}).password;
+  if (!entry && !email) throw Object.assign(new Error('The shared password is switched off.'), { code: 'shared-off' });
+  if (!entry) throw new Error('Wrong email or password.');
+  const { d } = await openLogin(password, entry.login);
+  return { opened: await openWithWrap(d, entry.wrap, file), keys: { d, pub: entry.wrap.pub } };
+}
+
+// Owner: the recovery code opens everything, either format.
+async function openWithCode(code, file) {
+  if (!(file.version >= 4)) return (await fromVersion3(await openRecovery(code, file))).opened;
+  if (!file.recovery) throw new Error('This data has no recovery code.');
+  return openWithWrap(code, file.recovery, file);
+}
+
+// Owner sign-in: owner password → recovery code → everything, either format. Throws on a wrong password.
+async function openWithOwnerPassword(password, file) {
+  const login = file.ownerLogin;
+  if (!login) throw new Error('Owner access is not set up.');
+  const key = await passwordKey(password, login.salt, login.iterations);
+  const { code } = await unlock(key, login);
+  return { code, auth: { key, salt: login.salt, iterations: login.iterations }, opened: await openWithCode(code, file) };
+}
+
+// Dashboard: build a version 4 contacts.enc.json.
+//   extra = everything only the dashboard should see, including
+//     shared: { pub, login } for the shared password, or null when it's switched off
+//     people: [{ email, pub, login, … }]
+//     owner:  { pub, login, … } or null
+async function buildFile4({ data, cards, extra }) {
+  const dataKey = newKey();
+  const k = newKey(); // the admin key: new on every publish
+  const byId = ([a], [b]) => (a < b ? -1 : 1); // order reveals nothing about when entries were added
+  const slots = [];
+  for (const card of cards) slots.push([await slotId(card.key), await lock(card.key, { dataKey, driver: card.driver })]);
+  const people = [];
+  for (const p of extra.people) people.push([await personSlot(p.email), { login: p.login, wrap: await lockForOwner(p.pub, { k }) }]);
+  const { shared, owner } = extra;
+  return {
+    version: 4,
+    data: await lock(dataKey, data),
+    cards: Object.fromEntries(slots.sort(byId)),
+    admin: await lock(k, { ...extra, dataKey, cards }),
+    wraps: shared ? { password: { login: shared.login, wrap: await lockForOwner(shared.pub, { k }) } } : {},
+    people: Object.fromEntries(people.sort(byId)),
+    ...(owner && owner.pub ? { recovery: await lockForOwner(owner.pub, { k }) } : {}),
+    ...(owner && owner.login ? { ownerLogin: owner.login } : {}),
+  };
 }

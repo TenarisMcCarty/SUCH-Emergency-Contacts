@@ -38,6 +38,9 @@ main.wrap { padding-top: 1.25rem; padding-bottom: 2rem; }
 .dash .wrap { max-width: 46rem; }
 
 h1 { margin: .2rem 0 0; font: 700 2rem/1.15 var(--font); letter-spacing: .01em; overflow-wrap: anywhere; }
+/* The family knows who the card is for: "Emergency contact" leads, the driver's name is secondary. */
+#t-for { font-size: 1.3rem; letter-spacing: .05em; color: var(--text); }
+h1#driver { margin-top: .1rem; font-size: 1.15rem; font-weight: 400; color: var(--gray); }
 h3 { margin: 0 0 .25rem; font: 700 1.15rem/1.3 var(--font); }
 p { margin: .5rem 0; }
 .eyebrow { margin: 0; font: 700 .8rem/1.3 var(--font); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -162,7 +165,6 @@ figcaption { margin-top: .4rem; font-size: .85rem; color: var(--muted); }
 .yard-row p { flex: 1; min-width: 11rem; margin: 0; overflow-wrap: anywhere; }
 .keep { margin-top: 1.75rem; display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; }
 .keep .link-btn { margin-top: 0; }
-.keep p { flex-basis: 100%; margin: .25rem 0 0; }
 
 /* ---- Dashboard extras ---- */
 .warn { padding: .6rem .8rem; background: #fff8eb; border-left: 4px solid var(--amber); }
@@ -172,3 +174,8 @@ figcaption { margin-top: .4rem; font-size: .85rem; color: var(--muted); }
 .gaps ul { margin: .25rem 0 0; padding-left: 1.1rem; }
 .ok { color: var(--green-dark); }
 .warn .link-btn { margin-top: 0; }
+
+/* ---- Dashboard: personal sign-ins ---- */
+#forgot-row { margin: .5rem 0 0; }
+#me-text { margin: .25rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+#account-list { margin-top: .5rem; }

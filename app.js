@@ -28,11 +28,9 @@ const TEXT = {
     whatsapp: name => `WhatsApp ${name}`,
     yard: 'Yard',
     directions: 'Directions',
-    saveContacts: 'Save numbers to Contacts',
+    saveContacts: 'Save yard numbers to Contacts',
     testSite: 'Test site',
-    addHome: 'Add to home screen',
-    homeApple: 'Tap Share (the square with an arrow), then Add to Home Screen.',
-    homeOther: 'Open the browser menu (⋮), then tap Add to Home screen.',
+    contactName: 'Tenaris Yard Supervisors',
     contactCompany: 'Tenaris',
     contactNote: driver => `Emergency contact for driver ${driver}`,
     tzNote: 'Shift times are Houston time.',
@@ -60,11 +58,9 @@ const TEXT = {
     whatsapp: name => `WhatsApp a ${name}`,
     yard: 'Patio',
     directions: 'Cómo llegar',
-    saveContacts: 'Guardar números en Contactos',
+    saveContacts: 'Guardar números del patio en Contactos',
     testSite: 'Sitio de prueba',
-    addHome: 'Agregar a la pantalla de inicio',
-    homeApple: 'Toque Compartir (el cuadro con una flecha) y luego Agregar a inicio.',
-    homeOther: 'Abra el menú del navegador (⋮) y toque Agregar a la pantalla principal.',
+    contactName: 'Supervisores del patio Tenaris',
     contactCompany: 'Tenaris',
     contactNote: driver => `Contacto de emergencia del conductor ${driver}`,
     tzNote: 'Los horarios de turno están en la hora de Houston.',
@@ -97,13 +93,12 @@ function applyLanguage() {
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
     'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry,
-    't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'add-home': t.addHome, 'test-flag': t.testSite };
+    't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'test-flag': t.testSite };
   for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
   if ($('lang')) {
     $('lang').textContent = t.switchTo;
     $('lang').lang = lang === 'en' ? 'es' : 'en';
   }
-  if ($('home-how') && !$('home-how').hidden) $('home-how').textContent = homeHow();
   if (card) { renderTextButtons(); renderOrder(); }
 }
 
@@ -224,7 +219,7 @@ function row(entry) {
   return li;
 }
 
-// ================= Yard address, Save to Contacts, home screen =================
+// ================= Yard address, Save to Contacts =================
 // Everything here is optional: an older cached page may not have these elements.
 
 // The yard address: what the dashboard saved as yardAddress ("" hides it), or the built-in one if nothing was
@@ -240,59 +235,51 @@ function renderExtras() {
     const q = encodeURIComponent(address);
     $('directions').href = apple() ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
   }
-  if ($('keep')) {
-    $('keep').hidden = false;
-    $('add-home').hidden = standalone(); // already opened from the home screen
-  }
+  if ($('keep')) $('keep').hidden = false;
+  // The home-screen button was removed; an older cached page may still have it and its note.
+  for (const id of ['add-home', 'home-how']) if ($(id)) $(id).hidden = true;
 }
 
 // vCard text needs \ , ; and line breaks escaped.
 const vEsc = s => String(s).replace(/[\\,;]/g, m => '\\' + m).replace(/\r?\n/g, '\\n');
 
-// One contact per person, named "Name (Tenaris)" so a call back from the yard shows who it is.
-function vcards() {
+// ONE contact, "Tenaris Yard Supervisors", holding everyone's number: iPhone only imports the first contact
+// of a file. Each number is labelled with the person's name and role the way iPhone and Google Contacts write
+// custom labels (itemN.TEL + itemN.X-ABLabel). Android's Contacts app keeps every number but may drop those
+// labels, so the note lists who is who as well. A call back from the yard then shows the contact's name.
+function vcard() {
   const t = T();
-  return card.contacts.map(c => {
-    const role = lang === 'es' ? (c.roleEs || '').trim() || c.role : c.role;
-    const name = `${c.name} (${t.contactCompany})`;
-    return ['BEGIN:VCARD', 'VERSION:3.0', `FN:${vEsc(name)}`, `N:;${vEsc(name)};;;`, `ORG:${vEsc(t.contactCompany)}`,
-      role ? `TITLE:${vEsc(role)}` : '', `TEL;TYPE=CELL:${clean(c.phone)}`,
-      yardAddress() ? `ADR;TYPE=WORK:;;${vEsc(yardAddress())};;;;` : '',
-      `NOTE:${vEsc(t.contactNote(card.driver))}`, 'END:VCARD'].filter(Boolean).join('\r\n');
-  }).join('\r\n') + '\r\n';
+  const people = card.contacts.map(c => {
+    const role = ((lang === 'es' && (c.roleEs || '').trim()) || c.role || '').trim();
+    return { label: role ? `${c.name} – ${role}` : c.name, phone: clean(c.phone) };
+  }).filter(p => p.phone);
+  const note = [t.contactNote(card.driver), ...people.map(p => `${p.label}: ${p.phone}`)].join('\n');
+  return ['BEGIN:VCARD', 'VERSION:3.0', `FN:${vEsc(t.contactName)}`, `N:;${vEsc(t.contactName)};;;`, `ORG:${vEsc(t.contactCompany)}`,
+    ...people.flatMap((p, i) => [`item${i + 1}.TEL;TYPE=CELL:${p.phone}`, `item${i + 1}.X-ABLabel:${vEsc(p.label)}`]),
+    yardAddress() ? `ADR;TYPE=WORK:;;${vEsc(yardAddress())};;;;` : '',
+    `NOTE:${vEsc(note)}`, 'END:VCARD'].filter(Boolean).join('\r\n') + '\r\n';
 }
 
+// iPhone: open the file the way Safari opens a link to a .vcf, so it shows the contact with Create New Contact.
+// Elsewhere (Android): download it as a named file; opening the download imports it into Contacts.
+// Browsers can't show a .vcf as a page, so the emergency page stays put either way.
+// The file is made on the phone; nothing is sent anywhere.
+let vcardLink = '';
 if ($('save-contacts')) $('save-contacts').onclick = () => {
   if (!card) return;
+  if (vcardLink) URL.revokeObjectURL(vcardLink); // the previous tap's file, long since opened
+  vcardLink = URL.createObjectURL(new Blob([vcard()], { type: 'text/vcard;charset=utf-8' }));
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([vcards()], { type: 'text/vcard;charset=utf-8' }));
-  a.download = 'tenaris-emergency-contacts.vcf';
+  a.href = vcardLink;
+  if (!apple()) a.download = 'tenaris-yard-supervisors.vcf';
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 60 * 1000);
 };
 
-const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-const homeHow = () => (apple() ? T().homeApple : T().homeOther);
-
-// Android Chrome offers its own "Install" prompt; other browsers need the steps spelled out.
-let installPrompt = null;
-addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
-addEventListener('appinstalled', () => { if ($('add-home')) $('add-home').hidden = true; });
-
-if ($('add-home')) $('add-home').onclick = async () => {
-  if (installPrompt) {
-    const p = installPrompt;
-    installPrompt = null;
-    try {
-      await p.prompt();
-      if ((await p.userChoice).outcome === 'accepted') return;
-    } catch {} // prompt refused: show the steps instead
-  }
-  $('home-how').textContent = homeHow();
-  $('home-how').hidden = false;
-};
+// The page has no install button. Stop Chrome on Android from showing its own install bar over the emergency
+// page; anyone can still add the page to the home screen from the browser menu.
+addEventListener('beforeinstallprompt', e => e.preventDefault());
 
 $('retry').onclick = load;
 addEventListener('hashchange', load);
