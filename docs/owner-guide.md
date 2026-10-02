@@ -44,7 +44,7 @@ The supervisors' password does **not** work on the owner link and can't open the
 | **GitHub token** | Stored encrypted in the data. Nobody needs to see it again. | Publishing | Make a new one ([section 4](#4-the-github-token)) | Delete it on GitHub, make a new one ([section 9](#9-taking-away-someones-access)) |
 | **GitHub account** (TenarisMcCarty) | You | The repository, and reclaiming owner access | Recover it through GitHub | Anyone with it can change the website. Keep two-factor authentication on. |
 
-Use the **suggested** passwords (five random words). Your own passwords must be at least 20 characters.
+Use the **suggested** passwords (two words, two digits and a symbol). Your own passwords need at least 8 characters, with a number and a symbol.
 
 ---
 
@@ -239,7 +239,7 @@ It's all on the owner link → **Owner** tab → **People who can sign in**. Eac
 ### Adding someone
 
 1. Type their **Email** and their **Name**, the way History should show it (e.g. `Jane Doe`) → **Add person**.
-2. **Temporary password for Jane Doe:** copy it (five random words), tick **I've copied it or written it down**, then **Done**. It's shown only this once. **Cancel** adds nobody.
+2. **Temporary password for Jane Doe:** copy it (two words, two digits and a symbol), tick **I've copied it or written it down**, then **Done**. It's shown only this once. **Cancel** adds nobody.
 3. **Publish.** The change list shows "Added a sign-in for Jane Doe (…)". Until you publish, the temporary password doesn't work.
 4. Give them the normal dashboard link, their email and the temporary password, in person or by phone. Never by email or chat.
 5. At their first sign-in they must choose their own password, then publish it. Until they publish, only the temporary password works.

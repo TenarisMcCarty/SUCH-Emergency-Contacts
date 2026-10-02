@@ -32,10 +32,10 @@ You don't need a GitHub account, and you don't need to install anything. The das
 
 ### Your first sign-in
 
-The site owner gives you a **temporary password** (five words joined by hyphens), in person or by phone.
+The site owner gives you a **temporary password** (two words, two digits and a symbol, e.g. maple-river-47!), in person or by phone.
 
 1. Sign in with your email and the temporary password.
-2. **Choose your own password.** Save the suggested one in your password manager (or type your own of at least 20 characters), tick **I've saved it in a password manager**, then **Next**.
+2. **Choose your own password.** Save the suggested one in your password manager (or type your own: at least 8 characters, with a number and a symbol), tick **I've saved it in a password manager**, then **Next**.
 3. The dashboard opens with one change waiting: "*Your name* chose a new password". Press **Publish**. **Until you publish, your new password doesn't work** and the temporary one stays in use. If you Lock without publishing, you'll be asked to choose a password again next time.
 
 ### Problems signing in
@@ -234,7 +234,7 @@ Every publish adds an entry with the date and time, who published, and what chan
 - **Signed in as:** your name and email. History uses this name. If it's wrong, ask the site owner.
 - **Change my password:** changes only your own password; nobody else is affected.
   1. Press **Change my password**.
-  2. Save the suggested password (five random words), or type your own of at least 20 characters.
+  2. Save the suggested password, or type your own: at least 8 characters, with a number and a symbol.
   3. Tick **I've saved it in a password manager**, then press **Next**.
   4. **Publish.** Your old password stops working the moment you publish.
 

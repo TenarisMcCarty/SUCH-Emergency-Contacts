@@ -123,15 +123,24 @@ function normalizePhone(text) {
 // "+15555550100" → "555-555-0100" (how it's printed on cards)
 const formatPhone = p => (p ? p.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : '');
 
-// A strong password: 5 random words (~64 bits). Rejection sampling keeps every word equally likely.
-function suggestPassword() {
-  const words = [];
-  const limit = Math.floor(2 ** 32 / WORDS.length) * WORDS.length;
-  while (words.length < 5) {
+// Passwords: at least 8 characters, with at least one number and one symbol.
+const PASSWORD_RULE = 'at least 8 characters, with a number and a symbol';
+const passwordOk = pw => pw.length >= 8 && /\d/.test(pw) && /[^\p{L}\p{N}\s]/u.test(pw);
+
+// A random whole number below `max`. Rejection sampling keeps every value equally likely.
+function randomBelow(max) {
+  const limit = Math.floor(2 ** 32 / max) * max;
+  for (;;) {
     const n = crypto.getRandomValues(new Uint32Array(1))[0];
-    if (n < limit) words.push(WORDS[n % WORDS.length]);
+    if (n < limit) return n % max;
   }
-  return words.join('-');
+}
+
+// A suggested or temporary password, easy to read out and type: two random words, two digits and a
+// symbol, e.g. "maple-river-47!" (about 36 bits).
+function suggestPassword() {
+  const word = () => WORDS[randomBelow(WORDS.length)];
+  return `${word()}-${word()}-${randomBelow(10)}${randomBelow(10)}${'!#$%&*?@'[randomBelow(8)]}`;
 }
 
 // A new sign-in for a password: a new key pair, its private half locked with the password → { pub, login }.
@@ -563,7 +572,7 @@ function passwordStep(label, cancel, done, { warning = false, title = 'Choose th
   $('pw-saved').onchange = () => ($('pw-next').disabled = !$('pw-saved').checked);
   $('pw-next').onclick = () => {
     const own = $('own-password').value.trim();
-    if (own && own.length < 20) return say('pw-msg', 'Your own password needs at least 20 characters, or clear it to use the suggested one.', true);
+    if (own && !passwordOk(own)) return say('pw-msg', `Use ${PASSWORD_RULE}, or clear it to use the suggested one.`, true);
     say('pw-msg', 'Saving…');
     done(own || suggestion);
   };
@@ -1245,7 +1254,7 @@ function resetAccount(a) {
   issuePassword('Reset password', a, () => say('account-msg', `New temporary password for ${a.name}. Publish to switch it on.`));
 }
 
-// A new key pair and temporary password (5 random words) for someone. The password is shown once; their
+// A new key pair and temporary password (see suggestPassword) for someone. The password is shown once; their
 // sign-in changes only when the owner confirms, and they must choose their own password at first sign-in.
 async function issuePassword(label, account, done) {
   const password = suggestPassword();
