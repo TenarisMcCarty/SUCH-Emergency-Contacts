@@ -19,15 +19,16 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <img class="brand-logo" src="logo.svg" alt="Tenaris">
-      <span class="product">Driver emergency contact</span>
+      <span id="t-product" class="product">Driver emergency contact</span>
+      <button id="lang" class="topbar-btn" type="button" lang="es">Español</button>
     </div>
   </header>
 
   <!-- Always visible, even if everything else fails. -->
   <div class="alert-911">
     <div class="wrap alert-inner">
-      <p>Life-threatening emergency?</p>
-      <a class="btn btn-911" href="tel:911">Call 911</a>
+      <p id="t-911">Life-threatening emergency?</p>
+      <a id="t-call911" class="btn btn-911" href="tel:911">Call 911</a>
     </div>
   </div>
 
@@ -35,11 +36,11 @@
     <p id="loading" class="status" role="status">Loading…</p>
 
     <section id="card" hidden>
-      <p class="eyebrow">Emergency contact for</p>
+      <p id="t-for" class="eyebrow">Emergency contact for</p>
       <h1 id="driver"></h1>
 
       <a id="text-all" class="btn btn-text">Text all contacts</a>
-      <p class="hint">Then tap <strong>Send</strong>. The text comes from your phone, so they can call you back.</p>
+      <p id="hint" class="hint">Then tap <strong>Send</strong>. The text comes from your phone, so they can call you back.</p>
       <a id="text-retry" class="small-link" hidden>Didn't get all of them? Try again</a>
 
       <h2 id="main-label" class="section">On shift now</h2>
@@ -50,7 +51,7 @@
       </div>
 
       <div id="also-section">
-        <h2 class="section">Also working now</h2>
+        <h2 id="t-also" class="section">Also working now</h2>
         <ul id="also-list" class="rows"></ul>
       </div>
 
@@ -64,13 +65,14 @@
     </section>
 
     <section id="error" hidden>
-      <p class="error-text">This card couldn't be loaded.</p>
-      <p class="error-text">Call the backup number printed on your card.</p>
+      <p id="t-error1" class="error-text">This card couldn't be loaded.</p>
+      <p id="t-error2" class="error-text">Call the backup number printed on your card.</p>
       <button id="retry" class="btn btn-dark" type="button">Retry</button>
     </section>
 
     <noscript>
       <p class="error-text">This card couldn't be loaded. Call the backup number printed on your card.</p>
+      <p class="error-text" lang="es">No se pudo cargar esta tarjeta. Llame al número de respaldo impreso en su tarjeta.</p>
     </noscript>
   </main>
 </body>

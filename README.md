@@ -69,6 +69,15 @@ The files were checked digitally:
 
 Nothing has been physically printed yet, so print and scan-test one card before making a batch.
 
+## English and Spanish
+
+Everything families see after tapping or scanning comes in English and Spanish. That covers the 911 banner, buttons, headings, shift times, notes, the error screen and the pre-filled text message.
+
+- **Which language opens:** phones set to Spanish open the page in Spanish. A button in the header switches language, and the phone remembers the choice.
+- **Dashboard fields:** **People** has a Spanish text message and an optional Spanish role per person. **Shifts** has an optional Spanish name per shift.
+- **Shift names:** common names like "1st shift" and "Day (8–5)" translate automatically. Anything else left blank shows in English.
+- **Printed cards:** still English only.
+
 ## Shifts
 
 The default shifts are 1st 6:00–14:00, 2nd 14:00–22:00, 3rd 22:00–6:00 (all week), and Day 8:00–17:00 (Mon–Fri). Change them any time. The big Call button goes to the person on the **first** shift in the list that's on right now. If nobody is on shift, it goes to the fallback person. Times use the yard's time zone, wherever the family is. **Check a time** on the Shifts tab shows who a card would call at any moment.

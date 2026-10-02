@@ -13,6 +13,7 @@ const FILE = 'contacts.enc.json';
 const ITERATIONS = 600000; // password stretching: makes guessing the password very slow
 const MAX_PEOPLE = 10;
 const DEFAULT_MESSAGE = 'EMERGENCY – need to reach driver {driver}. Please call me back at this number.';
+const DEFAULT_MESSAGE_ES = 'EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.';
 const SITE = new URL('./', location.href).href; // card links point at the emergency page next to this one
 const COMMON_ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'America/Los_Angeles', 'America/Mexico_City'];
 const OWNER = location.hash === '#owner';
@@ -301,6 +302,7 @@ async function upgrade(oldKey, file) {
   const data = withSchedule(opened.data);
   data.schedule = { ...emptyData().schedule, fallback: data.schedule.fallback };
   data.backup = '';
+  data.messageEs = DEFAULT_MESSAGE_ES;
   delete data.primary;
   const back = () => show('login');
   passwordStep('Upgrade · step 1 of 3', back, password => {
@@ -318,10 +320,11 @@ async function upgrade(oldKey, file) {
 }
 
 function emptyData() {
-  const contacts = Array.from({ length: 6 }, () => ({ id: newId(), name: '', role: '', phone: '' }));
+  const contacts = Array.from({ length: 6 }, () => ({ id: newId(), name: '', role: '', roleEs: '', phone: '' }));
   const every = [0, 1, 2, 3, 4, 5, 6];
   return {
     message: DEFAULT_MESSAGE,
+    messageEs: DEFAULT_MESSAGE_ES,
     contacts,
     backup: '',
     schedule: {
@@ -403,7 +406,8 @@ function enterDashboard(opened, publishedText) {
   github = opened.github;
   owner = opened.owner || null;
   log = opened.log || [];
-  state = { backup: '', ...opened.data, cards: opened.cards };
+  state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, ...opened.data, cards: opened.cards };
+  for (const c of state.contacts) c.roleEs = c.roleEs || '';
   published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner) } : null;
   pending = new Set();
   deployState = published ? 'checking' : 'none';
@@ -456,10 +460,11 @@ function changes() {
     for (const c of state.contacts) {
       const o = old.get(c.id);
       if (!o) out.push('Added ' + personName(c));
-      else if (o.name !== c.name || o.role !== c.role || o.phone !== c.phone) out.push('Edited ' + personName(c));
+      else if (o.name !== c.name || o.role !== c.role || o.roleEs !== c.roleEs || o.phone !== c.phone) out.push('Edited ' + personName(c));
     }
     for (const o of before.contacts) if (!now.has(o.id)) out.push('Removed ' + personName(o));
     if (before.message !== state.message) out.push('Changed the text message');
+    if (before.messageEs !== state.messageEs) out.push('Changed the Spanish text message');
     if (JSON.stringify(before.schedule) !== JSON.stringify(state.schedule)) out.push('Changed shifts');
     if ((before.backup || '') !== (state.backup || '')) out.push('Changed the backup line');
     const oldCards = new Map(before.cards.map(c => [c.key, c]));
@@ -545,6 +550,8 @@ function renderPeople() {
       el('div', { class: 'field-row' },
         input('Name', 'name'),
         input('Role', 'role', { placeholder: 'e.g. 1st shift lead' })),
+      el('div', { class: 'field-row' },
+        input('Role in Spanish (optional)', 'roleEs', { placeholder: 'e.g. Supervisor del 1er turno', lang: 'es' })),
       input('Phone', 'phone', {
         type: 'tel', placeholder: '(555) 555-0100',
         onchange: e => { const p = normalizePhone(e.target.value); if (p) { c.phone = e.target.value = p; refresh(); } },
@@ -553,10 +560,11 @@ function renderPeople() {
   }));
   $('add-person').disabled = state.contacts.length >= MAX_PEOPLE;
   $('message').value = state.message;
+  $('message-es').value = state.messageEs;
 }
 
 $('add-person').onclick = () => {
-  state.contacts.push({ id: newId(), name: '', role: '', phone: '' });
+  state.contacts.push({ id: newId(), name: '', role: '', roleEs: '', phone: '' });
   renderPeople();
   refresh();
   const boxes = document.querySelectorAll('#people-list fieldset');
@@ -573,6 +581,7 @@ function removePerson(c) {
 }
 
 $('message').oninput = e => { state.message = e.target.value; refresh(); };
+$('message-es').oninput = e => { state.messageEs = e.target.value; refresh(); };
 
 // ================= Shifts =================
 
@@ -593,9 +602,13 @@ function renderShifts() {
 function shiftBox(shift) {
   const changed = () => { refresh(); renderPreview(); };
   const legend = el('legend', { textContent: shift.name || 'Shift' });
+  const autoEs = () => { const es = shiftName({ ...shift, nameEs: '' }, 'es'); return es !== shift.name ? `${es} (automatic)` : 'e.g. Turno de noche'; };
+  const esName = el('input', { value: shift.nameEs || '', placeholder: autoEs(), lang: 'es', oninput: e => { shift.nameEs = e.target.value; changed(); } });
   return el('fieldset', { class: 'shift' },
     legend,
-    el('label', {}, 'Name', el('input', { value: shift.name, oninput: e => { shift.name = e.target.value; legend.textContent = shift.name || 'Shift'; changed(); } })),
+    el('div', { class: 'field-row' },
+      el('label', {}, 'Name', el('input', { value: shift.name, oninput: e => { shift.name = e.target.value; legend.textContent = shift.name || 'Shift'; esName.placeholder = autoEs(); changed(); } })),
+      el('label', {}, 'Name in Spanish (optional)', esName)),
     el('div', { class: 'field-row' },
       el('label', {}, 'Starts', el('input', { type: 'time', value: shift.start, onchange: e => { if (e.target.value) shift.start = e.target.value; changed(); } })),
       el('label', {}, 'Ends', el('input', { type: 'time', value: shift.end, onchange: e => { if (e.target.value) shift.end = e.target.value; changed(); } }))),
@@ -861,6 +874,7 @@ function problems() {
   const phones = state.contacts.map(c => normalizePhone(c.phone)).filter(Boolean);
   if (new Set(phones).size !== phones.length) out.push(['people', 'Two people have the same phone number.']);
   if (!state.message.trim()) out.push(['people', 'Write the text message.']);
+  if (!state.messageEs.trim()) out.push(['people', 'Write the Spanish text message.']);
   for (const s of state.schedule.shifts) {
     if (!s.name.trim()) out.push(['shifts', 'Every shift needs a name.']);
     if (!s.days.length) out.push(['shifts', `${s.name || 'A shift'} has no days ticked.`]);
@@ -891,7 +905,8 @@ async function publish() {
   try {
     const data = {
       message: state.message.trim(),
-      contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), phone: normalizePhone(c.phone) })),
+      messageEs: state.messageEs.trim(),
+      contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), roleEs: c.roleEs.trim(), phone: normalizePhone(c.phone) })),
       schedule: { ...state.schedule, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
       backup: state.backup || '',
     };

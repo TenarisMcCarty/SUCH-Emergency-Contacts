@@ -153,11 +153,13 @@
 
       <!-- People -->
       <section data-panel="people">
-        <p class="small">Everyone here gets the group text. Who gets the big Call button depends on the <strong>Shifts</strong> tab.</p>
+        <p class="small">Everyone here gets the group text. Who gets the big Call button depends on the <strong>Shifts</strong> tab. Families can switch the page to Spanish; fill in the Spanish boxes so roles read naturally there too.</p>
         <div id="people-list"></div>
         <button id="add-person" class="btn btn-light" type="button">Add person</button>
         <h2 class="section">Text message</h2>
         <textarea id="message" rows="3"></textarea>
+        <label for="message-es">In Spanish (sent when the family uses the Spanish page)</label>
+        <textarea id="message-es" rows="3" lang="es"></textarea>
         <p class="small muted">{driver} is replaced with the driver's name from the card.</p>
       </section>
 
@@ -275,6 +277,7 @@
           <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
           <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. The tag doesn't need rewriting, but print a new card face.</li>
           <li><strong>Give someone access:</strong> send them this page's link and tell them the password (in person or by phone).</li>
+          <li><strong>Spanish:</strong> families can switch the card page to Spanish (phones set to Spanish open it in Spanish). Fill in the Spanish boxes in People and Shifts so roles and shift names read naturally; anything left blank shows in English.</li>
         </ul>
         <h2 class="section">If something's wrong</h2>
         <ul>

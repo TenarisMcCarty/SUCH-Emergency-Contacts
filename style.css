@@ -67,7 +67,7 @@ code { font: .9em ui-monospace, Menlo, Consolas, monospace; }
 /* ---- Emergency page ---- */
 .alert-911 { background: var(--red); color: #fff; }
 .alert-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: .75rem; padding-bottom: .75rem; }
-.alert-inner p { margin: 0; font: 700 1.15rem/1.25 var(--font-bold-cn); }
+.alert-inner p { flex: 1; min-width: 0; margin: 0; font: 700 1.15rem/1.25 var(--font-bold-cn); }
 .hint { margin-top: .6rem; font-size: .95rem; color: var(--muted); }
 .small-link { display: inline-block; margin-top: .25rem; font-size: .95rem; color: var(--blue); }
 .main-contact { padding: 1rem; background: var(--soft); border-left: 4px solid var(--green); }

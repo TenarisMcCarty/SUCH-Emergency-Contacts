@@ -11,10 +11,24 @@ function toMinutes(hhmm) {
   return h * 60 + m;
 }
 
-// "14:00" → "2:00 PM"
-function timeLabel(hhmm) {
+// "14:00" → "2:00 PM" (Spanish: "2:00 p. m.")
+function timeLabel(hhmm, lang = 'en') {
   const [h, m] = hhmm.split(':').map(Number);
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  const time = `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`;
+  if (lang === 'es') return `${time} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+  return `${time} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+// Spanish for the usual shift names, used when no Spanish name was typed in the dashboard.
+const SHIFT_NAMES_ES = {
+  '1st shift': '1er turno', '2nd shift': '2º turno', '3rd shift': '3er turno',
+  'day (8–5)': 'Diurno (8–5)', 'day (8-5)': 'Diurno (8–5)', 'day': 'Diurno', 'day shift': 'Turno de día',
+  'night': 'Nocturno', 'night shift': 'Turno de noche', 'weekend': 'Fin de semana',
+};
+
+function shiftName(shift, lang = 'en') {
+  if (lang !== 'es') return shift.name;
+  return (shift.nameEs || '').trim() || SHIFT_NAMES_ES[shift.name.trim().toLowerCase()] || shift.name;
 }
 
 // Day (0 = Monday … 6 = Sunday) and minutes since midnight, in the yard's time zone.
@@ -77,7 +91,15 @@ function withSchedule(data) {
   return { ...data, contacts, schedule };
 }
 
-// "1st shift lead · 1st shift, until 2:00 PM"
-function detailLine({ contact, shift }) {
-  return [contact.role, shift && `${shift.name}, until ${timeLabel(shift.end)}`].filter(Boolean).join(' · ');
+// "1st shift lead · 1st shift, until 2:00 PM" (Spanish: "… · 1er turno, hasta las 2:00 p. m.")
+function detailLine({ contact, shift }, lang = 'en') {
+  const role = lang === 'es' ? (contact.roleEs || '').trim() || contact.role : contact.role;
+  let until = '';
+  if (shift) {
+    const hour = Number(shift.end.split(':')[0]) % 12;
+    until = lang === 'es'
+      ? `${shiftName(shift, lang)}, hasta ${hour === 1 ? 'la' : 'las'} ${timeLabel(shift.end, lang)}`
+      : `${shift.name}, until ${timeLabel(shift.end)}`;
+  }
+  return [role, until].filter(Boolean).join(' · ');
 }
