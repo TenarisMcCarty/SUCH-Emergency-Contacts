@@ -247,7 +247,6 @@ const TEST = typeof TEST_SITE !== 'undefined' && TEST_SITE;
 if ($('test-flag')) $('test-flag').hidden = !TEST;
 if ($('repo-name')) $('repo-name').textContent = REPO.split('/')[1];
 if (TEST) document.title = 'Test · ' + document.title;
-$('lost-supervisor').hidden = OWNER;
 showIf('forgot-row', !OWNER);
 
 // "Forgot password?" writes an email to the site owner asking for a reset, for the email typed above.
@@ -267,7 +266,7 @@ function applyRole() {
   document.querySelector('[data-tab="owner"]').hidden = role !== 'owner';
 }
 
-const OWNER_PW_INTRO = "Only you use this, on the owner link. It opens the Owner tab; the supervisors' password can't. Use the suggested one unless you have a good reason not to.";
+const OWNER_PW_INTRO = 'For the owner link only.';
 
 async function start() {
   if (typeof buildFile4 !== 'function') { // an older cached crypto.js, right after an update
@@ -291,8 +290,7 @@ async function start() {
   show('login');
   showIf('email-box', emails && !firstVersion && !ownerLogin);
   showIf('reclaim-email-box', emails);
-  if (emails && $('reclaim-label')) $('reclaim-label').textContent = 'Password (yours, or the shared one)';
-  if ($('email-hint')) $('email-hint').textContent = sharedOn ? "Leave Email empty to use the shared supervisors' password." : 'The email the site owner added for you.';
+  if (emails && $('reclaim-label')) $('reclaim-label').textContent = 'Password';
   if (firstVersion) { // saved by the first version, which used an admin key
     $('login-title').textContent = 'Upgrade';
     $('login-intro').hidden = false;
@@ -300,14 +298,10 @@ async function start() {
   } else if (ownerLogin) {
     $('login-title').textContent = 'Owner sign-in';
     $('password-label').textContent = 'Owner password';
-    $('owner-intro').textContent = 'This is the owner sign-in. Supervisors use the normal dashboard link.';
-    $('owner-intro').hidden = false;
   } else if (OWNER) {
     $('login-title').textContent = 'Set up owner access';
-    $('password-label').textContent = emails ? 'Password' : "Supervisors' dashboard password";
-    $('owner-intro').textContent = emails
-      ? "Owner access isn't set up yet. Sign in once with your email and password (or the supervisors' shared password, Email empty), then choose your own owner password."
-      : "Owner access isn't set up yet. Sign in once with the supervisors' dashboard password, then choose your own owner password.";
+    $('password-label').textContent = emails ? 'Password' : "Supervisors' password";
+    $('owner-intro').textContent = 'Sign in with a supervisor password first.';
     $('owner-intro').hidden = false;
   }
   $('reclaim-box').hidden = !data.ownerLogin;
@@ -325,7 +319,7 @@ async function signIn(file) {
   const email = typedEmail();
   const password = $('password').value.trim();
   if (!password) return;
-  if (email === null) return say('login-msg', "Enter your whole email address, or leave Email empty to use the shared supervisors' password.", true);
+  if (email === null) return say('login-msg', 'Enter your whole email address.', true);
   say('login-msg', 'Unlocking…');
   try {
     const data = JSON.parse(file.text);
@@ -335,7 +329,7 @@ async function signIn(file) {
       result = await openForSignIn(email, password, data);
     } catch (e) {
       if (e.code === 'shared-off') return say('login-msg', "The shared supervisors' password is switched off. Sign in with your own email and password.", true);
-      if (e.code === 'no-people') return say('login-msg', "Nobody has a personal sign-in yet. Leave Email empty and use the supervisors' shared password.", true);
+      if (e.code === 'no-people') return say('login-msg', 'Nobody has a personal sign-in yet. Leave Email empty.', true);
       return say('login-msg', email ? 'Wrong email or password.' : 'Wrong password.', true);
     }
     const { opened, keys } = result;
@@ -360,7 +354,7 @@ async function signIn(file) {
   }
 }
 
-const FIRST_PW_INTRO = 'The site owner gave you a temporary password. Choose your own now: only you will know it. Use the suggested one unless you have a good reason not to.';
+const FIRST_PW_INTRO = 'Replace your temporary password with your own.';
 
 // First sign-in with a temporary password: choose your own before anything else. It takes effect when you publish,
 // so the dashboard opens with that change waiting and no Discard.
@@ -370,7 +364,7 @@ function firstPassword(opened, publishedText, email) {
     enterDashboard(opened, publishedText, { mustPublish: true, me: email });
     useMySignIn(s);
     refresh();
-    say('publish-msg', 'Publish now to save your new password. Until you do, only the temporary password works.');
+    say('publish-msg', 'Publish now to save your new password.');
   }, { title: 'Choose your own password', intro: FIRST_PW_INTRO });
 }
 
@@ -391,7 +385,7 @@ async function ownerSignIn(file) {
   try {
     result = await openWithOwnerPassword(password, JSON.parse(file.text));
   } catch {
-    return say('login-msg', 'Wrong owner password. (Supervisors sign in on the normal dashboard link, without #owner.)', true);
+    return say('login-msg', 'Wrong owner password.', true);
   }
   $('password').value = '';
   say('login-msg', '');
@@ -445,7 +439,7 @@ async function reclaimOwner(file) {
   const email = typedEmail('reclaim-email');
   const password = $('reclaim-password').value.trim();
   if (!password) return;
-  if (email === null) return say('reclaim-msg', 'Enter a whole email address, or leave Email empty for the shared password.', true);
+  if (email === null) return say('reclaim-msg', 'Enter a whole email address.', true);
   say('reclaim-msg', 'Checking…');
   let opened;
   try {
@@ -453,7 +447,7 @@ async function reclaimOwner(file) {
     opened = result.opened;
     keyRing.set(result.keys.pub.x, result.keys.d);
   } catch {
-    return say('reclaim-msg', email ? 'Wrong email or password.' : 'Wrong dashboard password.', true);
+    return say('reclaim-msg', email ? 'Wrong email or password.' : 'Wrong password.', true);
   }
   $('reclaim-password').value = '';
   say('reclaim-msg', '');
@@ -461,7 +455,7 @@ async function reclaimOwner(file) {
   const back = () => show('login');
   tokenStep('Reclaim owner access · step 1 of 3: a new GitHub token', back, token => {
     if (opened.github && token === opened.github.token) {
-      return say('token-msg', 'Use a NEW token: make one on GitHub now. That proves you control the TenarisMcCarty account.', true);
+      return say('token-msg', 'Use a NEW token, made on GitHub just now.', true);
     }
     ownerAccessSteps('Reclaim owner access · step 2 of 3', 'Reclaim owner access · step 3 of 3', back, async (rec, auth) => {
       enterDashboard(opened, file.text, { mustPublish: true });
@@ -550,7 +544,7 @@ function showStep(id, label, cancel) {
   $('setup-cancel').onclick = cancel;
 }
 
-const DEFAULT_PW_INTRO = 'Everyone who manages the cards shares this password. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.';
+const DEFAULT_PW_INTRO = 'Shared by everyone who manages the cards.';
 
 function passwordStep(label, cancel, done, { warning = false, title = 'Choose the dashboard password', intro = DEFAULT_PW_INTRO } = {}) {
   showStep('setup-password', label, cancel);
@@ -699,7 +693,16 @@ function openTab(name) {
   tab = name;
   for (const b of document.querySelectorAll('[data-tab]')) b.classList.toggle('active', b.dataset.tab === name);
   for (const p of document.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== name;
+  showTab(document.querySelector(`[data-tab="${name}"]`));
   renderTab();
+}
+
+// On a phone the tab row scrolls sideways: bring the open tab fully into view (sideways only).
+function showTab(b) {
+  const row = b && b.parentElement;
+  if (!row || row.scrollWidth <= row.clientWidth) return;
+  if (b.offsetLeft < row.scrollLeft) row.scrollLeft = b.offsetLeft;
+  else if (b.offsetLeft + b.offsetWidth > row.scrollLeft + row.clientWidth) row.scrollLeft = b.offsetLeft + b.offsetWidth - row.clientWidth;
 }
 
 function renderAll() {
@@ -781,7 +784,7 @@ function refresh() {
   let label, cls, text;
   if (busy) [label, cls, text] = ['Publishing', 'updating', 'Saving to GitHub…'];
   else if (list.length && !published) [label, cls, text] = ['Not live yet', 'changes', 'Fill in People, Shifts and Cards, then Publish.'];
-  else if (list.length) [label, cls, text] = ['Not published', 'changes', `${list.length} change${list.length > 1 ? 's' : ''} only you can see. Publish to update every card.`];
+  else if (list.length) [label, cls, text] = ['Not published', 'changes', `${list.length} change${list.length > 1 ? 's' : ''} waiting. Publish to update every card.`];
   else if (deployState === 'deploying') [label, cls, text] = ['Updating', 'updating', 'Published. Cards pick it up within about a minute.'];
   else if (deployState === 'slow') [label, cls, text] = ['Delayed', 'problem', 'Published, but the site is slow to update. It usually catches up within 10 minutes.'];
   else if (deployState === 'checking') [label, cls, text] = ['Checking', 'updating', 'Checking the live site…'];
@@ -808,7 +811,7 @@ function refresh() {
   renderNow();
   const last = log[log.length - 1];
   $('facts').textContent = [
-    `${state.contacts.length} people`, `${state.cards.length} cards`,
+    `${state.contacts.length} ${state.contacts.length === 1 ? 'person' : 'people'}`, `${state.cards.length} card${state.cards.length === 1 ? '' : 's'}`,
     last && `last published ${when(last.at)}${last.who ? ' by ' + last.who : ''}`,
   ].filter(Boolean).join(' · ');
 }
@@ -824,7 +827,7 @@ function renderNow() {
     return;
   }
   const { main, also } = arrange({ contacts: ready, schedule: state.schedule }, now);
-  $('now-main').textContent = `Primary call: ${main.contact.name}` + (main.shift ? ` (${main.shift.name}, until ${timeLabel(main.shift.end)})` : ' (nobody is on shift, so the fallback person)');
+  $('now-main').textContent = `Primary call: ${main.contact.name}` + (main.shift ? ` (${main.shift.name}, until ${timeLabel(main.shift.end)})` : ' (fallback, nobody on shift)');
   $('now-also').textContent = also.length ? 'Also working: ' + also.map(a => `${a.contact.name} (${a.shift.name})`).join(', ') : '';
 }
 setInterval(() => state && renderNow(), 30 * 1000);
@@ -843,26 +846,25 @@ function renderPeople() {
     }));
     const due = isDue(c);
     const checked = c.phone && el('p', { class: 'checked' + (due ? ' due' : '') },
-      due ? `Number not checked since ${dateLabel(c.confirmed)}. Call or text ${c.name.trim() || 'them'} to make sure it still works.`
+      due ? `Number not checked since ${dateLabel(c.confirmed)}.`
         : `Number checked ${c.confirmed === today() ? 'today' : dateLabel(c.confirmed)}.`,
       due && el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Still right', onclick: () => {
         c.confirmed = today();
         renderPeople();
         refresh();
       } }));
-    return el('fieldset', { class: 'person' },
+    return el('fieldset', { class: 'box person' },
       el('legend', { textContent: `Person ${i + 1}` }),
       el('div', { class: 'field-row' },
         input('Name', 'name'),
-        input('Role', 'role', { placeholder: 'e.g. 1st shift lead' })),
-      el('div', { class: 'field-row' },
-        input('Role in Spanish (optional)', 'roleEs', { placeholder: 'e.g. Supervisor del 1er turno', lang: 'es' })),
-      input('Phone', 'phone', {
-        type: 'tel', placeholder: '(555) 555-0100',
-        onchange: e => { const p = normalizePhone(e.target.value); if (p) { c.phone = e.target.value = p; refresh(); } },
-      }),
+        input('Role', 'role', { placeholder: 'e.g. 1st shift lead' }),
+        input('Role in Spanish (optional)', 'roleEs', { placeholder: 'e.g. Supervisor del 1er turno', lang: 'es' }),
+        input('Phone', 'phone', {
+          type: 'tel', placeholder: '(555) 555-0100',
+          onchange: e => { const p = normalizePhone(e.target.value); if (p) { c.phone = e.target.value = p; refresh(); } },
+        })),
       checked,
-      el('button', { type: 'button', class: 'link-btn', textContent: 'Remove person', onclick: () => removePerson(c) }));
+      el('button', { type: 'button', class: 'link-btn box-remove', textContent: 'Remove person', onclick: () => removePerson(c) }));
   }));
   $('add-person').disabled = state.contacts.length >= MAX_PEOPLE;
   $('message').value = state.message;
@@ -941,7 +943,7 @@ function renderGaps() {
   }
   const shown = gaps.slice(0, 8);
   $('gaps').replaceChildren(el('div', { class: 'warn small' },
-    el('span', { textContent: `Nobody is on shift at these times, so the fallback person (${who}) gets the primary call:` }),
+    el('span', { textContent: `Nobody on shift at these times, so ${who} gets the primary call:` }),
     el('ul', {}, ...shown.map(([a, b]) => el('li', { textContent: `${weekTime(a)} to ${weekTime(b)}` })),
       gaps.length > shown.length && el('li', { textContent: `and ${gaps.length - shown.length} more` }))));
 }
@@ -951,11 +953,11 @@ function shiftBox(shift) {
   const legend = el('legend', { textContent: shift.name || 'Shift' });
   const autoEs = () => { const es = shiftName({ ...shift, nameEs: '' }, 'es'); return es !== shift.name ? `${es} (automatic)` : 'e.g. Turno de noche'; };
   const esName = el('input', { value: shift.nameEs || '', placeholder: autoEs(), lang: 'es', oninput: e => { shift.nameEs = e.target.value; changed(); } });
-  return el('fieldset', { class: 'shift' },
+  return el('fieldset', { class: 'box shift' },
     legend,
     el('div', { class: 'field-row' },
       el('label', {}, 'Name', el('input', { value: shift.name, oninput: e => { shift.name = e.target.value; legend.textContent = shift.name || 'Shift'; esName.placeholder = autoEs(); changed(); } })),
-      el('label', {}, 'Name in Spanish (optional)', esName)),
+      el('label', {}, 'Spanish name (optional)', esName)),
     el('div', { class: 'field-row' },
       el('label', {}, 'Starts', el('input', { type: 'time', value: shift.start, onchange: e => { if (e.target.value) shift.start = e.target.value; changed(); } })),
       el('label', {}, 'Ends', el('input', { type: 'time', value: shift.end, onchange: e => { if (e.target.value) shift.end = e.target.value; changed(); } }))),
@@ -973,7 +975,7 @@ function shiftBox(shift) {
             changed();
           } }), personName(c))))
       : el('p', { class: 'small muted', textContent: 'Add people first.' }),
-    el('button', { type: 'button', class: 'link-btn', textContent: 'Remove shift', onclick: () => {
+    el('button', { type: 'button', class: 'link-btn box-remove', textContent: 'Remove shift', onclick: () => {
       if (!confirm(`Remove ${shift.name || 'this shift'}?`)) return;
       state.schedule.shifts = state.schedule.shifts.filter(x => x !== shift);
       renderShifts();
@@ -1035,9 +1037,9 @@ $('add-card').onclick = () => {
 };
 
 function renameCard(card) {
-  const driver = prompt('Driver name and ID (printed on the card and shown on the page):', card.driver);
+  const driver = prompt('Driver name and ID:', card.driver);
   if (driver === null || !driver.trim()) return;
-  const note = prompt('Who has this card? (only shown here)', card.note);
+  const note = prompt('Given to (only shown here):', card.note);
   card.driver = driver.trim();
   if (note !== null) card.note = note.trim();
   renderCards();
@@ -1062,7 +1064,7 @@ function openPrint(card) {
 
 const printCard = () => state.cards.find(c => c.key === printKey);
 const printInfo = card => ({ link: SITE + '#' + card.key, driver: card.driver, backup: formatPhone(state.backup) });
-const tagThickness = () => Number($('tag-thickness').value);
+const PRINT_DOWNLOADS = ['dl-3mf', 'dl-stl'];
 
 function renderPrint() {
   const has = state.cards.length > 0;
@@ -1081,18 +1083,19 @@ async function renderPrintCard() {
   const card = printCard();
   $('card-link').value = SITE + '#' + card.key;
   $('print-status').hidden = isLive(card);
-  $('print-status').textContent = "This card isn't published yet. Its link and files only work after you publish.";
+  $('print-status').textContent = 'Not published yet. The link and files work after you publish.';
   $('print-msg').hidden = true;
   try {
     await CardMaker.load();
     if (run !== printRun) return;
     const info = printInfo(card);
-    const { problems } = CardMaker.layout(info, '3d');
+    const { problems } = CardMaker.layout(info);
     $('preview-front').replaceChildren(CardMaker.preview(info, 'front'));
     $('preview-back').replaceChildren(CardMaker.preview(info, 'back'));
     if (problems.length) printProblem(problems.join(' '));
-    for (const id of ['dl-black', 'dl-white', 'dl-notes']) $(id).disabled = problems.length > 0;
+    for (const id of PRINT_DOWNLOADS) if ($(id)) $(id).disabled = problems.length > 0;
   } catch (e) {
+    for (const id of PRINT_DOWNLOADS) if ($(id)) $(id).disabled = true;
     printProblem(e.message);
   }
 }
@@ -1113,7 +1116,8 @@ $('backup').onchange = e => {
 };
 $('copy-card-link').onclick = e => copy($('card-link').value, e.currentTarget);
 
-// Make one file (or all of them) for the chosen card and hand it to the browser.
+// Make the chosen card's print files and hand them to the browser:
+// '3mf' = Bambu Studio project (bambu3mf.js), 'stl' = ZIP with both STL parts and the print notes.
 async function download(what) {
   const card = printCard();
   const info = printInfo(card);
@@ -1121,25 +1125,21 @@ async function download(what) {
   $('print-msg').hidden = true;
   try {
     await CardMaker.load();
-    if (what === 'all') return saveFile(base + '.zip', CardMaker.zip(await CardMaker.files(info, tagThickness())));
-    if (what === 'black' || what === 'white' || what === 'notes') {
-      const m = CardMaker.model(info, tagThickness());
-      if (what === 'notes') return saveFile(base + '-print-notes.txt', new Blob([CardMaker.printNotes(info, m)], { type: 'text/plain' }));
-      return saveFile(`${base}-${what.toUpperCase()}.stl`, new Blob([m[what]], { type: 'model/stl' }));
+    if (what === 'stl') return saveFile(base + '-STL.zip', CardMaker.zip(await CardMaker.files(info)));
+    if (typeof Bambu3MF === 'undefined') {
+      return printProblem("The Bambu Studio project maker (bambu3mf.js) didn't load. Reload the page, or use the STL files.");
     }
-    if (what === 'paper') return saveFile(base + '-paper-card.pdf', await CardMaker.paperPdf(info));
-    if (what === 'label') return saveFile(base + '-qr-label.png', await CardMaker.canvasBlob(CardMaker.labelCanvas(info)));
-    if (what === 'qr-png') return saveFile(base + '-qr.png', await CardMaker.canvasBlob(CardMaker.qrCanvas(info.link)));
-    if (what === 'qr-svg') return saveFile(base + '-qr.svg', new Blob([CardMaker.qrSvg(info.link)], { type: 'image/svg+xml' }));
+    const m = CardMaker.model(info);
+    const bytes = await Bambu3MF.make({ black: m.black, white: m.white, name: base, pauseZ: m.pauseZ, layerHeight: m.layerHeight, material: $('print-material') ? $('print-material').value : 'ASA' });
+    saveFile(base + '.3mf', new Blob([bytes], { type: 'model/3mf' }));
   } catch (e) {
     printProblem(e.message);
   }
 }
 
-for (const [id, what] of [['dl-all', 'all'], ['dl-black', 'black'], ['dl-white', 'white'], ['dl-notes', 'notes'],
-  ['dl-paper', 'paper'], ['dl-label', 'label'], ['dl-qr-png', 'qr-png'], ['dl-qr-svg', 'qr-svg']]) {
-  $(id).onclick = () => download(what);
-}
+// Optional: for a few minutes after an update, GitHub's cache can pair this script with an older dashboard.html.
+onClick('dl-3mf', () => download('3mf'));
+onClick('dl-stl', () => download('stl'));
 
 // ================= History =================
 
@@ -1176,13 +1176,13 @@ $('change-password').onclick = () => {
   }, { warning: true, title: "Choose the new supervisors' password" });
 };
 
-const MY_PW_INTRO = 'Only your own sign-in changes. Nobody else is affected. Use the suggested one unless you have a good reason not to.';
+const MY_PW_INTRO = 'Changes only your own sign-in.';
 
 onClick('change-my-password', () => {
   passwordStep('Change my password', backToDash, async password => {
     await changeMyPassword(password);
     backToDash();
-    say('publish-msg', 'Publish to save your new password. Until you do, your old one still works.');
+    say('publish-msg', 'Publish to save your new password.');
   }, { title: 'Choose your new password', intro: MY_PW_INTRO });
 });
 
@@ -1192,7 +1192,7 @@ function renderOwner() {
   $('gh-status').textContent = (ghProblem ? ghProblem + ' ' : 'Connected. ') +
     `Token added ${github.addedAt}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
   const unpublished = ['recovery', 'upgrade', 'owner-access'].some(p => pending.has(p));
-  $('recovery-status').textContent = `Set up ${owner.at || ''}${unpublished ? ' (not published yet)' : ''}. Keep it in your password manager.`;
+  $('recovery-status').textContent = `Set up ${owner.at || ''}${unpublished ? ' (not published yet)' : ''}.`;
   $('owner-contact').value = (owner && owner.contact) || '';
   renderAccounts();
 }
@@ -1217,8 +1217,8 @@ function renderAccounts() {
   showIf('no-accounts', !accounts.length);
   if ($('shared-status')) {
     $('shared-status').textContent = shared
-      ? 'On: anyone who knows it can sign in by leaving Email empty.' + (accounts.length ? '' : ' To switch it off, first add at least one person above.')
-      : 'Off: only people listed above (and you, on the owner link) can sign in.';
+      ? 'On' + (accounts.length ? '' : ' · add a person above before turning it off')
+      : 'Off';
   }
   showIf('shared-off', !!shared);
   if ($('shared-off')) $('shared-off').disabled = !accounts.length;
@@ -1231,7 +1231,7 @@ onClick('add-account', async () => {
   const email = typedEmail('new-email');
   const name = $('new-name').value.trim();
   if (!email) return say('account-msg', email === null ? "That doesn't look like an email address." : 'Enter their email address.', true);
-  if (!name) return say('account-msg', 'Enter their name, the way History should show it.', true);
+  if (!name) return say('account-msg', 'Enter their name.', true);
   if (accounts.some(a => a.email === email)) return say('account-msg', `${email} already has a sign-in. Use Reset password instead.`, true);
   say('account-msg', '');
   await issuePassword('Add person', { email, name, addedAt: today(), addedBy: myName() || 'the owner' }, () => {
@@ -1251,7 +1251,6 @@ async function issuePassword(label, account, done) {
   const password = suggestPassword();
   const s = await makeSignIn(password);
   showStep('setup-temp', label, backToDash);
-  $('temp-title').textContent = `Temporary password for ${account.name}`;
   $('temp-for').textContent = `${account.name} (${account.email})`;
   $('temp-password').textContent = password;
   $('temp-saved').checked = false;
@@ -1270,8 +1269,8 @@ async function issuePassword(label, account, done) {
 function removeAccount(a) {
   if (!confirm(`Remove the sign-in for ${a.name} (${a.email})?\n\nOnce you publish, they can't open anything published after that.`)) return;
   accounts = accounts.filter(x => x.email !== a.email);
-  tokenAdvice = `${a.name} could have seen the GitHub token while signed in. Replace it, and after publishing delete the old token on GitHub.` +
-    (shared ? " If they also know the shared supervisors' password, use New password and token below instead." : '');
+  tokenAdvice = `${a.name} could have seen the GitHub token. Replace it.` +
+    (shared ? ' If they know the shared password, use New password and token instead.' : '');
   say('account-msg', `Removed ${a.name}. Publish to switch off their sign-in.`);
   renderAccounts();
   refresh();
@@ -1279,14 +1278,14 @@ function removeAccount(a) {
 
 onClick('shared-off', () => {
   if (!accounts.length) return;
-  if (!confirm("Switch off the shared supervisors' password?\n\nOnce you publish, it stops working: everyone must sign in with their own email and password. Check that every supervisor has their own sign-in first.\n\nYou can switch it back on later by setting a new shared password.")) return;
+  if (!confirm("Turn off the shared supervisors' password?\n\nOnce you publish, everyone must sign in with their own email. Check that every supervisor has a sign-in first.")) return;
   shared = null;
-  tokenAdvice = 'Anyone who knew the shared password could have seen the GitHub token. Replace it, and after publishing delete the old token on GitHub.';
+  tokenAdvice = 'Anyone who knew the shared password could have seen the GitHub token. Replace it.';
   renderAccounts();
   refresh();
 });
 
-const SHARED_PW_INTRO = "Anyone who knows this password can sign in by leaving Email empty. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.";
+const SHARED_PW_INTRO = 'For supervisors without their own sign-in.';
 
 onClick('shared-on', () => {
   passwordStep('Shared password', backToDash, async password => {
@@ -1311,7 +1310,7 @@ function replaceToken() {
 $('replace-token').onclick = replaceToken;
 onClick('token-advice-btn', replaceToken);
 
-const DELETE_OLD_TOKEN = 'After you publish, delete the OLD token on GitHub: Settings → Developer settings → Fine-grained tokens → the old "Emergency cards dashboard" token → Delete.';
+const DELETE_OLD_TOKEN = 'After you publish, delete the old token on GitHub: Settings → Developer settings → Fine-grained tokens → the older "Emergency cards dashboard" token → Delete.';
 
 $('change-owner-password').onclick = () => {
   passwordStep('Change owner password', backToDash, async ownerPassword => {

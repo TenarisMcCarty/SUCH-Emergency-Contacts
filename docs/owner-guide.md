@@ -8,7 +8,7 @@ Bookmark it. On the owner link you sign in with **your own owner password**, not
 
 - an **Owner** badge in the header and an **Owner** tab, starting with **People who can sign in** ([section 14](#14-people-who-can-sign-in))
 - everything supervisors have (see the [supervisor guide](supervisor-guide.md))
-- on the sign-in screen, under **Lost the password?**: the recovery-code reset, reclaiming owner access, and **Start over**
+- on the sign-in screen, under **Forgot owner password?**: the recovery-code reset, reclaiming owner access, and **Start over**
 
 The supervisors' password does **not** work on the owner link and can't open the Owner tab.
 
@@ -126,7 +126,7 @@ This is also how you handle "a supervisor forgot the shared password". Anyone si
 
 **Forgot it?** Use your recovery code:
 
-1. Owner link → **Lost the password?** → paste the code into **Your recovery code** → **Use recovery code**.
+1. Owner link → **Forgot owner password?** → paste the code into **Recovery code** → **Use recovery code**.
    - "Wrong recovery code." means check it.
    - "This data has no recovery code." means owner access was never set up, so see [section 2](#2-setting-up-owner-access-on-existing-data).
 2. **Recovery · new owner password:** save the new owner password, tick the box, then **Next**.
@@ -160,7 +160,7 @@ After you publish, the old code no longer opens anything new. Older versions of 
 You can reclaim owner access with a **supervisor sign-in** (a personal email and password, or the shared supervisors' password) plus a **new GitHub token made on the TenarisMcCarty account**. Only someone who can sign in to that GitHub account can make one. **No cards stop working.**
 
 1. Make a new token on GitHub ([section 4](#4-the-github-token)).
-2. Owner link → **Lost the password?** → **Lost the recovery code too?** → type the email and password of a personal sign-in, or leave **Email** empty and type the shared password → **Reclaim owner access**. (The Email box only appears once someone has a personal sign-in.)
+2. Owner link → **Forgot owner password?** → **Lost the recovery code too?** → type the email and password of a personal sign-in, or leave **Email** empty and type the shared password → **Reclaim owner access**. (The Email box only appears once someone has a personal sign-in.)
 3. **Reclaim owner access · step 1 of 3:** paste the new token. The old token, or a token from another account, is refused.
 4. **Steps 2 and 3:** choose a new owner password and save a new recovery code.
 5. **Publish.** The change list shows "Set up owner access…" and "Replaced the GitHub token".
@@ -199,7 +199,7 @@ Use this only if nobody can sign in (no shared password, no personal sign-in) **
 
 > **Every existing card stops working**, including any already printed or handed out. Starting over creates new card keys, so every NFC tag must be rewritten and every QR code reprinted.
 
-1. Owner link → **Lost the password?** → **Start over** → confirm.
+1. Owner link → **Forgot owner password?** → **Start over** → confirm.
 2. Follow the four setup steps ([section 3](#3-first-time-setup-from-scratch)).
 3. Re-enter people and shifts, add every card again, then **Publish**.
 4. Rewrite every NFC tag and reprint every card.

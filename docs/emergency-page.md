@@ -97,7 +97,7 @@ The header button (**Español** / **English**) switches instantly and is remembe
 |---|---|
 | Names of people | Shown as typed |
 | Roles | **Role in Spanish** if filled in, otherwise the English role |
-| Shift names | **Name in Spanish** if filled in; otherwise a built-in translation for common names (1st shift → 1er turno, 2nd shift → 2º turno, 3rd shift → 3er turno, Day (8–5) → Diurno (8–5), Day → Diurno, Day shift → Turno de día, Night → Nocturno, Night shift → Turno de noche, Weekend → Fin de semana); otherwise the English name |
+| Shift names | **Spanish name** if filled in; otherwise a built-in translation for common names (1st shift → 1er turno, 2nd shift → 2º turno, 3rd shift → 3er turno, Day (8–5) → Diurno (8–5), Day → Diurno, Day shift → Turno de día, Night → Nocturno, Night shift → Turno de noche, Weekend → Fin de semana); otherwise the English name |
 | Text message | **In Spanish** message; the default is "EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número." |
 
 Printed cards are English only.

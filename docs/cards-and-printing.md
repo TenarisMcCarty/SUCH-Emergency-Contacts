@@ -1,18 +1,17 @@
 # Cards and printing
 
-How a card works, how to write its NFC tag, and how to make each kind of printed card from the dashboard's **Print & QR** tab.
+How a card works, how to write its NFC tag, and how to print the 3D card from the dashboard's **Print & QR** tab.
 
 **Contents**
 
 1. [How a card works](#1-how-a-card-works)
 2. [Making a new card: the whole process](#2-making-a-new-card-the-whole-process)
 3. [Writing the NFC tag](#3-writing-the-nfc-tag)
-4. [The 3D-printed card](#4-the-3d-printed-card)
-5. [The paper card](#5-the-paper-card)
-6. [QR label and QR images](#6-qr-label-and-qr-images)
-7. [The ZIP download](#7-the-zip-download)
-8. [When a card needs reprinting](#8-when-a-card-needs-reprinting)
-9. [Trial checklist](#trial-checklist)
+4. [The card](#4-the-card)
+5. [Printing it](#5-printing-it)
+6. [The STL files (ZIP)](#6-the-stl-files-zip)
+7. [When a card needs reprinting](#7-when-a-card-needs-reprinting)
+8. [Trial checklist](#trial-checklist)
 
 ---
 
@@ -36,11 +35,11 @@ The same link is written to the card's **NFC tag** and encoded in its **QR code*
 
 1. **Cards → Add card:** enter the driver name and ID (e.g. `Jane Doe (1234)`) and who will hold it (e.g. "Family").
 2. **Publish.** The card's link only works after publishing.
-3. **Print & QR →** choose the card → check the previews → **Download everything (ZIP)**.
-4. **Write the NFC tag** with the card link ([section 3](#3-writing-the-nfc-tag)).
-5. **Print the card:** 3D ([section 4](#4-the-3d-printed-card)) or paper ([section 5](#5-the-paper-card)).
-6. **Test** with an iPhone and an Android phone: tap the tag and scan the QR. Both should open the page with the right driver name.
-7. **Lock the tag** (only after it works), then hand the card over.
+3. **Print & QR →** choose the card → check the previews → choose the **Filament** (ASA or ABS) → **Bambu Studio project (3MF)**.
+4. **Write the NFC tag** with the card link and test it ([section 3](#3-writing-the-nfc-tag)). Don't lock it yet.
+5. **Print the card** ([section 5](#5-printing-it)). At the pause, put the tag in.
+6. **Test** the finished card with an iPhone and an Android phone: tap the card and scan the QR. Both should open the page with the right driver name.
+7. **Lock the tag** (only now, after it works through the card), then hand the card over.
 
 Before printing your first cards, set the **Backup line** in Print & QR and publish. It's printed on the cards, and the page tells families to call it if the page ever can't load.
 
@@ -48,164 +47,145 @@ Before printing your first cards, set the **Backup line** in Print & QR and publ
 
 ## 3. Writing the NFC tag
 
-Use the free **NFC Tools** app (iPhone or Android) and an **NTAG215** sticker; the 25 mm round ones fit the 3D card. The link is about 80 characters, well within the tag's capacity.
+Use the free **NFC Tools** app (iPhone or Android) and an **NTAG215 round sticker, 25 mm across and 0.8 mm thick**. It's the only tag the card is made for. The link is about 80 characters, well within the tag's capacity.
 
-1. In the dashboard, **Print & QR →** choose the card → **Copy link**. Or open `…-link.txt` from the ZIP.
+1. In the dashboard, **Print & QR →** choose the card → **Copy link**. The print notes also contain the link.
 2. In NFC Tools: **Write → Add a record → URL / URI** → paste the link → **OK**.
 3. Tap **Write**, then hold the sticker to the back of the phone until it confirms.
 4. Test it: with NFC Tools closed, tap the sticker with an unlocked phone. The page should open with the right driver name.
-5. **Lock it only after testing:** NFC Tools → **Other → Lock tag**. Locking is **permanent**; it stops anyone rewriting the tag, including you.
+5. **Lock it only after testing the finished card:** NFC Tools → **Other → Lock tag**. It works through the card. Locking is **permanent**; it stops anyone rewriting the tag, including you.
 
 Notes:
 
 - iPhones read NFC tags in the background from the iPhone XS onward; the screen must be on. On Android, NFC must be switched on in Settings.
-- On a 3D-printed card, write and test the sticker **before** sealing it inside. Test it again after printing.
+- Write and test the sticker **before** it goes into the card, and test it again after printing.
 - Metal (and some phone cases or wallets with RFID blocking) stops NFC from working.
 
 ---
 
-## 4. The 3D-printed card
-
-**Print & QR → Black part (STL)** and **White part (STL)**, plus **Print notes**. Or take them from the ZIP.
+## 4. The card
 
 ### What it looks like
 
-**Front** (printed facing up):
+**Front** (printed face down, so it takes the build plate's flat finish):
 
-- dark background with the white Tenaris logo
-- "EMERGENCY CONTACT" and the driver's name in white
-- a white band along the bottom with three lines in black:
-  > Tap this card or scan the QR code
-  > to reach Tenaris emergency contacts.
-  > Life-threatening? Call 911 first.
-- the upper-right area is left plain: the NFC tag sits underneath it
+- black, with the white Tenaris logo at the top left
+- **EMERGENCY CONTACT** in big white capitals on two lines: the main text
+- the driver's name in smaller white capitals underneath, e.g. JANE DOE (1234); a long name wraps onto two lines
+- the upper right is plain black: the NFC tag sits inside the card there, with no outline, bump or texture showing
 
-**Back** (printed facing down, onto the build plate):
+**Back** (printed on top):
 
-- white background with the QR code on the right
-- on the left, a contactless symbol in a ring, sitting exactly over the hidden tag, with **TAP PHONE HERE** below it
-- **BACKUP LINE** and the number, if a backup line is set
+- white, with the QR code at the top right
+- **SCAN OR TAP** at the top left
+- a small contactless symbol over the hidden tag (the spot to tap)
+- **BACKUP** and the backup number, if one is set
+- **LIFE-THREATENING? CALL 911** along the bottom
 
-The Print & QR tab shows both faces before you download.
+The Print & QR tab shows both faces before you download: the front as you'll see it when you turn the card over, and the back as it comes off the printer.
 
 ### Specifications
 
 | | |
 |---|---|
-| Size | 85.6 × 53.98 mm, the same as a credit card, with 3.18 mm rounded corners |
-| Thickness | 1.2, 1.4 or 1.6 mm, set by **NFC sticker thickness** (table below) |
-| Layers, bottom to top | back skin 0.4 mm (QR side) · white core with the NFC pocket · front skin 0.4 mm |
-| Colours | two STL files that fit together exactly: **black part** (dark front, black lettering, QR squares, back artwork) and **white part** (core, white lettering and band, white back) |
-| NFC pocket | 25.6 mm round (for a 25 mm sticker), centred 67 mm from the left and 39 mm from the bottom of the front; sealed above and below by 0.4 mm |
-| QR code | 40 × 40 mm including its white margin of 4 squares; error-correction level M (still reads with about 15% damage). Current card links give 37 × 37 squares, about 0.89 mm each. |
-| Smallest details | the generator never makes a QR square smaller than 0.8 mm, or a capital letter shorter than 2.3 mm; both print cleanly with a 0.4 mm nozzle |
-| Logo | The official Tenaris signature, one colour (white on the black face), 44 mm wide: Multibar 7.9 mm tall (brand minimum 5.5 mm), with clear space of 80% of the Multibar height all round. Its thinnest bars are 0.27 mm wide; the slicer prints them at its narrowest line, so check them in the preview. |
-| Driver name | up to 5 mm capital height; long names shrink, then wrap onto two lines. If a name still can't print cleanly, the dashboard refuses and asks you to shorten it. Lettering never sits over the tag. |
-| Lettering | Source Sans 3 Bold (a free typeface in the style of Frutiger, the Tenaris typeface) |
-| Core colour | white, so white areas stay bright (thin white PLA over a black core looks grey) |
+| Size | 85.6 × 53.98 × **2.2 mm**, the outline of a credit card with 3.18 mm rounded corners |
+| Material | ASA or ABS, black and white, one type for both; Bambu Lab P2S with AMS, 0.4 mm nozzle, 0.2 mm layers |
+| Layers, from the build plate up | **front** 0–0.6 mm (3 layers, front artwork, face down) · **core** 0.6–1.6 mm (5 layers, white, with the NFC pocket) · **pause** · **roof** 1.6–1.8 mm (1 solid white layer) · **back** 1.8–2.2 mm (2 layers, QR artwork) |
+| NFC pocket | 26 mm round, 1.0 mm deep, centred 67 mm from the left and 39 mm from the bottom of the front (18.6 mm from the left on the back) |
+| Pause | after the layer that ends at **Z = 1.6 mm**, before layer 9 of 11 (shown as 1.8 mm in Bambu Studio's layer slider) |
+| Covers over the tag | 0.6 mm below (the front) and 0.6 mm above (roof + back) |
+| QR code | 40 × 40 mm including its white margin of 4 squares; error-correction level M (still reads with about 15% damage). Card links give 37 × 37 squares, about 0.89 mm each (the generator never goes below 0.8 mm). |
+| Lettering | Source Sans 3 Bold (a free typeface in the style of Frutiger, the Tenaris typeface). EMERGENCY CONTACT about 5.5–6 mm capitals; the name 4 mm on one line, 3.5–3.9 mm on two; SCAN OR TAP 3.8 mm; the backup number 3.6 mm; BACKUP 3.5 mm; the 911 line 3.6 mm. **Nothing smaller than 3.5 mm.** |
+| Smallest details | Every letter stroke, and every gap or hole in or between letters, is at least 0.5 mm. Letters are spaced at least 0.6 mm apart, and accents are lifted 0.6 mm clear of their letter. The tap symbol's lines and gaps are 0.8 mm. |
+| Logo | The official Tenaris signature, one colour (white on the black front), 40 mm wide, never stretched: Multibar 7.2 mm tall (brand minimum 5.5 mm), with clear space of 80% of the Multibar height (5.7 mm) all round, kept free of text. Its thinnest bars are about 0.22 mm wide (official artwork, so they're kept as they are); check them in the sliced preview. |
 
-### Choosing the NFC sticker thickness
+### Why it's built this way
 
-Measure the sticker at its thickest point (the chip), without its backing paper, and pick the matching option. It leaves at least 0.1 mm of clearance.
+- **Front face down.** The front gets the plate's flat finish, and the pocket and the tag are behind 0.6 mm of solid plastic that was printed first, so nothing can sag or show through there. The front is printed mirror-image, so it reads correctly when you turn the card over; the QR code on top is not mirrored.
+- **One tag size.** The pocket fits an NTAG215 round sticker, 25 mm × 0.8 mm. 26 mm across leaves 0.5 mm all round: ASA and ABS shrink about 0.5–0.8% and holes print slightly small, and the sticker still has to drop in by hand. 1.0 mm deep is the tag plus one 0.2 mm layer, so the nozzle never touches the tag.
+- **Covers.** 0.6 mm (three layers) under the tag keeps the front flat and opaque. Above it, one solid white layer (the first layer after the pause, printed in one colour so no colour changes happen while it spans the tag) plus the 0.4 mm back: 0.6 mm in all. Equal covers above and below make the card shrink evenly, so it stays flat.
+- **2.2 mm thick.** That's the minimum for a 0.8 mm tag with those covers: about three bank cards, still easy in a wallet slot, and stiff and hard to snap in solid (100% infill) ASA or ABS.
+- **White core.** Black plastic hides a white core completely, even at 0.6 mm. White plastic is translucent: over a black core it looks grey, and the QR code would lose contrast. With a white core the white lettering stays bright and the black front shows no trace of the core or the tag.
+- **Big, few words.** Small text doesn't print well. At 3.5 mm capitals, every stroke and gap of A–Z, 0–9 and common punctuation is at least 0.5 mm. A few characters have finer details and need bigger letters: Å and cedillas (Ç, Ş) 3.9 mm, the comma and # 3.7 mm. Curly quotes print as straight ones. If a name can't fit at its minimum size, even on two lines, the dashboard refuses it and asks you to shorten it (**Cards → Rename**).
 
-| Sticker thickness | Pocket depth | Card thickness | Pause after Z | Pause before layer (0.2 mm layers) |
-|---|---|---|---|---|
-| up to 0.3 mm | 0.4 mm | 1.2 mm | 0.8 mm | 5 |
-| up to 0.5 mm *(default)* | 0.6 mm | 1.4 mm | 1.0 mm | 6 |
-| up to 0.7 mm | 0.8 mm | 1.6 mm | 1.2 mm | 7 |
+---
 
-The **Print notes** file states the right numbers for the thickness you picked.
+## 5. Printing it
 
-### Printing in Bambu Studio (two colours, 0.4 mm nozzle)
+### With the Bambu Studio project (recommended)
 
-1. **Import both STL files at once.** When asked whether to load them as a single object with multiple parts, choose **Yes**. Keep their positions; they're already aligned.
-2. Give the **black part black filament** and the **white part white filament**. Use the same type of PLA for both.
-3. **Orientation:** QR side **down**, as the files come. Don't flip or mirror anything.
-4. **Suggested starting settings:**
-   - layer height 0.2 mm (first layer 0.2 mm)
-   - 100% infill; supports off; raft off
-   - a smooth build plate, for a cleaner QR face
-   - a slow first layer (about 20 mm/s)
-   - keep normal purging, but don't flush into the card itself
+1. **Print & QR →** choose the card → **Filament:** ASA or ABS → **Bambu Studio project (3MF)**.
+2. Open the file in Bambu Studio. It's set for a P2S with a 0.4 mm nozzle: black and white parts, 0.2 mm layers, 100% infill, Arachne walls, prime tower on, no supports, no brim, textured PEI plate, and the pause for the tag.
+3. Put black and white filament of that type in the AMS and match the two filaments to the AMS slots.
+4. **Slice**, then check the preview: every QR square, every letter, all 7 bars of the Tenaris logo, an empty pocket, and the pause at layer 9.
+5. **Print** ([at the pause](#at-the-pause)).
 
-   These are starting points, not a tested profile.
-5. **Slice**, then check the preview: every QR square, every letter, all 7 bars of the Tenaris logo, and an empty pocket (no support inside). If thin logo bars are missing, check that **Quality → Wall generator** is **Arachne** (the default).
-6. **Add the pause:** in the sliced preview, drag the layer slider to the layer given in the table above (the first layer that covers the pocket). Right-click its handle → **Add Pause**. Check it sits right after Z = 0.8 / 1.0 / 1.2 mm.
-7. **Print.** At the pause, press the written and tested sticker into the pocket, sticky side down, flat and below the rim. Then resume. The next layers seal it in.
-8. When it's cool, **test**: scan the QR and tap the card with an iPhone and an Android phone.
+### With the STL files
+
+1. **Print & QR → STL files and print notes (ZIP).**
+2. **Import both STL files at once.** When asked whether to load them as a single object with multiple parts, choose **Yes**. Keep their positions; they're already aligned.
+3. Give the **black part black filament** and the **white part white filament**, both the same type (ASA or ABS).
+4. **Orientation:** as the files come, front (logo side) face **down**. Don't flip, rotate or mirror anything.
+5. **Settings** (starting from the Bambu ASA or ABS profile and the 0.20 mm Standard process): layer height 0.2 mm, first layer 0.2 mm; sparse infill 100%; supports off; prime tower on; Arachne walls (the default).
+6. **Slice**, then drag the layer slider to **layer 9 (1.80 mm)**, right-click its handle → **Add Pause**. Layer 8 (1.60 mm) should be the last one with the pocket open.
+
+### ASA and ABS
+
+- Keep the **enclosure door and top closed** for the whole print, except at the pause. Drafts make ASA and ABS warp and crack.
+- **Part cooling fan off or low.** Bambu's ASA and ABS profiles already keep it low.
+- **Brim:** none needed normally. If corners lift on a test card, add a 3–5 mm brim (or mouse ears) and trim it off afterwards.
+- The front takes the plate's finish: a textured PEI plate gives a matte, slightly textured front; a smooth plate a glossy one. Clean the plate; no fingerprints.
+- Let the card cool on the plate before taking it off.
+
+### At the pause
+
+The printer stops after layer 8, with the pocket open.
+
+1. Wait until the head has parked. Open the door.
+2. Press the **written and tested** tag into the pocket, flat, sticky side down, fully below the rim. Nothing may stick up. Don't touch the nozzle or the print's edges.
+3. Close the door and resume. The next layer seals the tag in.
+
+Then **test** the finished card: scan the QR and tap it with an iPhone and an Android phone. Only then lock the tag.
 
 ### How the files were checked
 
-Without a physical print, the generated files were checked digitally:
+Without a physical print, the generated files were checked digitally for several names (short, long, accented, punctuation):
 
 - both parts are watertight
-- the black and white parts fill every layer exactly, with no gaps or overlaps
-- the pocket is fully enclosed
-- the QR code decodes correctly from the model's back face
+- the black and white parts fill every layer exactly, with no gaps or overlaps, and the total volume is right
+- the pocket is the right size and place, and fully enclosed: closed below by the front and above by the roof
+- the front, rendered from the model and turned over, reads the right way round; the QR code decodes from the top face
+- capital heights, letter strokes and gaps (both colours) and the logo's clear space were measured on renders of the model
 
 Print and test **one** card before making a batch.
 
 ---
 
-## 5. The paper card
+## 6. The STL files (ZIP)
 
-**Print & QR → Paper card (PDF).** It's a US Letter page with **three copies** of the card. Each copy is the **front and back side by side** at actual card size, ready to cut out and fold.
-
-1. Print at **100% / Actual size**, not "fit to page". Card stock gives the best result.
-2. Cut along the **outer marks**.
-3. Fold on the **middle marks**, so the back sits behind the front.
-4. Glue the halves together, or laminate.
-5. Scan the QR with a phone before handing it out.
-
-The paper card has the same layout as the 3D card's front, but on white with the **full-colour Tenaris signature** (the brand guide's preferred version), a Tenaris Green line above the instructions and the 911 line in red. A paper card has no NFC tag, so its back says **SCAN WITH YOUR PHONE CAMERA** with a green arrow pointing to the QR code, plus the backup line, if set. The back has no logo: at that size it would be below the brand guide's minimum, and the front already carries it. The card images are 600 dpi.
-
-You can stick an NFC sticker to a paper card and write the same link to it; it works the same way.
-
----
-
-## 6. QR label and QR images
-
-- **QR label with name (PNG):** a 4 × 6 inch label at 300 dpi (1200 × 1800 pixels). It has the full-colour Tenaris signature on white with its clear space, a Tenaris Green line, "EMERGENCY CONTACT FOR" and the driver's name, a large QR code, then:
-  > Scan with your phone camera to reach Tenaris emergency contacts.
-  >
-  > Life-threatening? Call 911 first.
-
-  plus the backup line, if set. Prints on standard 4 × 6 shipping-label printers, or on paper.
-- **QR only (PNG):** the bare QR code with its white margin, 20 pixels per square (900 × 900 pixels for current links).
-- **QR only (SVG):** the same as a vector file (one unit per square). Use it to put the code into another design.
-
-Keep the white margin around any QR code you place elsewhere; scanners need it.
-
----
-
-## 7. The ZIP download
-
-**Download everything (ZIP)** is named after the card, e.g. `card-Jane-Doe-1234-Family.zip`, and contains:
+**STL files and print notes (ZIP)** is named after the card, e.g. `card-Jane-Doe-1234-Family-STL.zip`, and contains:
 
 | File | |
 |---|---|
-| `card-<driver>-BLACK.stl` | 3D card, black part |
-| `card-<driver>-WHITE.stl` | 3D card, white part |
-| `card-<driver>-print-notes.txt` | Settings, the pause height and the card link |
-| `card-<driver>-paper-card.pdf` | Paper card sheet |
-| `card-<driver>-qr-label.png` | 4 × 6 label |
-| `card-<driver>-qr.png` | QR image |
-| `card-<driver>-qr.svg` | QR vector |
-| `card-<driver>-link.txt` | The exact card link, for writing the NFC tag |
+| `card-<driver>-BLACK.stl` | Black part |
+| `card-<driver>-WHITE.stl` | White part |
+| `card-<driver>-print-notes.txt` | The card link, the layers, orientation, ASA/ABS settings, the pause height and layer, inserting the tag, testing and locking |
 
-The 3D files in the ZIP use the **NFC sticker thickness** selected in the Print & QR tab at the time.
+File names use plain letters (José → Jose).
 
 ---
 
-## 8. When a card needs reprinting
+## 7. When a card needs reprinting
 
-| Change | Reprint the card? | Rewrite the tag? |
+The tag is sealed inside the card, so a reprint is a new card with a new tag. Write the **same link** to the new tag, and destroy the old card.
+
+| Change | Reprint the card? | Tag |
 |---|---|---|
-| People, phone numbers, roles, shifts, text messages | No | No |
-| Driver name (Cards → Rename) | Yes, for the printed name | No |
-| Backup line | Yes, for the printed number | No |
-| Card removed (lost card) | Make a new card | New tag |
-| Start over | Every card | Every tag |
+| People, phone numbers, roles, shifts, text messages | No | No change |
+| Driver name (Cards → Rename) | Yes, for the printed name | New tag, same link |
+| Backup line | Yes, for the printed number | New tag, same link |
+| Card removed (lost card) | Make a new card | New tag, new link |
+| Start over | Every card | Every tag, new links |
 
 ---
 
@@ -224,5 +204,5 @@ Do this once, with a real printed card and real phones, before making cards for 
 - [ ] If an address is set: **Directions** opens the maps app at the yard.
 - [ ] **Airplane mode** on a phone that has **never** opened the page shows "This card couldn't be loaded". A phone that **has** opened it before shows the saved copy with a note; that's intended.
 - [ ] Change something in the dashboard, publish, and confirm the card shows it within about a minute.
-- [ ] **3D card:** the QR scans, the tag reads through the card, and the lettering is clean.
+- [ ] **The card:** the QR scans, the tag reads through the card, the front shows no trace of the tag, and the lettering and logo are clean.
 - [ ] Only then **lock the tag**.

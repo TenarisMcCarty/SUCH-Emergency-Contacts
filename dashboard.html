@@ -18,6 +18,7 @@
   <script src="opentype.js" defer></script>
   <script src="earcut.js" defer></script>
   <script src="logo.js" defer></script>
+  <script src="bambu3mf.js" defer></script>
   <script src="cardmaker.js" defer></script>
   <script src="dashboard.js" defer></script>
 </head>
@@ -36,50 +37,48 @@
     <p id="loading" class="status" role="status">Loading…</p>
 
     <!-- ============ Sign in ============ -->
-    <section id="login" class="panel narrow" hidden>
+    <section id="login" class="panel narrow signin" hidden>
       <h1 id="login-title">Sign in</h1>
-      <p id="login-intro" hidden>The current data was made with the first version (copy-and-paste editor). Enter its <strong>admin key</strong> once to upgrade. Your contacts and cards carry over, and cards already written keep working.</p>
-      <p id="owner-intro" class="small" hidden></p>
+      <p id="login-intro" class="small muted" hidden>Enter the old admin key once to upgrade. Contacts and cards carry over.</p>
+      <p id="owner-intro" class="small muted" hidden></p>
       <form id="login-form" novalidate>
         <div id="email-box" hidden>
           <label for="email">Email</label>
           <input id="email" name="username" type="email" autocomplete="username" autocapitalize="off" spellcheck="false">
-          <p id="email-hint" class="small muted">Leave Email empty to use the shared supervisors' password.</p>
         </div>
         <label id="password-label" for="password">Password</label>
         <input id="password" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
         <button class="btn btn-primary" type="submit">Unlock</button>
         <p id="login-msg" class="msg" role="status"></p>
-        <p id="forgot-row" class="small"><a id="forgot" href="mailto:salil@tenaris.com?subject=Emergency%20Cards%3A%20password%20reset">Forgot password?</a></p>
+        <p id="forgot-row" class="signin-links"><a id="forgot" href="mailto:salil@tenaris.com?subject=Emergency%20Cards%3A%20password%20reset">Forgot password?</a></p>
       </form>
-      <details class="minor">
-        <summary>Lost the password?</summary>
-        <div id="lost-supervisor">
-          <p><strong>Your own password:</strong> press <strong>Forgot password?</strong> above. It writes an email to the site owner, who sends you a temporary password. You choose a new one when you sign in.</p>
-          <p><strong>The shared supervisors' password:</strong> ask the site owner. Either way, no cards stop working.</p>
-        </div>
-        <div id="lost-owner" hidden>
-          <p class="small">Forgot your owner password? Use your recovery code. Nothing else changes.</p>
-          <label for="recovery-input">Your recovery code</label>
+      <!-- Empty placeholder: an older cached dashboard.js still sets this for a few minutes after an update. -->
+      <div id="lost-supervisor" class="retired" hidden></div>
+
+      <!-- Owner link only: recovery code, reclaiming owner access and Start over, behind one small link. -->
+      <details id="lost-owner" class="reveal" hidden>
+        <summary>Forgot owner password?</summary>
+        <div class="reveal-body">
+          <label for="recovery-input">Recovery code</label>
           <input id="recovery-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
           <button id="use-recovery" class="btn btn-light" type="button">Use recovery code</button>
           <p id="recovery-msg" class="msg" role="status"></p>
 
           <div id="reclaim-box">
             <h3>Lost the recovery code too?</h3>
-            <p class="small">Reclaim owner access with a supervisor sign-in (your own, or the supervisors' shared password) and a <strong>new</strong> GitHub token made on the TenarisMcCarty account. No cards stop working.</p>
             <div id="reclaim-email-box" hidden>
-              <label for="reclaim-email">Email (leave empty for the shared password)</label>
+              <label for="reclaim-email">Email</label>
               <input id="reclaim-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false">
             </div>
-            <label id="reclaim-label" for="reclaim-password">Supervisors' dashboard password</label>
+            <label id="reclaim-label" for="reclaim-password">Supervisors' password</label>
             <input id="reclaim-password" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
             <button id="reclaim" class="btn btn-light" type="button">Reclaim owner access</button>
             <p id="reclaim-msg" class="msg" role="status"></p>
           </div>
 
-          <p class="small">Nothing left at all? Starting over creates new lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
-          <button id="start-over" class="btn btn-danger" type="button">Start over</button>
+          <div class="reveal-foot">
+            <button id="start-over" class="btn btn-danger btn-small" type="button">Start over</button>
+          </div>
         </div>
       </details>
     </section>
@@ -90,45 +89,48 @@
 
       <div id="setup-password">
         <h1 id="pw-title">Choose the dashboard password</h1>
-        <p id="pw-intro">Everyone who manages the cards shares this password. It also protects the data file, which is public, so it has to be strong. Use the suggested one unless you have a good reason not to.</p>
-        <p id="pw-warning" class="warn" hidden>Everyone else who uses the dashboard will need the new password once you publish. Tell them before you do.</p>
+        <p id="pw-intro" class="small muted">Shared by everyone who manages the cards.</p>
+        <p id="pw-warning" class="warn small" hidden>The old password stops working when you publish. Tell everyone who uses it.</p>
+        <p class="field-label">Suggested password</p>
         <code id="suggested" class="key"></code>
         <div class="btn-row">
-          <button id="suggest-again" class="btn btn-light" type="button">Suggest another</button>
-          <button id="copy-suggested" class="btn btn-light" type="button">Copy</button>
+          <button id="suggest-again" class="btn btn-light btn-small" type="button">Suggest another</button>
+          <button id="copy-suggested" class="btn btn-light btn-small" type="button">Copy</button>
         </div>
         <details class="minor">
           <summary>Use my own password instead</summary>
-          <label for="own-password">At least 20 characters</label>
+          <label for="own-password">Own password (at least 20 characters)</label>
           <input id="own-password" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false">
         </details>
-        <label class="check"><input id="pw-saved" type="checkbox"> I've saved the password in a password manager</label>
+        <label class="check"><input id="pw-saved" type="checkbox"> I've saved it in a password manager</label>
         <button id="pw-next" class="btn btn-primary" type="button" disabled>Next</button>
         <p id="pw-msg" class="msg" role="status"></p>
       </div>
 
       <div id="setup-token" hidden>
         <h1>Connect to GitHub</h1>
-        <p>Publishing needs a GitHub token that can change only this one repository. Make it while signed in to GitHub as <strong>TenarisMcCarty</strong>:</p>
+        <p class="small muted">Signed in to GitHub as <strong>TenarisMcCarty</strong>:</p>
         <ol class="steps">
-          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → New fine-grained token</a>.</li>
-          <li><strong>Token name:</strong> Emergency cards dashboard. <strong>Expiration:</strong> the longest offered.</li>
-          <li><strong>Repository access:</strong> Only select repositories → <em id="repo-name">SUCH-Emergency-Contacts</em>.</li>
-          <li><strong>Permissions:</strong> Repository permissions → <em>Contents</em> → <em>Read and write</em>. Leave everything else as is.</li>
-          <li><strong>Generate token</strong>, copy it (starts with <code>github_pat_</code>) and paste it below.</li>
+          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">New fine-grained token</a>.</li>
+          <li>Name: <em>Emergency cards dashboard</em>. Expiration: the longest offered.</li>
+          <li>Repository access: Only select repositories → <em id="repo-name">SUCH-Emergency-Contacts</em>.</li>
+          <li>Repository permissions: Contents → Read and write.</li>
+          <li>Generate the token and paste it below.</li>
         </ol>
         <label for="token-input">GitHub token</label>
-        <input id="token-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <input id="token-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…">
         <button id="token-next" class="btn btn-primary" type="button">Check and continue</button>
         <p id="token-msg" class="msg" role="status"></p>
       </div>
 
       <div id="setup-recovery" hidden>
         <h1>Save your recovery code</h1>
-        <p>This is your master key as the site owner. If everyone forgets the dashboard password, it lets you set a new one without breaking any cards. Keep it in <strong>your</strong> password manager. Supervisors never need it.</p>
+        <p class="small muted">Resets the owner password without breaking any cards. Only you need it.</p>
         <code id="recovery-code" class="key"></code>
-        <button id="copy-recovery" class="btn btn-light" type="button">Copy</button>
-        <label for="setup-contact">Your name and phone, shown to supervisors if something needs you (optional)</label>
+        <div class="btn-row">
+          <button id="copy-recovery" class="btn btn-light btn-small" type="button">Copy</button>
+        </div>
+        <label for="setup-contact">Your contact for supervisors (optional)</label>
         <input id="setup-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
         <label class="check"><input id="recovery-saved" type="checkbox"> I've saved the recovery code</label>
         <button id="recovery-next" class="btn btn-primary" type="button" disabled>Finish</button>
@@ -136,10 +138,11 @@
 
       <div id="setup-temp" hidden>
         <h1 id="temp-title">Temporary password</h1>
-        <p>For <strong id="temp-for"></strong>. Give it to them in person or by phone, never by email or chat. It's shown only this once.</p>
+        <p class="small muted">For <strong id="temp-for"></strong>. Shown once. Hand it over in person or by phone.</p>
         <code id="temp-password" class="key"></code>
-        <button id="copy-temp" class="btn btn-light" type="button">Copy</button>
-        <p class="small">They sign in on the normal dashboard link with their email and this password, and must then choose their own password and publish. Until you publish, the temporary password doesn't work.</p>
+        <div class="btn-row">
+          <button id="copy-temp" class="btn btn-light btn-small" type="button">Copy</button>
+        </div>
         <label class="check"><input id="temp-saved" type="checkbox"> I've copied it or written it down</label>
         <button id="temp-next" class="btn btn-primary" type="button" disabled>Done</button>
       </div>
@@ -187,30 +190,31 @@
 
       <!-- People -->
       <section data-panel="people">
-        <p class="small">Everyone here gets the group text. Who is the <strong>primary call</strong> depends on the <strong>Shifts</strong> tab. Families can switch the page to Spanish; fill in the Spanish boxes so roles read naturally there too.</p>
         <div id="people-list"></div>
         <button id="add-person" class="btn btn-light" type="button">Add person</button>
+
         <h2 class="section">Text message</h2>
+        <label for="message">English</label>
         <textarea id="message" rows="3"></textarea>
-        <label for="message-es">In Spanish (sent when the family uses the Spanish page)</label>
+        <label for="message-es">Spanish</label>
         <textarea id="message-es" rows="3" lang="es"></textarea>
-        <p class="small muted">{driver} is replaced with the driver's name from the card.</p>
+        <p class="hint">Use {driver} for the driver's name.</p>
 
         <h2 class="section">Yard address</h2>
-        <p class="small">Shown at the bottom of every card's page, with a Directions button. Leave it empty to hide it.</p>
-        <input id="address" autocomplete="off" placeholder="e.g. 1234 Example Rd, Houston, TX 77000">
+        <input id="address" autocomplete="off" aria-label="Yard address" placeholder="e.g. 1234 Example Rd, Houston, TX 77000">
 
         <h2 class="section">WhatsApp</h2>
         <label class="check"><input id="whatsapp-on" type="checkbox"> Show a WhatsApp button for the primary call</label>
-        <p class="small muted">Opens a WhatsApp chat with whoever is the primary call, with the emergency text already written. Only switch it on if the people on shift watch WhatsApp.</p>
       </section>
 
       <!-- Shifts -->
       <section data-panel="shifts" hidden>
-        <p class="small">The <strong>primary call</strong> is whoever is on the <strong>first</strong> shift in this list that's on right now. Everyone else working comes next, then everyone not scheduled. All times are Houston time (Central).</p>
+        <p class="lead small muted">Houston time. If shifts overlap, the first one listed gets the primary call.</p>
         <div id="gaps" class="gaps"></div>
         <div id="shift-list"></div>
         <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
+
+        <h2 class="section">Fallback</h2>
         <label for="fallback">If nobody is on shift, the primary call is</label>
         <select id="fallback"></select>
 
@@ -225,10 +229,12 @@
       <!-- Cards -->
       <section data-panel="cards" hidden>
         <h2 class="section">Add a card</h2>
-        <label for="new-driver">Driver name and ID (printed on the card and shown on the page)</label>
-        <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)">
-        <label for="new-note">Who has this card? (only shown here)</label>
-        <input id="new-note" autocomplete="off" placeholder="e.g. Family, School">
+        <div class="field-row">
+          <div><label for="new-driver">Driver name and ID</label>
+          <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)"></div>
+          <div><label for="new-note">Given to</label>
+          <input id="new-note" autocomplete="off" placeholder="e.g. Family (only shown here)"></div>
+        </div>
         <button id="add-card" class="btn btn-light" type="button">Add card</button>
         <p id="card-msg" class="msg" role="status"></p>
 
@@ -243,49 +249,39 @@
         <div id="print-body">
           <label for="print-card">Card</label>
           <select id="print-card"></select>
-          <p id="print-status" class="warn" hidden></p>
+          <p id="print-status" class="warn small" hidden></p>
           <p id="print-msg" class="msg bad" hidden></p>
 
           <div class="card-previews">
-            <figure><div id="preview-front" class="card-preview"></div><figcaption>3D card · front</figcaption></figure>
-            <figure><div id="preview-back" class="card-preview"></div><figcaption>3D card · back</figcaption></figure>
+            <figure><div id="preview-front" class="card-preview"></div><figcaption>Front</figcaption></figure>
+            <figure><div id="preview-back" class="card-preview"></div><figcaption>Back</figcaption></figure>
           </div>
-
-          <button id="dl-all" class="btn btn-primary" type="button">Download everything (ZIP)</button>
 
           <h2 class="section">3D-printed card</h2>
-          <p class="small">Two-colour print (black + white) with the NFC tag sealed inside. Import both STL files together as one object with two parts.</p>
-          <label for="tag-thickness">NFC sticker thickness (measure at the chip)</label>
-          <select id="tag-thickness">
-            <option value="0.3">Up to 0.3 mm (card 1.2 mm thick)</option>
-            <option value="0.5" selected>Up to 0.5 mm (card 1.4 mm thick)</option>
-            <option value="0.7">Up to 0.7 mm (card 1.6 mm thick)</option>
+          <p class="small muted">Bambu Lab P2S with AMS, 0.4 mm nozzle. NFC tag: NTAG215 sticker, 25 × 0.8 mm.</p>
+          <label for="print-material">Filament</label>
+          <select id="print-material">
+            <option value="ASA" selected>ASA</option>
+            <option value="ABS">ABS</option>
           </select>
           <div class="btn-row">
-            <button id="dl-black" class="btn btn-light" type="button">Black part (STL)</button>
-            <button id="dl-white" class="btn btn-light" type="button">White part (STL)</button>
-            <button id="dl-notes" class="btn btn-light" type="button">Print notes</button>
-          </div>
-
-          <h2 class="section">Paper card</h2>
-          <p class="small">Three copies on a Letter page, front and back side by side. Print at 100%, cut, fold, laminate.</p>
-          <button id="dl-paper" class="btn btn-light" type="button">Paper card (PDF)</button>
-
-          <h2 class="section">QR code</h2>
-          <div class="btn-row">
-            <button id="dl-label" class="btn btn-light" type="button">QR label with name (PNG)</button>
-            <button id="dl-qr-png" class="btn btn-light" type="button">QR only (PNG)</button>
-            <button id="dl-qr-svg" class="btn btn-light" type="button">QR only (SVG)</button>
+            <button id="dl-3mf" class="btn btn-primary" type="button">Bambu Studio project (3MF)</button>
+            <button id="dl-stl" class="btn btn-light" type="button">STL files and print notes (ZIP)</button>
           </div>
 
           <h2 class="section">NFC tag</h2>
-          <p class="small">Write this link to the tag: NFC Tools → Write → Add a record → URL → paste → Write. Lock the tag only after testing it.</p>
-          <input id="card-link" readonly>
-          <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+          <div class="copy-row">
+            <input id="card-link" readonly aria-label="Card link">
+            <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+          </div>
+          <p class="hint">Write it to the tag with NFC Tools before printing, and lock the tag only after testing the finished card.</p>
 
           <h2 class="section">Backup line</h2>
-          <p class="small">Printed on every card. If the page ever can't load, it tells families to call this number. Publish after changing it, then print new cards.</p>
-          <input id="backup" type="tel" autocomplete="off" placeholder="(555) 555-0100">
+          <input id="backup" type="tel" autocomplete="off" aria-label="Backup line" placeholder="(555) 555-0100">
+          <p class="hint">Printed on every card. After changing it, publish and print new cards.</p>
+
+          <!-- Empty placeholders: an older cached dashboard.js still looks these up for a few minutes after an update. -->
+          <span id="tag-thickness" class="retired" hidden></span><span id="dl-all" class="retired" hidden></span><span id="dl-black" class="retired" hidden></span><span id="dl-white" class="retired" hidden></span><span id="dl-notes" class="retired" hidden></span><span id="dl-paper" class="retired" hidden></span><span id="dl-label" class="retired" hidden></span><span id="dl-qr-png" class="retired" hidden></span><span id="dl-qr-svg" class="retired" hidden></span>
         </div>
       </section>
 
@@ -300,21 +296,16 @@
         <div id="me-box" hidden>
           <h2 class="section">Signed in as</h2>
           <p id="me-text"></p>
-          <p class="small">History shows this name next to what you publish. If it's wrong, ask the site owner.</p>
-          <h2 class="section">Your password</h2>
-          <p class="small">Changes only your own password. Nobody else is affected. It takes effect when you publish.</p>
           <button id="change-my-password" class="btn btn-light" type="button">Change my password</button>
         </div>
 
         <div id="name-box">
           <h2 class="section">Your name</h2>
-          <p class="small">Shown in History next to what you publish. Saved only on this device.</p>
-          <input id="my-name" autocomplete="name">
+          <input id="my-name" autocomplete="name" aria-label="Your name" placeholder="Shown in History">
         </div>
 
         <div id="shared-box">
           <h2 class="section">Shared password</h2>
-          <p class="warn">Changing the shared supervisors' password affects everyone who signs in with it: once you publish, the old one stops working. Tell them the new one. People with their own sign-in aren't affected. If it's ever lost, the site owner can reset it.</p>
           <button id="change-password" class="btn btn-light" type="button">Change the shared password</button>
         </div>
       </section>
@@ -322,75 +313,75 @@
       <!-- Help -->
       <section data-panel="help" hidden class="help">
         <h2 class="section">How it works</h2>
-        <p>Each family or school has a card with an NFC tag and QR code. Tapping or scanning it opens a page with a <strong>Text All Yard Supervisors</strong> button and Call buttons. The person on shift right now is at the top as the <strong>primary call</strong>. Changes you publish here reach every card within about a minute.</p>
-        <h2 class="section">Common jobs</h2>
-        <ul>
-          <li><strong>Shift rotation changed:</strong> Shifts → tick who works each shift → Publish.</li>
-          <li><strong>New person / someone left:</strong> People → Add person or Remove → check Shifts → Publish.</li>
-          <li><strong>New card:</strong> Cards → Add card → Publish → Print &amp; QR → download the files, write the link to the tag. Test it, then lock the tag.</li>
-          <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
-          <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. The tag doesn't need rewriting, but print a new card face.</li>
-          <li><strong>Give someone access:</strong> ask the site owner to add them. They get their own sign-in and a temporary password.</li>
-          <li><strong>"Number not checked":</strong> call or text that person to make sure the number still works, then press <strong>Still right</strong> → Publish. Each number is due every 90 days; changing a number counts as checking it.</li>
-          <li><strong>Spanish:</strong> families can switch the card page to Spanish (phones set to Spanish open it in Spanish). Fill in the Spanish boxes in People and Shifts so roles and shift names read naturally; anything left blank shows in English.</li>
-        </ul>
-        <h2 class="section">If something's wrong</h2>
-        <ul>
-          <li><strong>"Not published" won't go away:</strong> press Publish and read the message under it.</li>
-          <li><strong>Publishing isn't working:</strong> ask the site owner.</li>
-          <li><strong>Someone else published first:</strong> Lock, sign in again, redo your change.</li>
-          <li><strong>Forgot your password:</strong> press <strong>Forgot password?</strong> on the sign-in screen to email the site owner, who resets it.</li>
-        </ul>
-        <h2 class="section">Security</h2>
-        <p class="small">All data is encrypted before it leaves this page. Each card can unlock only the contacts and its own driver's name. The password never leaves this device.</p>
-        <h2 class="section">Full guides</h2>
-        <ul>
-          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/supervisor-guide.md" target="_blank" rel="noopener noreferrer">Supervisor guide</a>: every task step by step.</li>
-          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/cards-and-printing.md" target="_blank" rel="noopener noreferrer">Cards and printing</a>: NFC tags, 3D and paper cards.</li>
-          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/emergency-page.md" target="_blank" rel="noopener noreferrer">The emergency page</a>: what families see and why.</li>
+        <p>Each card opens a page with a <strong>Text All Yard Supervisors</strong> button and Call buttons. Whoever is on shift is the <strong>primary call</strong>. Published changes reach every card within a minute.</p>
+
+        <h2 class="section">Common tasks</h2>
+        <dl class="tasks">
+          <dt>Shift rotation changed</dt><dd>Shifts → tick who works each shift → Publish</dd>
+          <dt>Someone joins or leaves</dt><dd>People → Add person or Remove person → check Shifts → Publish</dd>
+          <dt>New card</dt><dd>Cards → Add card → Publish → Print &amp; QR</dd>
+          <dt>Lost card</dt><dd>Cards → Remove → Publish. Only that card stops working.</dd>
+          <dt>Name typo on a card</dt><dd>Cards → Rename → Publish, then print a new card. The tag stays the same.</dd>
+          <dt>Number not checked</dt><dd>Call or text the person, then Still right → Publish</dd>
+          <dt>Spanish</dt><dd>Fill in the Spanish boxes in People and Shifts. Blank boxes show in English.</dd>
+          <dt>Access for someone new</dt><dd>Ask the site owner</dd>
+        </dl>
+
+        <h2 class="section">Problems</h2>
+        <dl class="tasks">
+          <dt>Publish fails</dt><dd>Read the message under Publish. For GitHub problems, ask the site owner.</dd>
+          <dt>Someone else published first</dt><dd>Lock, sign in again and redo your change.</dd>
+          <dt>Forgot password</dt><dd>Forgot password? on the sign-in screen</dd>
+        </dl>
+
+        <h2 class="section">Guides</h2>
+        <ul class="links">
+          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/supervisor-guide.md" target="_blank" rel="noopener noreferrer">Supervisor guide</a></li>
+          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/cards-and-printing.md" target="_blank" rel="noopener noreferrer">Cards and printing</a></li>
+          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/emergency-page.md" target="_blank" rel="noopener noreferrer">The emergency page</a></li>
+          <li><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/security.md" target="_blank" rel="noopener noreferrer">Security</a></li>
         </ul>
       </section>
 
       <!-- Owner (only with #owner in the address) -->
       <section data-panel="owner" hidden>
-        <p class="small">Only shown when the dashboard is opened as <code>dashboard.html#owner</code>. Supervisors don't need anything here. Details: <a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/owner-guide.md" target="_blank" rel="noopener noreferrer">owner guide</a>.</p>
-
         <h2 class="section">People who can sign in</h2>
-        <p class="small">Each person signs in on the normal dashboard link with their own email and password, and History shows their name. Adding someone or resetting their password gives you a temporary password to hand over; they choose their own at first sign-in. Then publish.</p>
         <ul id="account-list" class="rows"></ul>
         <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
         <div class="field-row">
           <label>Email <input id="new-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="jane.doe@tenaris.com"></label>
-          <label>Name (shown in History) <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
+          <label>Name <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
         </div>
         <button id="add-account" class="btn btn-light" type="button">Add person</button>
         <p id="account-msg" class="msg" role="status"></p>
         <p id="token-advice" class="warn small" hidden><span id="token-advice-text"></span> <button id="token-advice-btn" class="link-btn" type="button">Replace GitHub token</button></p>
 
         <h2 class="section">Shared supervisors' password</h2>
-        <p id="shared-status" class="small"></p>
-        <button id="shared-off" class="btn btn-light" type="button">Turn off the shared password</button>
-        <button id="shared-on" class="btn btn-light" type="button" hidden>Set a new shared password</button>
+        <p id="shared-status" class="status-text"></p>
+        <div class="btn-row">
+          <button id="shared-off" class="btn btn-light" type="button">Turn off the shared password</button>
+          <button id="shared-on" class="btn btn-light" type="button" hidden>Set a new shared password</button>
+        </div>
 
         <h2 class="section">GitHub connection</h2>
-        <p id="gh-status" class="small"></p>
+        <p id="gh-status" class="status-text"></p>
         <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
 
         <h2 class="section">Owner password</h2>
-        <p class="small">Your own password for the owner link. The supervisors' password can't open this tab. (To change the supervisors' password, use Settings.)</p>
         <button id="change-owner-password" class="btn btn-light" type="button">Change owner password</button>
 
         <h2 class="section">Recovery code</h2>
-        <p id="recovery-status" class="small"></p>
+        <p id="recovery-status" class="status-text"></p>
         <button id="new-recovery" class="btn btn-light" type="button">Make a new recovery code</button>
 
         <h2 class="section">Your contact for supervisors</h2>
-        <p class="small">Shown when something needs you, like an expired GitHub token.</p>
-        <input id="owner-contact" autocomplete="off" placeholder="e.g. Salil, 555-555-0100">
+        <input id="owner-contact" autocomplete="off" aria-label="Your contact for supervisors" placeholder="e.g. Salil, 555-555-0100">
 
         <h2 class="section">Take away someone's access</h2>
-        <p class="small">Someone with their own sign-in: <strong>Remove</strong> them above, then replace the GitHub token. Someone who knows the shared password: this button sets a new shared password <strong>and</strong> a new GitHub token (just the token if the shared password is off). After publishing, delete the old token on GitHub (Settings → Developer settings → Fine-grained tokens).</p>
+        <p class="small muted">Replaces the GitHub token, and the shared password if it's on.</p>
         <button id="revoke-access" class="btn btn-light" type="button">New password and token</button>
+
+        <p class="owner-foot"><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/owner-guide.md" target="_blank" rel="noopener noreferrer">Owner guide</a></p>
       </section>
     </div>
   </main>

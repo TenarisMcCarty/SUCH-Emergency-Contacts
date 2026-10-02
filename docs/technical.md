@@ -22,7 +22,7 @@ For anyone maintaining or changing the code.
 - **One data file**, `contacts.enc.json`, fully encrypted in the browser. The emergency page reads it with a card key. The dashboard reads it with a supervisor's own email and password, the shared supervisors' password, or the owner password or recovery code, and writes it back through the GitHub REST API.
 - **Two pages:**
   - `index.html` + `app.js`: the emergency page. It loads `crypto.js` and `schedule.js`.
-  - `dashboard.html` + `dashboard.js`: the dashboard. It also loads `cardmaker.js` and its dependencies.
+  - `dashboard.html` + `dashboard.js`: the dashboard. It also loads `cardmaker.js`, `bambu3mf.js` and their dependencies.
 
 ```
 family phone ──(card link #key)──► index.html ──fetch──► contacts.enc.json ──decrypt with card key──► page
@@ -43,10 +43,11 @@ supervisor ──(email + password)──► dashboard.html ──GitHub API PUT
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
 | `dashboard.html` | Dashboard markup | Sign-in (Email, password, Forgot password?), setup steps (including the one-time temporary password), tabs, Owner tab |
 | `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing (with a self-check), deploy watching, Print & QR, Owner tab (people who can sign in, shared password, token, owner password, recovery code). Elements added for personal sign-ins are optional, for cache mixes with an older `dashboard.html`. |
-| `cardmaker.js` | Print files | Card layout, 3D model and STL writer, canvas drawing, PDF writer, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
+| `cardmaker.js` | Print files | Card layout, 3D model and STL writer, previews, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
+| `bambu3mf.js`, `bambu-template.json` | Bambu Studio project | Builds a .3mf for a Bambu Lab P2S (0.4 mm nozzle, ASA or ABS, white + black parts on their own filaments, 100% infill, the NFC pause already set). The template holds the project settings taken from Bambu Studio's system presets. |
 | `style.css` | Styling | Brand colours and type ([Tenaris brand](#tenaris-brand)). Frutiger if installed locally, otherwise Source Sans 3. |
 | `logo.svg` | Tenaris signature | The official full-colour artwork from tenaris.com, unchanged (only a `<title>` added). Used in both page headers and for the home-screen icons. |
-| `logo.js` | Tenaris signature outlines | The same artwork as flattened outlines with their colours, for the card maker (paper in colour, 3D in one colour). Also records the Multibar's size for clear-space and minimum-size checks. |
+| `logo.js` | Tenaris signature outlines | The same artwork as flattened outlines with their colours, for the card maker (one colour on the 3D card). Also records the Multibar's size for clear-space and minimum-size checks. |
 | `source-sans-3-regular.woff2`, `source-sans-3-bold.woff2` | Page typeface | Source Sans 3 (Adobe, SIL Open Font License), unmodified release files. Also kept in the offline copy. |
 | `source-sans-3-bold.ttf` | Card lettering | Source Sans 3 Bold, unmodified, read by opentype.js |
 | `qrcode.js` | QR encoder | qrcode-generator 2.0.4 (MIT), unmodified. SHA-256 `79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c` |
@@ -192,35 +193,36 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
 
 ## 6. The card maker
 
-`cardmaker.js` exposes a `CardMaker` object; everything runs in the browser.
+`cardmaker.js` exposes a `CardMaker` object; everything runs in the browser. It makes the 3D-printed card only.
 
-1. **Layout** (`layout(card, '3d' | 'paper')`): builds the front and back as *zones*, areas of one base colour, holding *items*, outlines in the other colour. All in millimetres with y pointing up; the back is laid out as seen from the back.
-   - Text outlines come from `opentype.js` and the font, with curves flattened to about 0.15 mm.
-   - Text is fitted to width, and names wrap onto two lines if needed.
-   - Text placement respects a circular keep-out around the NFC pocket.
-   - `checkClearances` refuses designs where front art would cover the pocket, art leaves its zone, or back art enters the QR margin.
+1. **Layout** (`layout(card)`): builds the front and back as *zones* (areas of one base colour) holding *items* (outlines in the other colour). All in millimetres with y pointing up; the front is laid out as seen from the front, the back as seen from the back. It also returns `problems` (why a card can't print), every text line with its capital height, the logo box and the QR size.
+   - Text outlines come from `opentype.js` and the font, with curves flattened to about 0.15 mm. The name is normalised first (NFC, leftover combining marks dropped, curly quotes made straight); only letters, digits and . , - ' " ( ) & # / are accepted.
+   - Glyphs built from overlapping pieces (the cedilla of Ç and Ş) are merged into one outline (`unionContours`, non-zero rule). Accents on capitals are lifted until they are 0.6 mm clear of their letter (`raiseMarks`). Letters are placed at least 0.6 mm apart (`shape`).
+   - Text is fitted to width; the name wraps onto two lines if needed. Smallest capital height 3.5 mm (3.7 for the comma and #, 3.9 for Å and cedilla letters), so every stroke, gap and counter is at least 0.5 mm.
+   - `checkClearances` refuses designs where text would sit over the NFC pocket or in the logo's clear space, leave the card, enter the QR area, or come within 0.6 mm of other art.
 2. **Filling** (`fillZone`): nests the outlines by containment. Alternate levels get alternate colours (zone → letter → letter hole → …).
-3. **3D model** (`model(card, tagThickness)`):
-   - **Layers:** each filled region becomes a prism. The back skin goes at z 0–0.4 (mirrored, because it's printed face down), then the white core with a 25.6 mm pocket, then the front skin.
+3. **3D model** (`model(card)`), printed front face down:
+   - **Layers:** each filled region becomes a prism. Front skin z 0–0.6 (mirrored, because it's printed face down), white core 0.6–1.6 with a 26 mm pocket, one solid white roof layer 1.6–1.8, back skin 1.8–2.2.
+   - Returns `black` and `white` (binary STL), `thickness` (2.2), `pauseZ` (1.6: the Z where the roof starts; pause after this layer), `pauseLayer` (9), `layerHeight` (0.2), `layers`, `pocket` and `layout`.
    - **QR:** drawn as rows of same-colour rectangles.
    - **Caps** are triangulated with `earcut`. Every point is nudged by up to 2 × 10⁻⁵ mm, always identically for the same point. Without this, letters sharing a baseline create collinear points and T-junctions.
-   - **Output** is binary STL, one file per colour. Each part is a set of closed solids that touch along shared faces.
-4. **Drawing** (`drawFace`, `labelCanvas`, `qrCanvas`): renders the same layout onto canvas, for the paper card at 600 dpi, the previews and the label. QR squares are snapped to whole pixels, so no seams appear.
-5. **PDF** (`paperPdf`): a minimal PDF 1.4 writer. It embeds two RGB images, compressed with the browser's `CompressionStream('deflate')`, and draws cut marks and Helvetica text.
-6. **ZIP** (`zip`): stored (uncompressed) ZIP with CRC-32 and UTF-8 names.
+   - **Output** is binary STL, one file per colour, in one coordinate system. Each part is a set of closed solids that touch along shared faces.
+4. **Bambu Studio project:** the dashboard passes the two STL parts and `pauseZ` to `bambu3mf.js` (`Bambu3MF.make`), which makes a .3mf for a Bambu Lab P2S with the pause already in it. `cardmaker.js` doesn't depend on it.
+5. **Previews** (`preview(card, side)`, `drawFace`): render the layout onto canvas. QR squares are snapped to whole pixels, so no seams appear.
+6. **ZIP** (`zip`, `files(card)`): stored (uncompressed) ZIP with CRC-32 and UTF-8 names, holding both STL parts and the print notes (`printNotes`). File names use plain letters (`slug`: José → Jose).
 
 **Design constants** (top of the file):
 
 | Constant | Value |
 |---|---|
-| Card size | 85.6 × 53.98 mm, corner radius 3.18 |
-| Skins | 0.4 mm |
-| Tag pocket | 25.6 mm, centred at (67, 39) on the front |
-| Front white band | bottom 16.5 mm |
-| QR area | 40 mm, at (40.6, 7) on the back |
+| Card size | 85.6 × 53.98 × 2.2 mm, corner radius 3.18 |
+| Layers (0.2 mm each) | front 0.6 · core 1.0 · roof 0.2 · back 0.4; pause at Z 1.6 |
+| NFC tag | NTAG215 round sticker, 25 × 0.8 mm, centred at (67, 39) on the front |
+| Pocket | 26 mm across, 1.0 mm deep |
+| QR area | 40 mm, top right of the back, 1.6 mm from the edges |
 | Smallest QR square | 0.8 mm |
-| Smallest capital height | 2.3 mm |
-| Pocket depth by tag thickness | ≤ 0.3 mm tag → 0.4 mm · ≤ 0.5 mm → 0.6 mm · ≤ 0.7 mm → 0.8 mm |
+| Smallest capital height | 3.5 mm (3.7 for , and #; 3.9 for Å and cedillas) |
+| Smallest gap between letters | 0.6 mm |
 
 ---
 
@@ -228,8 +230,8 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
 
 Everything follows the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communications):
 
-- **Signature:** only the official artwork (`logo.svg` / `logo.js`, from tenaris.com), never redrawn, stretched, recoloured or boxed in. Full colour on white (page headers, home-screen icons, paper card, QR label); one colour (white on black) on the two-colour 3D card, which the guide allows.
-- **Minimum size:** Multibar at least 5.5 mm tall in print. The 3D and paper card use a 44 mm signature (Multibar 7.9 mm) and the label 48 mm (8.6 mm). The paper card's back has no logo, because it would be too small there.
+- **Signature:** only the official artwork (`logo.svg` / `logo.js`, from tenaris.com), never redrawn, stretched, recoloured or boxed in. Full colour on white (page headers, home-screen icons); one colour (white on black) on the two-colour 3D card, which the guide allows.
+- **Minimum size:** Multibar at least 5.5 mm tall in print. The 3D card uses a 40 mm signature (Multibar 7.2 mm).
 - **Clear space:** 80% of the Multibar's height on every side. `cardmaker.js` computes it (`clearSpace`) and places the logo and the text below it accordingly. On screen, the header's padding and gap give the same.
 - **Colours:** on screen, the guide's values: Tenaris Green `#009900`, Tenaris Blue `#000099`, Tenaris Gray `#666666`. A darker green `#007a00` is used only where small white text needs more contrast. Red stays for 911 and amber for dashboard warnings, for safety. The signature keeps the colours of its own artwork.
 - **Type:** Frutiger is the Tenaris typeface but needs a paid licence, so the site and the cards use Source Sans 3, a free typeface in the same humanist style. Computers with Frutiger installed show Frutiger.
@@ -239,7 +241,7 @@ Everything follows the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing C
 Code changes are tried on a separate **test copy** before they go live, so a half-finished change can never break the cards.
 
 - **Local folder:** `~/SUCH-Emergency-Contacts-staging`, its own git repository with **fake data** (made-up people with fictional 555-01xx numbers, one demo card, test-only passwords). It is never connected to the live repository.
-- **Online (optional):** a separate repository `TenarisMcCarty/SUCH-Emergency-Contacts-staging` with its own GitHub Pages site. Every page there shows a **Test site** label. `dashboard.js` works out which repository it belongs to from the page address, so the same code runs on both. Publishing on the test site needs its own GitHub token for that repository (Owner tab → Replace GitHub token).
+- **Kept on the owner's Mac only.** There is no online test site. Every page of the test copy shows a **Test site** label if it is ever served from a repository whose name ends in `-staging`; `dashboard.js` works out its repository from the page address.
 - **Going live:** only with the owner's approval. Copy the code files (everything except `contacts.enc.json` and `.git`) from the test copy to the live repository, commit and push, then open the printed demo card's link to check.
 - The test copy's data file must never be copied to the live site, and the live data file must never be copied to the test copy: a card removed on the live site would still open the copy.
 
@@ -305,10 +307,13 @@ An automated suite was used during development. It isn't included in this reposi
 - **Print files:**
   - both STL parts watertight (every edge paired)
   - black + white areas tile each layer exactly, and the volume equals the card minus the sealed pocket
-  - the QR decodes (with zxing-cpp) from the STL's back face, the PDF's embedded image, the label and the PNG
+  - the pocket is 26 mm round at the tag position and closed below and above; `pauseZ` is the pocket top, and the .3mf pauses at the same layer
+  - the front, rendered from the bottom face and turned over, matches the preview (not mirrored); the QR decodes upright (zxing-cpp) from the top face
+  - capital heights, the thinnest strokes and gaps in both colours (≥ 0.5 mm) and the logo's size and clear space, measured on renders of the STL
+  - the .3mf opens and slices in the Bambu Studio command-line tool for the P2S, with both filaments and the pause at the right layer
   - the ZIP is valid
 
-**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, WhatsApp), a physical 3D print, and a paper print.
+**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, WhatsApp), and a physical 3D print.
 
 ---
 
@@ -317,7 +322,7 @@ An automated suite was used during development. It isn't included in this reposi
 - **Browsers:**
   - Emergency page: Safari on iOS 14 or later, and any current Android browser. It uses Web Crypto (AES-GCM, SHA-256), service workers and modern JavaScript.
   - Dashboard: any current browser. It also uses PBKDF2 and ECDH P-256.
-  - The paper-card PDF needs `CompressionStream` (Safari 16.4+, Chrome 80+, Firefox 113+).
+  - The Bambu Studio project uses `CompressionStream` to compress the .3mf (Safari 16.4+, Chrome 80+, Firefox 113+); without it the file is about 6 MB but still works.
 - **GitHub Pages:** hosting, with deploys triggered by commits to `main` (usually under a minute).
 - **GitHub REST API:** used only by the dashboard (the contents endpoint).
   - Loading works without authentication (60 requests per hour per IP address), falling back to the site copy.

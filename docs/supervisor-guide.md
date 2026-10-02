@@ -35,7 +35,7 @@ You don't need a GitHub account, and you don't need to install anything. The das
 The site owner gives you a **temporary password** (five words joined by hyphens), in person or by phone.
 
 1. Sign in with your email and the temporary password.
-2. **Choose your own password.** Save the suggested one in your password manager (or type your own of at least 20 characters), tick **I've saved the password…**, then **Next**.
+2. **Choose your own password.** Save the suggested one in your password manager (or type your own of at least 20 characters), tick **I've saved it in a password manager**, then **Next**.
 3. The dashboard opens with one change waiting: "*Your name* chose a new password". Press **Publish**. **Until you publish, your new password doesn't work** and the temporary one stays in use. If you Lock without publishing, you'll be asked to choose a password again next time.
 
 ### Problems signing in
@@ -102,8 +102,8 @@ Under each phone number is the date it was last checked, e.g. *Number checked Oc
 
 This is the group text the family sends to everyone. `{driver}` is replaced with the driver's name from their card.
 
-- **Text message** is used on the English page. Default: *EMERGENCY – need to reach driver {driver}. Please call me back at this number.*
-- **In Spanish** is used when the family has the page in Spanish. Default: *EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.*
+- **English** is used on the English page. Default: *EMERGENCY – need to reach driver {driver}. Please call me back at this number.*
+- **Spanish** is used when the family has the page in Spanish. Default: *EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.*
 
 The family sees the message in their Messages app and can edit it before tapping Send. It's sent from their own phone, so the yard can call them back.
 
@@ -143,7 +143,7 @@ Keep the rotating shifts (1st, 2nd, 3rd) **above** the Day shift. Then the shift
 
 - **All times are Houston time** (Central), even if a family is somewhere else. Their card page then adds a note: "Shift times are Houston time."
 - **Each shift has:**
-  - **Name** and an optional **Name in Spanish**. The usual names (1st shift, 2nd shift, 3rd shift, Day (8–5), Day, Night) translate automatically; the grey hint shows the automatic Spanish.
+  - **Name** and an optional **Spanish name**. The usual names (1st shift, 2nd shift, 3rd shift, Day (8–5), Day, Night) translate automatically; the grey hint shows the automatic Spanish.
   - **Starts** and **Ends**. A shift that ends earlier than it starts runs past midnight, e.g. 22:00–06:00. It counts as belonging to the day it **starts**: a Friday 22:00–06:00 shift covers Saturday 02:00. A shift that starts and ends at the same time runs 24 hours.
   - **Days:** tick the days the shift runs.
   - **Who works it:** tick the people on that shift. A person can be on more than one shift.
@@ -170,11 +170,11 @@ Each card (family or school) has its own secret link, written to its NFC tag and
 
 - **Add card:**
   - **Driver name and ID:** shown on the page and printed on the card, e.g. `Jane Doe (1234)`.
-  - **Who has this card? (only shown here):** a note like "Family" or "School", so you can tell cards apart. Families never see it.
+  - **Given to:** a note like "Family" or "School", so you can tell cards apart. Families never see it.
 
   A new card shows **Not published yet** until you publish. Its link only works after that.
 - **Print & QR** (on each card): opens the Print & QR tab for that card.
-- **Rename:** fix the driver name or the note. The card's link doesn't change, so the NFC tag doesn't need rewriting. Publish, then print a new card face if the printed name was wrong.
+- **Rename:** fix the driver name or the note. The card's link doesn't change, so the NFC tag doesn't need rewriting. Publish. If the printed name was wrong, print a new card, with a new tag holding the same link, and destroy the old one.
 - **Remove:** permanently switches that card off once you publish. Use it for a lost card. Every other card keeps working. A removed card can't be brought back; make a new one instead.
 
 > A driver can have several cards (e.g. family and school). Each one can be removed on its own.
@@ -183,26 +183,21 @@ Each card (family or school) has its own secret link, written to its NFC tag and
 
 ## 6. Print & QR
 
-Everything needed to make a physical card, generated from the card's data.
+Everything needed to make the 3D-printed card, generated from the card's data.
 
 1. Choose the **Card** at the top. A yellow note warns you if the card isn't published yet; its files only work after you publish.
-2. Check the two previews (3D card front and back).
+2. Check the two previews: the front (printed face down) and the back (printed on top).
 3. Download what you need:
 
 | Button | Gives you |
 |---|---|
-| **Download everything (ZIP)** | All the files below in one ZIP, plus the card link as a text file |
-| **Black part (STL)** / **White part (STL)** | The two-colour 3D-printed card |
-| **Print notes** | Printer settings and the exact pause height for inserting the NFC tag |
-| **Paper card (PDF)** | Three copies of the card on a Letter page, to cut, fold and laminate |
-| **QR label with name (PNG)** | A 4 × 6 inch label: logo, name, QR code, instructions |
-| **QR only (PNG)** / **QR only (SVG)** | Just the QR code |
+| **Bambu Studio project (3MF)** | The card ready for a Bambu Lab P2S: both colours, settings and the pause for the NFC tag already set. Choose **ASA** or **ABS** under **Filament** first. |
+| **STL files and print notes (ZIP)** | The black and white parts as STL files, plus print notes with the settings and the pause height, for setting up the print yourself |
 
-- **NFC sticker thickness:** pick the thickness of your NFC sticker (measured at the chip). It sets the pocket depth and card thickness of the 3D files.
-- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag.
+- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 round sticker, 25 mm, 0.8 mm thick).
 - **Backup line:** a phone number printed on every card. If the page ever can't load, it tells families to call the backup number on their card, so set this before printing cards. Publish after changing it.
 
-If a driver's name is too long to print cleanly, the 3D buttons are disabled with a message. Shorten the name with **Cards → Rename**.
+If a driver's name can't print cleanly (too long, or characters the card can't print), both download buttons are disabled with a message. Shorten or fix the name with **Cards → Rename**.
 
 Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
@@ -240,7 +235,7 @@ Every publish adds an entry with the date and time, who published, and what chan
 - **Change my password:** changes only your own password; nobody else is affected.
   1. Press **Change my password**.
   2. Save the suggested password (five random words), or type your own of at least 20 characters.
-  3. Tick **I've saved the password…**, then press **Next**.
+  3. Tick **I've saved it in a password manager**, then press **Next**.
   4. **Publish.** Your old password stops working the moment you publish.
 
 **Signed in with the shared password:**
@@ -267,7 +262,7 @@ Every publish adds an entry with the date and time, who published, and what chan
 
 **A new family or school needs a card**
 1. **Cards** → **Add card** → **Publish.**
-2. **Print & QR** → choose the card → **Download everything (ZIP)**.
+2. **Print & QR** → choose the card → **Bambu Studio project (3MF)**.
 3. Write the link to the NFC tag and print the card. See [Cards and printing](cards-and-printing.md).
 4. Test it with a phone before handing it over.
 
@@ -275,7 +270,7 @@ Every publish adds an entry with the date and time, who published, and what chan
 **Cards** → **Remove** next to it → **Publish.** Only that card stops working. Make a replacement with **Add card**.
 
 **A name on a card is misspelled**
-**Cards** → **Rename** → **Publish.** The page shows the corrected name within about a minute. Reprint the card face; the tag stays the same.
+**Cards** → **Rename** → **Publish.** The page shows the corrected name within about a minute. To fix the printed name, print a new card with a new tag holding the same link (Print & QR), and destroy the old card.
 
 **Giving someone dashboard access**
 Ask the site owner to add them. The owner gives them a temporary password in person or by phone, and they choose their own at first sign-in.
@@ -300,4 +295,6 @@ Ask the site owner to add them. The owner gives them a temporary password in per
 | "Add your name first (Settings → Your name)…" | Type your name in **Settings → Your name**, then publish again. |
 | Badge stuck on **Delayed** | GitHub is slow. It nearly always catches up within 10 minutes. |
 | "The driver name is too long to print." (Print & QR) | **Cards → Rename** to a shorter form, e.g. initials for middle names. |
+| "The driver name has characters the card can't print" (Print & QR) | **Cards → Rename** using letters, digits and . , - ' " ( ) & # / only. |
+| "The Bambu Studio project maker (bambu3mf.js) didn't load." (Print & QR) | Reload the page. If it keeps happening, use **STL files and print notes (ZIP)** instead. |
 | A family says their card shows "This card couldn't be loaded" | Check the card is listed in **Cards** and shows **Active**. If it was removed, make a new card. If it's active, ask them to tap **Retry** or check their internet. |

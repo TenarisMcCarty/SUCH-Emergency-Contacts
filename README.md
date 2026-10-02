@@ -38,7 +38,7 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 |---|---|---|
 | [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in with your email, your first sign-in, Forgot password?, people, shifts, cards, printing, publishing, history, changing your password, fixing common problems |
 | [Owner guide](docs/owner-guide.md) | Site owner | Owner password, recovery code, the GitHub token, people who can sign in (add, reset, remove), switching off the shared password, taking away access, starting over |
-| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card (specs and Bambu Studio steps), the paper card, QR labels, testing |
+| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card (specs, Bambu Studio project, printing in ASA/ABS), testing |
 | [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the call order is chosen, English/Spanish, offline behaviour, error messages |
 | [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
 | [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
@@ -73,13 +73,9 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
-- **Print & QR generator:** from a card's data, the dashboard makes:
-  - a two-colour 3D-printable card (2 STL files, NFC tag sealed inside)
-  - a paper card PDF and a QR label
-  - plain QR images
-  - all of these in one ZIP
+- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (2.2 mm, NFC tag sealed inside), as a ready-to-print **Bambu Studio project (3MF)** for the P2S with the tag pause already set, or as **STL files** with print notes.
 - **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
-- **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen, paper and labels; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
+- **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
 - **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or a sign-in, the data file is unreadable.
 - **Personal sign-ins:** each supervisor has their own email and password, and History shows who published. The site owner (own password plus a recovery code) adds, resets and removes people and can switch off the old shared password. Nothing breaks any cards.
 
@@ -91,7 +87,8 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 |---|---|
 | `index.html`, `app.js` | The emergency page families see |
 | `dashboard.html`, `dashboard.js` | The dashboard for supervisors and the owner |
-| `cardmaker.js` | Makes the print files (STL, PDF, PNG, SVG, ZIP) in the browser |
+| `cardmaker.js` | Makes the 3D card (two STL parts, previews, print notes, ZIP) in the browser |
+| `bambu3mf.js`, `bambu-template.json` | Turns the two STL parts into a ready-to-print Bambu Studio project (3MF) |
 | `crypto.js` | Encryption, shared by both pages |
 | `schedule.js` | Works out who is on shift; Spanish shift names and times |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
@@ -120,5 +117,4 @@ Hosting is **GitHub Pages**, from the `main` branch, repository root. There is n
 
   Run the trial checklist in [Cards and printing](docs/cards-and-printing.md#trial-checklist) before making a batch.
 - **Printed cards are English only.** Spanish text is about 30% longer and doesn't fit at a size a 0.4 mm nozzle prints cleanly.
-- **The paper card is laid out for US Letter paper.**
 - Anyone who can sign in can publish changes. See [Security](docs/security.md) for what that means and how to take access away.
