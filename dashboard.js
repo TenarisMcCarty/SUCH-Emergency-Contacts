@@ -120,17 +120,19 @@ async function setPassword(password) {
 
 // ================= GitHub =================
 
-async function gh(path, { method = 'GET', body } = {}) {
+async function gh(path, { method = 'GET', body, timeout = 0 } = {}) {
   const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
   if (github) headers.Authorization = 'Bearer ' + github.token;
   if (body) headers['Content-Type'] = 'application/json';
-  return fetch(API + path, { method, headers, body: body && JSON.stringify(body), cache: 'no-store' });
+  const stop = new AbortController();
+  if (timeout) setTimeout(() => stop.abort(), timeout);
+  return fetch(API + path, { method, headers, body: body && JSON.stringify(body), cache: 'no-store', signal: stop.signal });
 }
 
 // The latest saved file → { text, sha }, or null if there isn't one yet.
 async function loadFile() {
   try { // straight from GitHub: always the newest version (the repo is public, so no sign-in needed)
-    const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`);
+    const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`, { timeout: 8000 });
     if (res.status === 404) return null;
     if (res.ok) {
       const j = await res.json();
@@ -875,7 +877,10 @@ async function publish() {
   let who = myName();
   if (!who) {
     who = (prompt('Your name, for the History tab:') || '').trim();
-    if (!who) return;
+    if (!who) {
+      openTab('settings');
+      return say('publish-msg', 'Add your name first (Settings → Your name), so History shows who published.', true);
+    }
     setMyName(who);
     $('my-name').value = who;
   }
