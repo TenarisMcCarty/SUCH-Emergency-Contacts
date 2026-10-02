@@ -64,6 +64,19 @@ function arrange({ contacts, schedule }, now) {
   return { main, also: working, off };
 }
 
+// Data saved by the first version (before shifts existed) has no shifts or contact ids:
+// fill them in so it still works. The old main contact becomes the fallback.
+function withSchedule(data) {
+  const contacts = data.contacts.map((c, i) => ({ ...c, id: c.id || 'c' + i }));
+  const main = contacts[data.primary || 0] || contacts[0];
+  const schedule = data.schedule || {
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    fallback: main ? main.id : null,
+    shifts: [],
+  };
+  return { ...data, contacts, schedule };
+}
+
 // "1st shift lead · 1st shift, until 2:00 PM"
 function detailLine({ contact, shift }) {
   return [contact.role, shift && `${shift.name}, until ${timeLabel(shift.end)}`].filter(Boolean).join(' · ');

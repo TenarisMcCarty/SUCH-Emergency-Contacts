@@ -18,7 +18,7 @@ async function load() {
     // ?v= skips GitHub's 10-minute cache, so changes from the dashboard show up within a minute.
     const res = await fetch('contacts.enc.json?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('No contacts file.');
-    card = await openCard(location.hash.slice(1).trim(), await res.json());
+    card = withSchedule(await openCard(location.hash.slice(1).trim(), await res.json()));
     renderTextButtons();
     renderOrder();
     $('offline-note').hidden = res.headers.get('X-Offline-Copy') !== '1';
@@ -62,6 +62,7 @@ function renderOrder() {
   $('also-section').hidden = !also.length;
   $('also-list').replaceChildren(...also.map(row));
   $('off-section').hidden = !off.length;
+  $('off-heading').textContent = card.schedule.shifts.length ? 'Off shift · still emergency contacts' : 'Other contacts';
   $('off-list').replaceChildren(...off.map(row));
 
   const tz = card.schedule.timeZone;

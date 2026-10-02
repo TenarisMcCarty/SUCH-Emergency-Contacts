@@ -20,6 +20,7 @@ let admin = null;       // { key, salt, iterations } made from the password
 let github = null;      // { token, addedAt, addedBy }
 let state = null;       // what you're editing: { message, contacts, schedule, cards }
 let published = null;   // { state, text, admin, github } as last published (null = never published)
+                        // (admin/github are null right after upgrading from the first version)
 let sha = null;         // GitHub's id for the current file (needed to replace it)
 let log = [];           // change history
 let pending = new Set(); // changes that aren't in `state`: 'password', 'token'
@@ -191,6 +192,11 @@ async function start() {
   sha = file && file.sha;
   if (file) {
     show('login');
+    if (!JSON.parse(file.text).admin.salt) { // saved by the first version, which used an admin key
+      $('login-title').textContent = 'Upgrade';
+      $('login-intro').hidden = false;
+      $('password-label').textContent = 'Old admin key';
+    }
     $('login-form').onsubmit = e => { e.preventDefault(); signIn(file); };
     $('start-over').onclick = () => {
       if (confirm('Start over? Once you publish, EVERY existing card stops working until it is rewritten with a new link.')) setUp(true);
@@ -206,6 +212,7 @@ async function signIn(file) {
   say('login-msg', 'Unlocking…');
   try {
     const data = JSON.parse(file.text);
+    if (!data.admin.salt) return upgrade(password, file);
     const key = await passwordKey(password, data.admin.salt, data.admin.iterations);
     let opened;
     try {
@@ -232,6 +239,37 @@ function setUp(startingOver) {
       admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
       say('token-msg', '');
       enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, log: [], cards: [], data: emptyData() }, null);
+    });
+  });
+}
+
+// First version → this one: open with the old admin key, choose a password, connect GitHub.
+// Contacts and cards carry over unchanged, so cards already written keep working.
+async function upgrade(oldKey, file) {
+  if (!isKey(oldKey)) return say('login-msg', 'Enter the 22-character admin key from the old editor.', true);
+  let opened;
+  try {
+    opened = await openAdmin(oldKey, JSON.parse(file.text));
+  } catch {
+    return say('login-msg', 'Wrong admin key.', true);
+  }
+  $('password').value = '';
+  say('login-msg', '');
+  const data = withSchedule(opened.data);
+  data.schedule = { ...emptyData().schedule, fallback: data.schedule.fallback };
+  delete data.primary;
+  const back = () => show('login');
+  passwordStep('Upgrade · step 1 of 2', back, password => {
+    tokenStep('Upgrade · step 2 of 2', back, async token => {
+      say('token-msg', 'Setting up…');
+      const salt = newSalt();
+      admin = { key: await passwordKey(password, salt, ITERATIONS), salt, iterations: ITERATIONS };
+      say('token-msg', '');
+      const cards = opened.cards.map(c => ({ note: '', ...c }));
+      enterDashboard({ github: { token, addedAt: today(), addedBy: myName() }, log: [], cards, data }, file.text);
+      published.admin = published.github = null;
+      pending.add('upgrade');
+      refresh();
     });
   });
 }
@@ -368,6 +406,7 @@ function changes() {
     }
     for (const o of before.cards) if (!nowCards.has(o.key)) out.push(`Removed card: ${cardLabel(o)}`);
   }
+  if (pending.has('upgrade')) out.push('Upgrade from the first version: new password, GitHub connection and shifts');
   if (pending.has('password')) out.push('Changed the password');
   if (pending.has('token')) out.push('Replaced the GitHub token');
   return out;
@@ -764,8 +803,12 @@ $('publish').onclick = $('publish-bar-btn').onclick = () => { if (!busy) publish
 $('discard').onclick = () => {
   if (!confirm('Throw away all changes that are not published?')) return;
   state = clone(published.state);
-  ({ admin, github } = published);
-  pending.clear();
+  if (published.admin) {
+    ({ admin, github } = published);
+    pending.clear();
+  } else {
+    pending = new Set(['upgrade']); // keep the new password and token; they're needed to publish
+  }
   say('publish-msg', '');
   $('card-out').hidden = true;
   renderAll();

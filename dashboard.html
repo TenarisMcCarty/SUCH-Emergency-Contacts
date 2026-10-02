@@ -31,10 +31,11 @@
 
     <!-- ============ Sign in ============ -->
     <section id="login" class="panel narrow" hidden>
-      <h1>Sign in</h1>
+      <h1 id="login-title">Sign in</h1>
+      <p id="login-intro" hidden>The current data was made with the first version (copy-and-paste editor). Enter its <strong>admin key</strong> once to upgrade. Your contacts and cards carry over, and cards already written keep working.</p>
       <form id="login-form">
         <input type="text" name="username" autocomplete="username" value="Emergency Cards" hidden>
-        <label for="password">Password</label>
+        <label id="password-label" for="password">Password</label>
         <input id="password" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
         <button class="btn btn-primary" type="submit">Unlock</button>
         <p id="login-msg" class="msg" role="status"></p>

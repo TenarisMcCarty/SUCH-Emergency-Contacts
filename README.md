@@ -18,6 +18,8 @@ Send the dashboard link and tell them the password, in person or by phone. That'
 
 ## First-time setup (once)
 
+Already set up with the first version (the copy-and-paste editor)? The dashboard asks for that **admin key** once, then runs steps 2–3 below. Contacts and cards carry over, and cards already written keep working.
+
 1. Open the dashboard. It starts the setup.
 2. **Password:** save the suggested password in your password manager, tick the box → Next.
 3. **GitHub token:** follow the steps on screen (about 2 minutes, signed in to GitHub as TenarisMcCarty), paste the token → Check and continue.
