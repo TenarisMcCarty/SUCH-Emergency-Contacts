@@ -75,23 +75,29 @@ let lang = startLanguage();
 const T = () => TEXT[lang];
 
 // Put the fixed words on the page in the current language.
+// Every element is optional: for a few minutes after an update, GitHub's cache can pair this
+// script with the previous page, and the emergency page must keep working regardless.
 function applyLanguage() {
   const t = T();
   document.documentElement.lang = lang;
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
     'text-retry': t.retryText, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry };
-  for (const [id, words] of Object.entries(set)) $(id).textContent = words;
-  const [before, send, after] = t.hint;
-  const strong = document.createElement('strong');
-  strong.textContent = send;
-  $('hint').replaceChildren(before, strong, after);
-  $('lang').textContent = t.switchTo;
-  $('lang').lang = lang === 'en' ? 'es' : 'en';
+  for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
+  if ($('hint')) {
+    const [before, send, after] = t.hint;
+    const strong = document.createElement('strong');
+    strong.textContent = send;
+    $('hint').replaceChildren(before, strong, after);
+  }
+  if ($('lang')) {
+    $('lang').textContent = t.switchTo;
+    $('lang').lang = lang === 'en' ? 'es' : 'en';
+  }
   if (card) { renderTextButtons(); renderOrder(); }
 }
 
-$('lang').onclick = () => {
+if ($('lang')) $('lang').onclick = () => {
   lang = lang === 'en' ? 'es' : 'en';
   try { localStorage.setItem('lang', lang); } catch {}
   applyLanguage();
