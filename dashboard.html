@@ -26,6 +26,7 @@
     <div class="wrap topbar-inner">
       <img class="brand-logo" src="logo.svg" alt="Tenaris">
       <span class="product">Emergency Cards</span>
+      <span id="test-flag" class="owner-flag" hidden>Test site</span>
       <span id="owner-flag" class="owner-flag" hidden>Owner</span>
       <button id="lock" class="topbar-btn" type="button" hidden>Lock</button>
     </div>
@@ -102,7 +103,7 @@
         <ol class="steps">
           <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → New fine-grained token</a>.</li>
           <li><strong>Token name:</strong> Emergency cards dashboard. <strong>Expiration:</strong> the longest offered.</li>
-          <li><strong>Repository access:</strong> Only select repositories → <em>SUCH-Emergency-Contacts</em>.</li>
+          <li><strong>Repository access:</strong> Only select repositories → <em id="repo-name">SUCH-Emergency-Contacts</em>.</li>
           <li><strong>Permissions:</strong> Repository permissions → <em>Contents</em> → <em>Read and write</em>. Leave everything else as is.</li>
           <li><strong>Generate token</strong>, copy it (starts with <code>github_pat_</code>) and paste it below.</li>
         </ol>

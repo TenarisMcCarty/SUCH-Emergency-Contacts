@@ -29,6 +29,7 @@ const TEXT = {
     yard: 'Yard',
     directions: 'Directions',
     saveContacts: 'Save numbers to Contacts',
+    testSite: 'Test site',
     addHome: 'Add to home screen',
     homeApple: 'Tap Share (the square with an arrow), then Add to Home Screen.',
     homeOther: 'Open the browser menu (⋮), then tap Add to Home screen.',
@@ -60,6 +61,7 @@ const TEXT = {
     yard: 'Patio',
     directions: 'Cómo llegar',
     saveContacts: 'Guardar números en Contactos',
+    testSite: 'Sitio de prueba',
     addHome: 'Agregar a la pantalla de inicio',
     homeApple: 'Toque Compartir (el cuadro con una flecha) y luego Agregar a inicio.',
     homeOther: 'Abra el menú del navegador (⋮) y toque Agregar a la pantalla principal.',
@@ -95,7 +97,7 @@ function applyLanguage() {
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
     'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry,
-    't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'add-home': t.addHome };
+    't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'add-home': t.addHome, 'test-flag': t.testSite };
   for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
   if ($('lang')) {
     $('lang').textContent = t.switchTo;
@@ -104,6 +106,8 @@ function applyLanguage() {
   if ($('home-how') && !$('home-how').hidden) $('home-how').textContent = homeHow();
   if (card) { renderTextButtons(); renderOrder(); }
 }
+
+if ($('test-flag') && typeof TEST_SITE !== 'undefined') $('test-flag').hidden = !TEST_SITE;
 
 if ($('lang')) $('lang').onclick = () => {
   lang = lang === 'en' ? 'es' : 'en';
@@ -223,8 +227,13 @@ function row(entry) {
 // ================= Yard address, Save to Contacts, home screen =================
 // Everything here is optional: an older cached page may not have these elements.
 
+// The yard address: what the dashboard saved as yardAddress ("" hides it), or the built-in one if nothing was
+// saved. A non-empty "address" (this field's name for a few hours) still counts. The typeof check covers an
+// older cached schedule.js for a few minutes after an update.
+const yardAddress = () => (card.yardAddress ?? (card.address || undefined) ?? (typeof YARD_ADDRESS !== 'undefined' ? YARD_ADDRESS : '')).trim();
+
 function renderExtras() {
-  const address = (card.address || '').trim();
+  const address = yardAddress();
   if ($('yard-section')) {
     $('yard-section').hidden = !address;
     $('yard-address').textContent = address;
@@ -248,7 +257,7 @@ function vcards() {
     const name = `${c.name} (${t.contactCompany})`;
     return ['BEGIN:VCARD', 'VERSION:3.0', `FN:${vEsc(name)}`, `N:;${vEsc(name)};;;`, `ORG:${vEsc(t.contactCompany)}`,
       role ? `TITLE:${vEsc(role)}` : '', `TEL;TYPE=CELL:${clean(c.phone)}`,
-      card.address ? `ADR;TYPE=WORK:;;${vEsc(card.address.trim())};;;;` : '',
+      yardAddress() ? `ADR;TYPE=WORK:;;${vEsc(yardAddress())};;;;` : '',
       `NOTE:${vEsc(t.contactNote(card.driver))}`, 'END:VCARD'].filter(Boolean).join('\r\n');
   }).join('\r\n') + '\r\n';
 }

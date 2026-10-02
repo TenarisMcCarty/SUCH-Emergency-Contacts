@@ -96,7 +96,7 @@ The family sees the message in their Messages app and can edit it before tapping
 
 ### Yard address
 
-Shown at the bottom of every card's page, with a **Directions** button that opens the phone's maps app. Type it the way you'd type it into Google Maps, e.g. *1234 Example Rd, Houston, TX 77000*. Leave it empty to hide it.
+Shown at the bottom of every card's page, with a **Directions** button that opens the phone's maps app. It starts as the yard's address, **302 McCarty St, Houston, TX 77029**. To change it, type it the way you'd type it into Google Maps. Empty it to hide it from the page.
 
 ### WhatsApp
 

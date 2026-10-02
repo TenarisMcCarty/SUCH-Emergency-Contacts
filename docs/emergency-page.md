@@ -28,7 +28,7 @@ From top to bottom:
 | **Primary call** | The person who should be called first right now: name, role, which shift and until when, and a big **Call** button. If supervisors switch WhatsApp on, a **WhatsApp** button sits under it ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)). |
 | **Also working now** | Others on a shift right now, each with a **Call** button |
 | **Not scheduled · still emergency contacts** | Everyone else, each with a **Call** button. It's titled **Other contacts** if no shifts are set up. |
-| **Yard** | The yard address with a **Directions** button. Only shown if supervisors have entered an address. |
+| **Yard** | The yard address (302 McCarty St, Houston, TX 77029, unless supervisors change it) with a **Directions** button. Hidden if supervisors empty the address. |
 | Time-zone note | "Shift times are Houston time." Only shown when the phone is set to a time zone other than Houston's (Central). |
 | Offline note | Only shown when the page opened from the phone's saved copy (see [section 5](#5-weak-or-no-internet)) |
 | Bottom links | **Save numbers to Contacts** and **Add to home screen**, small, at the very bottom so they never get in the way of calling |
@@ -153,7 +153,7 @@ The family never sees a technical error message. The backup number is printed on
 - Only the primary call gets one: WhatsApp links can't message a group or several people at once.
 - Spanish page: **WhatsApp a [name]**, with the Spanish message.
 
-**Yard address** (set in **People → Yard address**; hidden when empty)
+**Yard address** (**People → Yard address**; starts as 302 McCarty St, Houston, TX 77029; hidden if emptied)
 
 - Shown under the contacts with a **Directions** button (**Cómo llegar** in Spanish). It opens Apple Maps on iPhone and Google Maps everywhere else.
 

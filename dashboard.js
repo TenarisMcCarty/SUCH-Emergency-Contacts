@@ -8,7 +8,8 @@
 // dashboard.html#owner and signs in with their own owner password (or recovery code); only then
 // does the Owner tab (GitHub token, owner password, recovery code, access) appear.
 
-const REPO = 'TenarisMcCarty/SUCH-Emergency-Contacts';
+// The repository this copy of the site is published from: the live site, or the test copy ("-staging").
+const REPO = 'TenarisMcCarty/' + (location.hostname.endsWith('.github.io') ? location.pathname.split('/')[1] : 'SUCH-Emergency-Contacts');
 const API = 'https://api.github.com';
 const FILE = 'contacts.enc.json';
 const ITERATIONS = 600000; // password stretching: makes guessing the password very slow
@@ -211,6 +212,12 @@ function show(view) {
 }
 
 $('lost-owner').hidden = !OWNER;
+// For a few minutes after an update, GitHub's cache can pair this script with an older page or
+// schedule.js, so the test-site label and yard address are optional here.
+const TEST = typeof TEST_SITE !== 'undefined' && TEST_SITE;
+if ($('test-flag')) $('test-flag').hidden = !TEST;
+if ($('repo-name')) $('repo-name').textContent = REPO.split('/')[1];
+if (TEST) document.title = 'Test · ' + document.title;
 $('lost-supervisor').hidden = OWNER;
 
 // The Owner tab and badge appear only after signing in as the owner (owner password, recovery code or setup).
@@ -552,7 +559,7 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false } = {
   github = opened.github;
   owner = opened.owner || null;
   log = opened.log || [];
-  state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, address: '', whatsapp: false, ...opened.data, cards: opened.cards };
+  state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, whatsapp: false, ...opened.data, address: savedAddress(opened.data), cards: opened.cards };
   state.schedule.timeZone = YARD_TIME_ZONE;
   // When each number was last checked (kept with the dashboard data, not on the cards).
   // Numbers from before this was tracked count as checked on the last publish.
@@ -579,6 +586,14 @@ $('lock').onclick = () => location.reload(); // forgets every key (warns about u
 addEventListener('beforeunload', e => {
   if (state && changes().length) { e.preventDefault(); e.returnValue = ''; }
 });
+
+// The yard address is saved as "yardAddress" ("" hides it). Without one, cards show the built-in YARD_ADDRESS,
+// and so does this box. (A few hours' worth of dashboards wrote "address" and saved "" automatically,
+// so a non-empty "address" still counts but an empty one doesn't.) undefined = leave it out of the file.
+function savedAddress(data) {
+  const saved = data.yardAddress ?? (data.address || undefined);
+  return saved ?? (typeof YARD_ADDRESS !== 'undefined' ? YARD_ADDRESS : undefined);
+}
 
 // ================= Tabs =================
 
@@ -1135,7 +1150,7 @@ async function publish() {
       contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), roleEs: c.roleEs.trim(), phone: normalizePhone(c.phone) })),
       schedule: { ...state.schedule, timeZone: YARD_TIME_ZONE, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
       backup: state.backup || '',
-      address: (state.address || '').trim(),
+      ...(state.address === undefined ? {} : { yardAddress: state.address.trim() }),
       whatsapp: !!state.whatsapp,
     };
     const confirmed = Object.fromEntries(state.contacts.map(c => [c.id, c.confirmed || today()]));
@@ -1157,7 +1172,7 @@ async function publish() {
 
     log = newLog;
     pending.clear();
-    state = { ...data, contacts: data.contacts.map(c => ({ ...c, confirmed: confirmed[c.id] })), cards: state.cards };
+    state = { ...data, address: savedAddress(data), contacts: data.contacts.map(c => ({ ...c, confirmed: confirmed[c.id] })), cards: state.cards };
     published = { state: clone(state), text, admin, github, owner: clone(owner), ownerAuth, ownerCode };
     mustPublish = false;
     deployState = 'deploying';

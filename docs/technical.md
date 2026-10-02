@@ -88,7 +88,8 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
                   "people": ["<contact id>"] } ]
   },
   "backup": "+15555550199",  // optional, "" if unset
-  "address": "1234 Example Rd, Houston, TX 77000",  // optional yard address, "" if unset
+  "yardAddress": "302 McCarty St, Houston, TX 77029",  // optional: absent = the built-in YARD_ADDRESS, "" = hidden
+                                                     // (an older non-empty "address" field is still read)
   "whatsapp": false          // optional, WhatsApp button for the primary call
 }
 ```
@@ -214,7 +215,18 @@ Everything follows the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing C
 - **Colours:** on screen, the guide's values: Tenaris Green `#009900`, Tenaris Blue `#000099`, Tenaris Gray `#666666`. A darker green `#007a00` is used only where small white text needs more contrast. Red stays for 911 and amber for dashboard warnings, for safety. The signature keeps the colours of its own artwork.
 - **Type:** Frutiger is the Tenaris typeface but needs a paid licence, so the site and the cards use Source Sans 3, a free typeface in the same humanist style. Computers with Frutiger installed show Frutiger.
 
+## The test copy (staging)
+
+Code changes are tried on a separate **test copy** before they go live, so a half-finished change can never break the cards.
+
+- **Local folder:** `~/SUCH-Emergency-Contacts-staging`, its own git repository with **fake data** (made-up people with fictional 555-01xx numbers, one demo card, test-only passwords). It is never connected to the live repository.
+- **Online (optional):** a separate repository `TenarisMcCarty/SUCH-Emergency-Contacts-staging` with its own GitHub Pages site. Every page there shows a **Test site** label. `dashboard.js` works out which repository it belongs to from the page address, so the same code runs on both. Publishing on the test site needs its own GitHub token for that repository (Owner tab → Replace GitHub token).
+- **Going live:** only with the owner's approval. Copy the code files (everything except `contacts.enc.json` and `.git`) from the test copy to the live repository, commit and push, then open the printed demo card's link to check.
+- The test copy's data file must never be copied to the live site, and the live data file must never be copied to the test copy: a card removed on the live site would still open the copy.
+
 ## Changing the code safely
+
+Try every change on the test copy first ([above](#the-test-copy-staging)), and go live only with the owner's approval. Then:
 
 1. **Never break existing card links.** Printed cards and locked tags can't be updated. The very first printed demo card already depends on these staying exactly as they are:
    - the link format: site + `#` + 22-character base64url key

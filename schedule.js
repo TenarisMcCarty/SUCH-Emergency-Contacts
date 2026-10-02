@@ -6,6 +6,10 @@
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const YARD_TIME_ZONE = 'America/Chicago'; // the yard is in Houston: shift times are always Houston time
+const YARD_ADDRESS = '302 McCarty St, Houston, TX 77029'; // shown until the dashboard saves a different one (or clears it)
+
+// The test copy of the site lives in a repository ending in "-staging"; it says so on every page.
+const TEST_SITE = /-staging\//.test(location.pathname);
 
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
