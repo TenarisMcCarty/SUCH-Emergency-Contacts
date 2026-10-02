@@ -11,6 +11,10 @@ The page shows:
 3. **Primary call**: a big Call button for whoever is on shift at that moment.
 4. **Also working now**: others on duty right now, each with a Call button.
 5. **Not scheduled · still emergency contacts**: everyone else, each with a Call button.
+6. **Yard** address with a Directions button (if set).
+7. Small links at the bottom: **Save numbers to Contacts** and **Add to home screen**.
+
+Supervisors can also switch on a **WhatsApp** button for the primary call.
 
 Supervisors keep the contacts, shifts and cards up to date in a web **dashboard**. Changes reach every card within about a minute, and no card ever needs reprinting for a contact change.
 
@@ -63,7 +67,9 @@ Open the owner link and sign in with **your own owner password**; the supervisor
 
 ## Features at a glance
 
-- **Shift-aware calling:** the primary call follows the shift schedule, always in Houston time.
+- **Shift-aware calling:** the primary call follows the shift schedule, always in Houston time. The dashboard lists any times when nobody is on shift.
+- **Numbers kept current:** the dashboard asks supervisors to re-check each phone number every 90 days.
+- **For families:** optional WhatsApp button, yard address with directions, save every number to Contacts in one tap, and a home-screen icon.
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
@@ -88,6 +94,7 @@ Open the owner link and sign in with **your own owner password**; the supervisor
 | `crypto.js` | Encryption, shared by both pages |
 | `schedule.js` | Works out who is on shift; Spanish shift names and times |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
+| `manifest.json`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` | Home-screen name and icon for the emergency page |
 | `style.css` | Styling for both pages (Tenaris colours) |
 | `contacts.enc.json` | The encrypted data. **Written only by the dashboard's Publish button; never edit it by hand.** |
 | `logo.js`, `logo.svg` | Tenaris logo outlines (from the official Tenaris media kit) |
@@ -106,6 +113,7 @@ Hosting is **GitHub Pages**, from the `main` branch, repository root. There is n
 
 - **Not yet tested on real phones or a real printer:**
   - the group-text links (iPhone and Samsung)
+  - Save to Contacts, Add to home screen and the WhatsApp button
   - NFC reading through the 3D-printed card
   - a physical print of the 3D card
 

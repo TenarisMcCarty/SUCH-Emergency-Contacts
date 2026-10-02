@@ -13,6 +13,7 @@ const API = 'https://api.github.com';
 const FILE = 'contacts.enc.json';
 const ITERATIONS = 600000; // password stretching: makes guessing the password very slow
 const MAX_PEOPLE = 10;
+const CHECK_DAYS = 90; // ask supervisors to re-check each phone number this often
 const DEFAULT_MESSAGE = 'EMERGENCY – need to reach driver {driver}. Please call me back at this number.';
 const DEFAULT_MESSAGE_ES = 'EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.';
 const SITE = new URL('./', location.href).href; // card links point at the emergency page next to this one
@@ -63,6 +64,9 @@ const newId = () => toB64(crypto.getRandomValues(new Uint8Array(6)));
 const today = () => new Date().toISOString().slice(0, 10);
 const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const personName = c => c.name.trim() || 'a person with no name';
+const daysSince = iso => Math.floor((Date.parse(today()) - Date.parse(iso)) / 864e5);
+const dateLabel = iso => new Date(iso + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+const isDue = c => c.phone && daysSince(c.confirmed) >= CHECK_DAYS;
 const askOwner = () => (role === 'owner' ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
 
 async function copy(text, btn) {
@@ -548,9 +552,16 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false } = {
   github = opened.github;
   owner = opened.owner || null;
   log = opened.log || [];
-  state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, ...opened.data, cards: opened.cards };
+  state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, address: '', whatsapp: false, ...opened.data, cards: opened.cards };
   state.schedule.timeZone = YARD_TIME_ZONE;
-  for (const c of state.contacts) c.roleEs = c.roleEs || '';
+  // When each number was last checked (kept with the dashboard data, not on the cards).
+  // Numbers from before this was tracked count as checked on the last publish.
+  const checked = opened.confirmed || {};
+  const lastPublish = log.length ? log[log.length - 1].at.slice(0, 10) : today();
+  for (const c of state.contacts) {
+    c.roleEs = c.roleEs || '';
+    c.confirmed = checked[c.id] || lastPublish;
+  }
   published = publishedText ? { state: clone(state), text: publishedText, admin, github, owner: clone(owner), ownerAuth, ownerCode } : null;
   mustPublish = must;
   pending = new Set();
@@ -606,12 +617,15 @@ function changes() {
       const o = old.get(c.id);
       if (!o) out.push('Added ' + personName(c));
       else if (o.name !== c.name || o.role !== c.role || o.roleEs !== c.roleEs || o.phone !== c.phone) out.push('Edited ' + personName(c));
+      else if (o.confirmed !== c.confirmed) out.push(`Checked ${personName(c)}'s number`);
     }
     for (const o of before.contacts) if (!now.has(o.id)) out.push('Removed ' + personName(o));
     if (before.message !== state.message) out.push('Changed the text message');
     if (before.messageEs !== state.messageEs) out.push('Changed the Spanish text message');
     if (JSON.stringify(before.schedule) !== JSON.stringify(state.schedule)) out.push('Changed shifts');
     if ((before.backup || '') !== (state.backup || '')) out.push('Changed the backup line');
+    if ((before.address || '') !== (state.address || '')) out.push('Changed the yard address');
+    if (!!before.whatsapp !== !!state.whatsapp) out.push(state.whatsapp ? 'Switched the WhatsApp button on' : 'Switched the WhatsApp button off');
     const oldCards = new Map(before.cards.map(c => [c.key, c]));
     const nowCards = new Set(state.cards.map(c => c.key));
     for (const c of state.cards) {
@@ -658,6 +672,10 @@ function refresh() {
   $('gh-problem').hidden = !ghProblem;
   $('gh-problem').textContent = ghProblem || '';
 
+  const due = state.contacts.filter(isDue).length;
+  $('due-note').hidden = !due;
+  $('due-text').textContent = due === 1 ? `1 phone number hasn't been checked in ${CHECK_DAYS} days.` : `${due} phone numbers haven't been checked in ${CHECK_DAYS} days.`;
+
   renderNow();
   const last = log[log.length - 1];
   $('facts').textContent = [
@@ -688,8 +706,21 @@ function renderPeople() {
   $('people-list').replaceChildren(...state.contacts.map((c, i) => {
     const input = (label, key, extra = {}) => el('label', {}, label, el('input', {
       value: c[key], autocomplete: 'off', ...extra,
-      oninput: e => { c[key] = e.target.value; refresh(); },
+      oninput: e => {
+        c[key] = e.target.value;
+        if (key === 'phone') c.confirmed = today(); // a new number counts as checked
+        refresh();
+      },
     }));
+    const due = isDue(c);
+    const checked = c.phone && el('p', { class: 'checked' + (due ? ' due' : '') },
+      due ? `Number not checked since ${dateLabel(c.confirmed)}. Call or text ${c.name.trim() || 'them'} to make sure it still works.`
+        : `Number checked ${c.confirmed === today() ? 'today' : dateLabel(c.confirmed)}.`,
+      due && el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Still right', onclick: () => {
+        c.confirmed = today();
+        renderPeople();
+        refresh();
+      } }));
     return el('fieldset', { class: 'person' },
       el('legend', { textContent: `Person ${i + 1}` }),
       el('div', { class: 'field-row' },
@@ -701,15 +732,18 @@ function renderPeople() {
         type: 'tel', placeholder: '(555) 555-0100',
         onchange: e => { const p = normalizePhone(e.target.value); if (p) { c.phone = e.target.value = p; refresh(); } },
       }),
+      checked,
       el('button', { type: 'button', class: 'link-btn', textContent: 'Remove person', onclick: () => removePerson(c) }));
   }));
   $('add-person').disabled = state.contacts.length >= MAX_PEOPLE;
   $('message').value = state.message;
   $('message-es').value = state.messageEs;
+  $('address').value = state.address || '';
+  $('whatsapp-on').checked = !!state.whatsapp;
 }
 
 $('add-person').onclick = () => {
-  state.contacts.push({ id: newId(), name: '', role: '', roleEs: '', phone: '' });
+  state.contacts.push({ id: newId(), name: '', role: '', roleEs: '', phone: '', confirmed: today() });
   renderPeople();
   refresh();
   const boxes = document.querySelectorAll('#people-list fieldset');
@@ -727,6 +761,9 @@ function removePerson(c) {
 
 $('message').oninput = e => { state.message = e.target.value; refresh(); };
 $('message-es').oninput = e => { state.messageEs = e.target.value; refresh(); };
+$('address').oninput = e => { state.address = e.target.value; refresh(); };
+$('whatsapp-on').onchange = e => { state.whatsapp = e.target.checked; refresh(); };
+$('due-open').onclick = () => openTab('people');
 
 // ================= Shifts =================
 
@@ -739,10 +776,49 @@ function renderShifts() {
     $('preview-day').replaceChildren(...DAYS.map((d, i) => el('option', { value: i, textContent: d, selected: i === now.day })));
   }
   renderPreview();
+  renderGaps();
+}
+
+// Times in the week when nobody (with a name) is on any shift → [[start, end), …] in minutes from Monday 0:00.
+const WEEK = 7 * 1440;
+function scheduleGaps() {
+  const named = new Set(state.contacts.filter(c => c.name.trim()).map(c => c.id));
+  const staffed = state.schedule.shifts.filter(s => s.people.some(id => named.has(id)));
+  const gaps = [];
+  for (let i = 0; i < WEEK; i++) {
+    if (staffed.some(s => shiftOn(s, { day: Math.floor(i / 1440), minutes: i % 1440 }))) continue;
+    const last = gaps[gaps.length - 1];
+    if (last && last[1] === i) last[1] = i + 1;
+    else gaps.push([i, i + 1]);
+  }
+  // A gap running from Sunday night into Monday morning is one gap.
+  if (gaps.length > 1 && gaps[0][0] === 0 && gaps[gaps.length - 1][1] === WEEK) gaps[0][0] = gaps.pop()[0] - WEEK;
+  return gaps.sort((x, y) => (x[0] + WEEK) % WEEK - (y[0] + WEEK) % WEEK); // in week order, Monday first
+}
+
+function weekTime(i) {
+  const m = ((i % WEEK) + WEEK) % WEEK;
+  return `${DAYS[Math.floor(m / 1440)]} ${timeLabel(`${Math.floor((m % 1440) / 60)}:${m % 60}`)}`;
+}
+
+// Warn about hours with nobody on shift: the fallback person gets the primary call then.
+function renderGaps() {
+  const gaps = scheduleGaps();
+  const fb = state.contacts.find(c => c.id === state.schedule.fallback) || state.contacts[0];
+  const who = fb ? personName(fb) : 'the fallback person';
+  if (!gaps.length) return $('gaps').replaceChildren(el('p', { class: 'small ok', textContent: '✓ Someone is on shift at every hour of the week.' }));
+  if (gaps[0][1] - gaps[0][0] >= WEEK) {
+    return $('gaps').replaceChildren(el('p', { class: 'warn small', textContent: `Nobody is on any shift, so ${who} is always the primary call.` }));
+  }
+  const shown = gaps.slice(0, 8);
+  $('gaps').replaceChildren(el('div', { class: 'warn small' },
+    el('span', { textContent: `Nobody is on shift at these times, so the fallback person (${who}) gets the primary call:` }),
+    el('ul', {}, ...shown.map(([a, b]) => el('li', { textContent: `${weekTime(a)} to ${weekTime(b)}` })),
+      gaps.length > shown.length && el('li', { textContent: `and ${gaps.length - shown.length} more` }))));
 }
 
 function shiftBox(shift) {
-  const changed = () => { refresh(); renderPreview(); };
+  const changed = () => { refresh(); renderPreview(); renderGaps(); };
   const legend = el('legend', { textContent: shift.name || 'Shift' });
   const autoEs = () => { const es = shiftName({ ...shift, nameEs: '' }, 'es'); return es !== shift.name ? `${es} (automatic)` : 'e.g. Turno de noche'; };
   const esName = el('input', { value: shift.nameEs || '', placeholder: autoEs(), lang: 'es', oninput: e => { shift.nameEs = e.target.value; changed(); } });
@@ -781,7 +857,7 @@ $('add-shift').onclick = () => {
   renderShifts();
   refresh();
 };
-$('fallback').onchange = e => { state.schedule.fallback = e.target.value; refresh(); renderPreview(); };
+$('fallback').onchange = e => { state.schedule.fallback = e.target.value; refresh(); renderPreview(); renderGaps(); };
 $('preview-day').onchange = $('preview-time').onchange = () => renderPreview();
 
 // What a card would show at the chosen day and time.
@@ -1059,10 +1135,13 @@ async function publish() {
       contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), roleEs: c.roleEs.trim(), phone: normalizePhone(c.phone) })),
       schedule: { ...state.schedule, timeZone: YARD_TIME_ZONE, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
       backup: state.backup || '',
+      address: (state.address || '').trim(),
+      whatsapp: !!state.whatsapp,
     };
+    const confirmed = Object.fromEntries(state.contacts.map(c => [c.id, c.confirmed || today()]));
     const newLog = [...log, { at: new Date().toISOString(), who, what }].slice(-200);
     // adminKey lets the owner (via the recovery block) publish without knowing the supervisors' password.
-    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog, adminKey: admin } });
+    const file = await buildFile(admin, { data, cards: state.cards, extra: { github, owner, log: newLog, adminKey: admin, confirmed } });
     // Double-check before sending: the new file opens with the password and with every card.
     await openAdmin(admin.key, file);
     for (const card of state.cards) await openCard(card.key, file);
@@ -1078,7 +1157,7 @@ async function publish() {
 
     log = newLog;
     pending.clear();
-    state = { ...data, cards: state.cards };
+    state = { ...data, contacts: data.contacts.map(c => ({ ...c, confirmed: confirmed[c.id] })), cards: state.cards };
     published = { state: clone(state), text, admin, github, owner: clone(owner), ownerAuth, ownerCode };
     mustPublish = false;
     deployState = 'deploying';

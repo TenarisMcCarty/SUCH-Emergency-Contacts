@@ -36,12 +36,13 @@ supervisor ──(password)──► dashboard.html ──GitHub API PUT──�
 | File | Role | Notes |
 |---|---|---|
 | `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. |
-| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
+| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, WhatsApp button, yard address and directions link, Save to Contacts (vCard 3.0, made in the browser), Add to home screen, remembering the last card key, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
 | `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow`, `shiftOn`, `arrange` (call order), `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
 | `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, recovery-code ECDH (`newRecovery`, `lockForOwner`, `openRecovery`), owner login (`makeOwnerLogin`, `openOwner`), `buildFile`, `openCard`, `openAdmin` |
+| `manifest.json`, `icon-*.png`, `apple-touch-icon.png` | Home-screen app | Name "Emergency", Tenaris mark on charcoal. `start_url` is `./` (no card key), so `app.js` falls back to the last card key saved in `localStorage` when the link has no `#`. |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
 | `dashboard.html` | Dashboard markup | Sign-in, setup steps, tabs, Owner tab |
-| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (supervisor, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, publishing, deploy watching, Print & QR, Owner tab |
+| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (supervisor, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing, deploy watching, Print & QR, Owner tab |
 | `cardmaker.js` | Print files | Card layout, 3D model and STL writer, canvas drawing, PDF writer, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
 | `style.css` | Styling | Tenaris colours from tenaris.com. Frutiger only if installed locally. |
 | `logo.js`, `logo.svg` | Tenaris logo | Outlines from the official media kit: `logo.js` for drawing and 3D, `logo.svg` for the page headers |
@@ -84,7 +85,9 @@ Version 3, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
                   "days": [0,1,2,3,4,5,6],      // 0 = Monday … 6 = Sunday
                   "people": ["<contact id>"] } ]
   },
-  "backup": "+15555550199"   // optional, "" if unset
+  "backup": "+15555550199",  // optional, "" if unset
+  "address": "1234 Example Rd, Houston, TX 77000",  // optional yard address, "" if unset
+  "whatsapp": false          // optional, WhatsApp button for the primary call
 }
 ```
 
@@ -100,7 +103,8 @@ The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot
   "github": { "token": "github_pat_…", "addedAt": "2026-10-02", "addedBy": "…" },
   "owner":  { "contact": "…", "pub": { "x": "…", "y": "…" }, "at": "2026-10-02", "login": { …same as ownerLogin… } },  // may be absent
   "adminKey": { "key": "…", "salt": "…", "iterations": 600000 },  // the supervisors'-password key, for the owner (via recovery)
-  "log":    [ { "at": "ISO time", "who": "…", "what": ["Changed shifts", "…"] } ]  // last 200
+  "log":    [ { "at": "ISO time", "who": "…", "what": ["Changed shifts", "…"] } ],  // last 200
+  "confirmed": { "<contact id>": "2026-10-02" }  // when each number was last checked; may be absent
 }
 ```
 
@@ -205,7 +209,7 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
    - the slot-id formula
    - the encryption of card entries
 2. **Only ever add to the data format.** Phones may run a cached older `app.js`, so never rename or remove fields it reads: `message`, `contacts[].{id,name,role,phone}`, `schedule`, `cards`, and the card-entry fields. New fields must be optional on read.
-3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`.
+3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`. A dashboard tab still running an older `dashboard.js` drops fields it doesn't know (e.g. `address`, `whatsapp`, `confirmed`) if it publishes, so re-check them after a deploy that adds fields.
 4. **If you change emergency-page files:** add new ones to `PATHS` in `sw.js`, and optionally bump `CACHE` so phones drop old copies.
 5. **Never hand-edit `contacts.enc.json`.** The dashboard's `sha` check would refuse the next publish anyway, but a broken file would break every card.
 6. **Keep names out of commit messages.** They're public.
@@ -236,6 +240,9 @@ An automated suite was used during development. It isn't included in this reposi
   - owner "take away access"
   - owner password reset with the recovery code
   - upgrading from first-version data
+  - 90-day number checks: missing dates count from the last publish, **Still right**, a changed number counts as checked, dates kept only in the admin block
+  - shift gaps: overnight and weekend gaps merged across Sunday→Monday, listed Monday first, ✓ when covered
+  - yard address (trimmed) and the WhatsApp switch in the change list and the published data
 - **Emergency page:**
   - iPhone and Android link formats
   - call order against an independent Python implementation
@@ -245,6 +252,10 @@ An automated suite was used during development. It isn't included in this reposi
   - English/Spanish: auto-detection, toggle, remembered choice, Spanish message and roles
   - offline copy and recovery once back online
   - deploy mixes: an older cached `index.html` with the new `app.js`, and the reverse
+  - WhatsApp link (number and message, English and Spanish), hidden when off or on older data
+  - yard address with Apple Maps (iPhone) / Google Maps (others) links
+  - the vCard: one per person, escaping, Spanish roles, address and note
+  - the manifest loads under the CSP, Chrome's installability check passes, the plain address reopens the last card, and a wrong key isn't remembered
 - **Encryption:** the published file was opened independently with Python's `cryptography` library: the password via PBKDF2, the card entries, and the recovery block via ECDH. It was also checked that no readable names, numbers or tokens appear in the file.
 - **Print files:**
   - both STL parts watertight (every edge paired)
@@ -252,7 +263,7 @@ An automated suite was used during development. It isn't included in this reposi
   - the QR decodes (with zxing-cpp) from the STL's back face, the PDF's embedded image, the label and the PNG
   - the ZIP is valid
 
-**Not yet verified:** real phones (group-text formats, NFC through the card), a physical 3D print, and a paper print.
+**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, Add to home screen, WhatsApp), a physical 3D print, and a paper print.
 
 ---
 
@@ -266,4 +277,5 @@ An automated suite was used during development. It isn't included in this reposi
 - **GitHub REST API:** used only by the dashboard (the contents endpoint).
   - Loading works without authentication (60 requests per hour per IP address), falling back to the site copy.
   - Publishing uses the fine-grained token (5,000 requests per hour).
+- **Links out (only when a family taps them):** `wa.me` (WhatsApp), `maps.apple.com` and `google.com/maps` (directions). Nothing is loaded from them.
 - **No other services:** no analytics, fonts, CDNs or third-party scripts.

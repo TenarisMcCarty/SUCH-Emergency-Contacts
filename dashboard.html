@@ -143,6 +143,7 @@
         </div>
         <p id="publish-msg" class="msg" role="status"></p>
         <p id="gh-problem" class="msg bad" hidden></p>
+        <p id="due-note" class="warn small" hidden><span id="due-text"></span> <button id="due-open" class="link-btn" type="button">Open People</button></p>
 
         <div class="now">
           <p class="eyebrow">Right now <span id="now-time"></span></p>
@@ -173,11 +174,20 @@
         <label for="message-es">In Spanish (sent when the family uses the Spanish page)</label>
         <textarea id="message-es" rows="3" lang="es"></textarea>
         <p class="small muted">{driver} is replaced with the driver's name from the card.</p>
+
+        <h2 class="section">Yard address</h2>
+        <p class="small">Shown at the bottom of every card's page, with a Directions button. Leave it empty to hide it.</p>
+        <input id="address" autocomplete="off" placeholder="e.g. 1234 Example Rd, Houston, TX 77000">
+
+        <h2 class="section">WhatsApp</h2>
+        <label class="check"><input id="whatsapp-on" type="checkbox"> Show a WhatsApp button for the primary call</label>
+        <p class="small muted">Opens a WhatsApp chat with whoever is the primary call, with the emergency text already written. Only switch it on if the people on shift watch WhatsApp.</p>
       </section>
 
       <!-- Shifts -->
       <section data-panel="shifts" hidden>
         <p class="small">The <strong>primary call</strong> is whoever is on the <strong>first</strong> shift in this list that's on right now. Everyone else working comes next, then everyone not scheduled. All times are Houston time (Central).</p>
+        <div id="gaps" class="gaps"></div>
         <div id="shift-list"></div>
         <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
         <label for="fallback">If nobody is on shift, the primary call is</label>
@@ -287,6 +297,7 @@
           <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
           <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. The tag doesn't need rewriting, but print a new card face.</li>
           <li><strong>Give someone access:</strong> send them this page's link and tell them the password (in person or by phone).</li>
+          <li><strong>"Number not checked":</strong> call or text that person to make sure the number still works, then press <strong>Still right</strong> → Publish. Each number is due every 90 days; changing a number counts as checking it.</li>
           <li><strong>Spanish:</strong> families can switch the card page to Spanish (phones set to Spanish open it in Spanish). Fill in the Spanish boxes in People and Shifts so roles and shift names read naturally; anything left blank shows in English.</li>
         </ul>
         <h2 class="section">If something's wrong</h2>

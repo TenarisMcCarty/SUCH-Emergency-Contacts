@@ -5,7 +5,7 @@
 // shift right now (schedule.js).
 
 const $ = id => document.getElementById(id);
-let card = null; // what the card unlocked: { driver, message, messageEs, contacts, schedule }
+let card = null; // what the card unlocked: { driver, message, messageEs, contacts, schedule, address, whatsapp }
 
 // ================= Words on the page =================
 
@@ -25,6 +25,15 @@ const TEXT = {
     others: 'Other contacts',
     call: 'Call',
     callName: name => `Call ${name}`,
+    whatsapp: name => `WhatsApp ${name}`,
+    yard: 'Yard',
+    directions: 'Directions',
+    saveContacts: 'Save numbers to Contacts',
+    addHome: 'Add to home screen',
+    homeApple: 'Tap Share (the square with an arrow), then Add to Home Screen.',
+    homeOther: 'Open the browser menu (⋮), then tap Add to Home screen.',
+    contactCompany: 'Tenaris',
+    contactNote: driver => `Emergency contact for driver ${driver}`,
     tzNote: 'Shift times are Houston time.',
     offline: 'Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.',
     error1: "This card couldn't be loaded.",
@@ -47,6 +56,15 @@ const TEXT = {
     others: 'Otros contactos',
     call: 'Llamar',
     callName: name => `Llamar a ${name}`,
+    whatsapp: name => `WhatsApp a ${name}`,
+    yard: 'Patio',
+    directions: 'Cómo llegar',
+    saveContacts: 'Guardar números en Contactos',
+    addHome: 'Agregar a la pantalla de inicio',
+    homeApple: 'Toque Compartir (el cuadro con una flecha) y luego Agregar a inicio.',
+    homeOther: 'Abra el menú del navegador (⋮) y toque Agregar a la pantalla principal.',
+    contactCompany: 'Tenaris',
+    contactNote: driver => `Contacto de emergencia del conductor ${driver}`,
     tzNote: 'Los horarios de turno están en la hora de Houston.',
     offline: 'Internet débil o sin conexión: se muestra la copia guardada en este teléfono. Los mensajes y las llamadas funcionan con señal normal.',
     error1: 'No se pudo cargar esta tarjeta.',
@@ -76,12 +94,14 @@ function applyLanguage() {
   document.documentElement.lang = lang;
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
-    'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry };
+    'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry,
+    't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'add-home': t.addHome };
   for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
   if ($('lang')) {
     $('lang').textContent = t.switchTo;
     $('lang').lang = lang === 'en' ? 'es' : 'en';
   }
+  if ($('home-how') && !$('home-how').hidden) $('home-how').textContent = homeHow();
   if (card) { renderTextButtons(); renderOrder(); }
 }
 
@@ -98,15 +118,26 @@ function show(id) {
   for (const s of ['loading', 'card', 'error']) $(s).hidden = s !== id;
 }
 
+// The card key from the link. Opened from the home screen without one (Android drops the part
+// after #), use the card this phone opened last.
+function cardKey() {
+  const key = location.hash.slice(1).trim();
+  if (key) return key;
+  try { return localStorage.getItem('card') || ''; } catch { return ''; }
+}
+
 async function load() {
   show('loading');
   try {
     // ?v= skips GitHub's 10-minute cache, so changes from the dashboard show up within a minute.
     const res = await fetch('contacts.enc.json?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('No contacts file.');
-    card = withSchedule(await openCard(location.hash.slice(1).trim(), await res.json()));
+    const key = cardKey();
+    card = withSchedule(await openCard(key, await res.json()));
+    try { localStorage.setItem('card', key); } catch {}
     renderTextButtons();
     renderOrder();
+    renderExtras();
     $('offline-note').hidden = res.headers.get('X-Offline-Copy') !== '1';
     show('card');
   } catch {
@@ -118,18 +149,22 @@ async function load() {
 
 // Keep only digits and "+" so a phone number can't become anything else inside a link.
 const clean = phone => phone.replace(/[^\d+]/g, '');
+const apple = () => /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+const textFor = () => {
+  const t = T();
+  const template = (lang === 'es' ? card.messageEs || t.message : card.message) || t.message;
+  return template.split('{driver}').join(card.driver);
+};
 
 function renderTextButtons() {
   const t = T();
   $('driver').textContent = card.driver;
   const numbers = card.contacts.map(c => clean(c.phone));
-  const template = (lang === 'es' ? card.messageEs || t.message : card.message) || t.message;
-  const body = encodeURIComponent(template.split('{driver}').join(card.driver));
-  const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+  const body = encodeURIComponent(textFor());
 
   // Group text to everyone. iPhone and Android need different link formats.
   $('text-all').textContent = t.textAll(numbers.length);
-  $('text-all').href = apple
+  $('text-all').href = apple()
     ? `sms:/open?addresses=${numbers.join(',')}&body=${body}`
     : `sms:${numbers.join(',')}?body=${body}`;
 }
@@ -146,6 +181,14 @@ function renderOrder() {
   $('main-detail').textContent = detailLine(main, lang);
   $('call-main').textContent = t.callName(main.contact.name);
   $('call-main').href = 'tel:' + clean(main.contact.phone);
+
+  // WhatsApp only opens a chat with one person, so it's offered for the primary call only.
+  const wa = $('whatsapp');
+  if (wa) {
+    wa.hidden = !card.whatsapp;
+    wa.textContent = t.whatsapp(main.contact.name);
+    wa.href = `https://wa.me/${clean(main.contact.phone).replace('+', '')}?text=${encodeURIComponent(textFor())}`;
+  }
 
   $('also-section').hidden = !also.length;
   $('also-list').replaceChildren(...also.map(row));
@@ -176,6 +219,71 @@ function row(entry) {
   li.append(who, call);
   return li;
 }
+
+// ================= Yard address, Save to Contacts, home screen =================
+// Everything here is optional: an older cached page may not have these elements.
+
+function renderExtras() {
+  const address = (card.address || '').trim();
+  if ($('yard-section')) {
+    $('yard-section').hidden = !address;
+    $('yard-address').textContent = address;
+    const q = encodeURIComponent(address);
+    $('directions').href = apple() ? `https://maps.apple.com/?q=${q}` : `https://www.google.com/maps/search/?api=1&query=${q}`;
+  }
+  if ($('keep')) {
+    $('keep').hidden = false;
+    $('add-home').hidden = standalone(); // already opened from the home screen
+  }
+}
+
+// vCard text needs \ , ; and line breaks escaped.
+const vEsc = s => String(s).replace(/[\\,;]/g, m => '\\' + m).replace(/\r?\n/g, '\\n');
+
+// One contact per person, named "Name (Tenaris)" so a call back from the yard shows who it is.
+function vcards() {
+  const t = T();
+  return card.contacts.map(c => {
+    const role = lang === 'es' ? (c.roleEs || '').trim() || c.role : c.role;
+    const name = `${c.name} (${t.contactCompany})`;
+    return ['BEGIN:VCARD', 'VERSION:3.0', `FN:${vEsc(name)}`, `N:;${vEsc(name)};;;`, `ORG:${vEsc(t.contactCompany)}`,
+      role ? `TITLE:${vEsc(role)}` : '', `TEL;TYPE=CELL:${clean(c.phone)}`,
+      card.address ? `ADR;TYPE=WORK:;;${vEsc(card.address.trim())};;;;` : '',
+      `NOTE:${vEsc(t.contactNote(card.driver))}`, 'END:VCARD'].filter(Boolean).join('\r\n');
+  }).join('\r\n') + '\r\n';
+}
+
+if ($('save-contacts')) $('save-contacts').onclick = () => {
+  if (!card) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([vcards()], { type: 'text/vcard;charset=utf-8' }));
+  a.download = 'tenaris-emergency-contacts.vcf';
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60 * 1000);
+};
+
+const standalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+const homeHow = () => (apple() ? T().homeApple : T().homeOther);
+
+// Android Chrome offers its own "Install" prompt; other browsers need the steps spelled out.
+let installPrompt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+addEventListener('appinstalled', () => { if ($('add-home')) $('add-home').hidden = true; });
+
+if ($('add-home')) $('add-home').onclick = async () => {
+  if (installPrompt) {
+    const p = installPrompt;
+    installPrompt = null;
+    try {
+      await p.prompt();
+      if ((await p.userChoice).outcome === 'accepted') return;
+    } catch {} // prompt refused: show the steps instead
+  }
+  $('home-how').textContent = homeHow();
+  $('home-how').hidden = false;
+};
 
 $('retry').onclick = load;
 addEventListener('hashchange', load);

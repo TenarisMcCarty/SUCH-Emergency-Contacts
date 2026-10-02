@@ -55,6 +55,7 @@ Below the badge:
 
 - **Right now (Houston time …):** who the cards would call at this moment: the primary call and anyone else working. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
 - **Facts line:** how many people and cards there are, and when the last change was published and by whom.
+- **Numbers to check:** "*N* phone numbers haven't been checked in 90 days", with an **Open People** link. Only shown when something is due ([section 3](#3-people)).
 
 When there are unpublished changes, a dark bar with a **Publish** button also stays at the bottom of the screen.
 
@@ -76,6 +77,14 @@ Each person has:
 - **Add person** adds a row; there's room for up to **10 people**.
 - **Remove person** deletes them and also takes them off every shift.
 
+### Checking numbers every 90 days
+
+Under each phone number is the date it was last checked, e.g. *Number checked Oct 2, 2026.* After 90 days it turns amber: *Number not checked since …* Call or text that person, make sure the number still works, then press **Still right** and **Publish**.
+
+- Changing a number counts as checking it.
+- Numbers that were there before this feature count as checked on the last publish before it.
+- The dates are only seen in the dashboard, never on cards.
+
 ### Text message
 
 This is the group text the family sends to everyone. `{driver}` is replaced with the driver's name from their card.
@@ -84,6 +93,16 @@ This is the group text the family sends to everyone. `{driver}` is replaced with
 - **In Spanish** is used when the family has the page in Spanish. Default: *EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.*
 
 The family sees the message in their Messages app and can edit it before tapping Send. It's sent from their own phone, so the yard can call them back.
+
+### Yard address
+
+Shown at the bottom of every card's page, with a **Directions** button that opens the phone's maps app. Type it the way you'd type it into Google Maps, e.g. *1234 Example Rd, Houston, TX 77000*. Leave it empty to hide it.
+
+### WhatsApp
+
+Tick **Show a WhatsApp button for the primary call** to add a WhatsApp button under the big Call button. It opens a WhatsApp chat with whoever is the primary call at that moment, with the emergency text already written. WhatsApp links can only message one person, so only the primary call gets one.
+
+Only switch it on if the people on shift actually watch WhatsApp. It's off by default.
 
 ---
 
@@ -98,6 +117,12 @@ This tab decides **who is the primary call** (the big Call button on the card pa
 3. Everyone else on a shift that's on right now is listed under **Also working now**.
 4. Everyone else is listed under **Not scheduled · still emergency contacts**.
 5. If **nobody** is on shift, the primary call is the person chosen in **If nobody is on shift, the primary call is**.
+
+### Times with nobody on shift
+
+Above the shift list, an amber box lists every time in the week when nobody is on any shift, e.g. *Fri 10:00 PM to Mon 6:00 AM*, and who gets the primary call then (the fallback person). A shift with nobody ticked doesn't count. When every hour is covered it says *✓ Someone is on shift at every hour of the week.*
+
+Gaps aren't errors (the fallback person covers them), and you can still publish. The box just makes sure they're on purpose.
 
 Keep the rotating shifts (1st, 2nd, 3rd) **above** the Day shift. Then the shift lead is the primary call and the day staff appear as "Also working".
 

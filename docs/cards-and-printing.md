@@ -218,6 +218,10 @@ Do this once, with a real printed card and real phones, before making cards for 
 - [ ] **Text all contacts** opens Messages with every number and the message filled in, on an iPhone **and** a Samsung phone. If a phone leaves numbers out, report it; the link format can be adjusted.
 - [ ] The **Primary call** shows the person on shift now, and every Call button dials the right number.
 - [ ] **Español** switches the page to Spanish, and the Spanish text message appears.
+- [ ] **Save numbers to Contacts** adds every person, named "*Name* (Tenaris)", on an iPhone and an Android phone.
+- [ ] **Add to home screen** puts the Emergency icon on both phones, and the icon opens the right driver's page.
+- [ ] If WhatsApp is switched on: the **WhatsApp** button opens a chat with the primary call, with the message filled in.
+- [ ] If an address is set: **Directions** opens the maps app at the yard.
 - [ ] **Airplane mode** on a phone that has **never** opened the page shows "This card couldn't be loaded". A phone that **has** opened it before shows the saved copy with a note; that's intended.
 - [ ] Change something in the dashboard, publish, and confirm the card shows it within about a minute.
 - [ ] **3D card:** the QR scans, the tag reads through the card, and the lettering is clean.

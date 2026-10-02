@@ -80,9 +80,9 @@ Notes:
 
 - **Strict Content-Security-Policy** on both pages:
   - Only this site's own scripts run; there are no outside scripts, fonts, trackers or analytics.
-  - The emergency page connects only to this site.
+  - The emergency page connects only to this site. Its WhatsApp and Directions buttons are ordinary links: they hand the yard's number and message, or the address, to WhatsApp or the maps app only when tapped.
   - The dashboard additionally connects to `api.github.com`, to publish.
-- **No cookies.** The emergency page stores only the language choice and its offline copy. The dashboard stores only "Your name" for History. Passwords, the recovery code, the token and card keys stay in memory and are forgotten on **Lock**, reload or close.
+- **No cookies.** The emergency page stores only the language choice, its offline copy and the last card link opened (so the home-screen icon can reopen it; that link is already in the phone's browser history). The dashboard stores only "Your name" for History. Passwords, the recovery code, the token and card keys stay in memory and are forgotten on **Lock**, reload or close.
 - **Referrer** headers are switched off, so following a link from these pages doesn't leak the address, and search engines are asked not to index them.
 - **Text is never treated as code:** names and messages are inserted as plain text, so a name containing HTML just shows as text.
 - **Third-party code** is copied into the repository, not loaded from other servers:

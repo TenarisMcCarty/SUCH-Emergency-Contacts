@@ -4,12 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Only this site's own files may run or be fetched. No outside scripts, fonts or trackers. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#373c41">
   <title>Driver Emergency Contact</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Emergency">
   <link rel="stylesheet" href="style.css">
   <script src="crypto.js" defer></script>
   <script src="schedule.js" defer></script>
@@ -49,6 +53,7 @@
         <p id="main-name" class="main-name"></p>
         <p id="main-detail" class="detail"></p>
         <a id="call-main" class="btn btn-call">Call</a>
+        <a id="whatsapp" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer" hidden>WhatsApp</a>
       </div>
 
       <div id="also-section">
@@ -61,8 +66,23 @@
         <ul id="off-list" class="rows"></ul>
       </div>
 
+      <div id="yard-section" hidden>
+        <h2 id="t-yard" class="section">Yard</h2>
+        <div class="yard-row">
+          <p id="yard-address"></p>
+          <a id="directions" class="btn btn-outline" target="_blank" rel="noopener noreferrer">Directions</a>
+        </div>
+      </div>
+
       <p id="tz-note" class="small muted" hidden></p>
       <p id="offline-note" class="note" hidden>Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.</p>
+
+      <!-- Small extras at the very bottom, so they never get in the way of calling. -->
+      <div id="keep" class="keep" hidden>
+        <button id="save-contacts" class="link-btn" type="button">Save numbers to Contacts</button>
+        <button id="add-home" class="link-btn" type="button">Add to home screen</button>
+        <p id="home-how" class="small muted" hidden></p>
+      </div>
     </section>
 
     <section id="error" hidden>
