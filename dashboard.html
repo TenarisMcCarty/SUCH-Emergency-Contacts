@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Only this site's own files may run. The only outside connection allowed is GitHub's API, for publishing. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data: blob:; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#373c41">
+  <title>Emergency Cards Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="crypto.js" defer></script>
+  <script src="schedule.js" defer></script>
+  <script src="words.js" defer></script>
+  <script src="qrcode.js" defer></script>
+  <script src="dashboard.js" defer></script>
+</head>
+<body class="dash">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand">Tenaris</span>
+      <span class="product">Emergency Cards</span>
+      <button id="lock" class="topbar-btn" type="button" hidden>Lock</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <p id="loading" class="status" role="status">Loading…</p>
+
+    <!-- ============ Sign in ============ -->
+    <section id="login" class="panel narrow" hidden>
+      <h1>Sign in</h1>
+      <form id="login-form">
+        <input type="text" name="username" autocomplete="username" value="Emergency Cards" hidden>
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+        <button class="btn btn-primary" type="submit">Unlock</button>
+        <p id="login-msg" class="msg" role="status"></p>
+      </form>
+      <details class="minor">
+        <summary>Lost the password?</summary>
+        <p>There's no way to recover it. Starting over creates a new password and empty lists, and <strong>every existing card stops working</strong> until it is rewritten with a new link.</p>
+        <button id="start-over" class="btn btn-danger" type="button">Start over</button>
+      </details>
+    </section>
+
+    <!-- ============ Setup steps (first time, change password, replace token) ============ -->
+    <section id="setup" class="panel narrow" hidden>
+      <p id="setup-step" class="eyebrow"></p>
+
+      <div id="setup-password">
+        <h1>Choose the dashboard password</h1>
+        <p>Everyone who manages the cards shares this password. It also protects the GitHub access stored in the public data file, so it has to be strong. Use the suggested one unless you have a good reason not to.</p>
+        <code id="suggested" class="key"></code>
+        <div class="btn-row">
+          <button id="suggest-again" class="btn btn-light" type="button">Suggest another</button>
+          <button id="copy-suggested" class="btn btn-light" type="button">Copy</button>
+        </div>
+        <details class="minor">
+          <summary>Use my own password instead</summary>
+          <label for="own-password">At least 20 characters</label>
+          <input id="own-password" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+        </details>
+        <label class="check"><input id="pw-saved" type="checkbox"> I've saved the password in a password manager</label>
+        <button id="pw-next" class="btn btn-primary" type="button" disabled>Next</button>
+        <p id="pw-msg" class="msg" role="status"></p>
+      </div>
+
+      <div id="setup-token" hidden>
+        <h1>Connect to GitHub</h1>
+        <p>Publishing needs a GitHub token that can change only this one repository. Make it while signed in to GitHub as <strong>TenarisMcCarty</strong>:</p>
+        <ol class="steps">
+          <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub → New fine-grained token</a>.</li>
+          <li><strong>Token name:</strong> Emergency cards dashboard. <strong>Expiration:</strong> the longest offered.</li>
+          <li><strong>Repository access:</strong> Only select repositories → <em>SUCH-Emergency-Contacts</em>.</li>
+          <li><strong>Permissions:</strong> Repository permissions → <em>Contents</em> → <em>Read and write</em>. Leave everything else as is.</li>
+          <li><strong>Generate token</strong>, copy it (starts with <code>github_pat_</code>) and paste it below.</li>
+        </ol>
+        <label for="token-input">GitHub token</label>
+        <input id="token-input" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button id="token-next" class="btn btn-primary" type="button">Check and continue</button>
+        <p id="token-msg" class="msg" role="status"></p>
+      </div>
+
+      <button id="setup-cancel" class="link-btn" type="button" hidden>Cancel</button>
+    </section>
+
+    <!-- ============ Dashboard ============ -->
+    <div id="dash" hidden>
+      <section class="status-panel">
+        <div class="status-line">
+          <span id="pub-badge" class="badge"></span>
+          <span id="pub-text"></span>
+        </div>
+
+        <div id="changes" class="changes" hidden>
+          <ul id="change-list"></ul>
+          <div class="btn-row">
+            <button id="publish" class="btn btn-primary" type="button">Publish</button>
+            <button id="discard" class="btn btn-light" type="button">Discard changes</button>
+          </div>
+        </div>
+        <p id="publish-msg" class="msg" role="status"></p>
+        <p id="gh-problem" class="msg bad" hidden></p>
+
+        <div class="now">
+          <p class="eyebrow">Right now <span id="now-time"></span></p>
+          <p id="now-main" class="now-main"></p>
+          <p id="now-also" class="small"></p>
+        </div>
+        <p id="facts" class="small muted"></p>
+      </section>
+
+      <nav class="tabs" aria-label="Sections">
+        <button type="button" data-tab="people" class="active">People</button>
+        <button type="button" data-tab="shifts">Shifts</button>
+        <button type="button" data-tab="cards">Cards</button>
+        <button type="button" data-tab="history">History</button>
+        <button type="button" data-tab="settings">Settings</button>
+        <button type="button" data-tab="help">Help</button>
+      </nav>
+
+      <!-- People -->
+      <section data-panel="people">
+        <p class="small">Everyone here gets the group text. Who gets the big Call button depends on the <strong>Shifts</strong> tab.</p>
+        <div id="people-list"></div>
+        <button id="add-person" class="btn btn-light" type="button">Add person</button>
+        <h2 class="section">Text message</h2>
+        <textarea id="message" rows="3"></textarea>
+        <p class="small muted">{driver} is replaced with the driver's name from the card.</p>
+      </section>
+
+      <!-- Shifts -->
+      <section data-panel="shifts" hidden>
+        <p class="small">The big Call button goes to whoever is on the <strong>first</strong> shift in this list that's on right now. Everyone else working comes next, then people who are off.</p>
+        <label for="tz">Yard time zone</label>
+        <select id="tz"></select>
+        <div id="shift-list"></div>
+        <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
+        <label for="fallback">If nobody is on shift, the Call button goes to</label>
+        <select id="fallback"></select>
+
+        <h2 class="section">Check a time</h2>
+        <div class="field-row">
+          <label>Day <select id="preview-day"></select></label>
+          <label>Time <input id="preview-time" type="time" value="15:00"></label>
+        </div>
+        <ol id="preview" class="preview"></ol>
+      </section>
+
+      <!-- Cards -->
+      <section data-panel="cards" hidden>
+        <h2 class="section">Add a card</h2>
+        <label for="new-driver">Driver name and ID (shown on the page)</label>
+        <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)">
+        <label for="new-note">Who has this card? (only shown here)</label>
+        <input id="new-note" autocomplete="off" placeholder="e.g. Family, School">
+        <button id="add-card" class="btn btn-light" type="button">Add card</button>
+        <p id="card-msg" class="msg" role="status"></p>
+
+        <div id="card-out" class="panel" hidden>
+          <h3 id="card-out-title"></h3>
+          <p id="card-out-status" class="small"></p>
+          <label for="card-link">Card link: write this to the NFC tag</label>
+          <input id="card-link" readonly>
+          <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+          <canvas id="qr" class="qr"></canvas>
+          <div class="btn-row">
+            <a id="qr-png" class="btn btn-light">QR as PNG</a>
+            <a id="qr-svg" class="btn btn-light">QR as SVG (3D modelling)</a>
+          </div>
+          <p class="small muted">NFC Tools → Write → Add a record → URL → paste → Write. Lock the tag only after testing it.</p>
+        </div>
+
+        <h2 class="section">All cards (<span id="card-count">0</span>)</h2>
+        <ul id="card-list" class="rows"></ul>
+        <p id="no-cards" class="small muted">No cards yet.</p>
+      </section>
+
+      <!-- History -->
+      <section data-panel="history" hidden>
+        <ol id="history-list" class="history"></ol>
+        <p id="no-history" class="small muted">Nothing published yet.</p>
+      </section>
+
+      <!-- Settings -->
+      <section data-panel="settings" hidden>
+        <h2 class="section">Your name</h2>
+        <p class="small">Shown in History next to what you publish. Saved only on this device.</p>
+        <input id="my-name" autocomplete="name">
+
+        <h2 class="section">GitHub connection</h2>
+        <p id="gh-status" class="small"></p>
+        <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
+
+        <h2 class="section">Password</h2>
+        <p class="small">To take away someone's access, change the password <strong>and</strong> replace the GitHub token, then delete the old token on GitHub.</p>
+        <label class="check"><input id="pw-revoke" type="checkbox"> Someone who should lose access knows the current password</label>
+        <button id="change-password" class="btn btn-light" type="button">Change password</button>
+      </section>
+
+      <!-- Help -->
+      <section data-panel="help" hidden class="help">
+        <h2 class="section">How it works</h2>
+        <p>Each family or school has a card with an NFC tag and QR code. Tapping or scanning it opens a page with a <strong>Text all</strong> button and Call buttons. The person on shift right now is at the top. Changes you publish here reach every card within about a minute.</p>
+        <h2 class="section">Common jobs</h2>
+        <ul>
+          <li><strong>Shift rotation changed:</strong> Shifts → tick who works each shift → Publish.</li>
+          <li><strong>New person / someone left:</strong> People → Add person or Remove → check Shifts → Publish.</li>
+          <li><strong>New card:</strong> Cards → Add card → Publish → write the link to the tag (NFC Tools) and use the QR for the print. Test it, then lock the tag.</li>
+          <li><strong>Lost card:</strong> Cards → Remove next to it → Publish. Only that card stops working.</li>
+          <li><strong>Name typo on a card:</strong> Cards → Rename → Publish. No need to rewrite the card.</li>
+          <li><strong>Give someone access:</strong> send them this page's link and tell them the password (in person or by phone).</li>
+          <li><strong>Take away access:</strong> Settings → tick "Someone who should lose access…" → Change password → Publish.</li>
+        </ul>
+        <h2 class="section">If something's wrong</h2>
+        <ul>
+          <li><strong>"Not published" won't go away:</strong> press Publish; read the message under it.</li>
+          <li><strong>GitHub token problem:</strong> Settings → Replace GitHub token (instructions are on that screen).</li>
+          <li><strong>Someone else published first:</strong> Lock, sign in again, redo your change.</li>
+        </ul>
+        <h2 class="section">Security</h2>
+        <p class="small">All data is encrypted before it leaves this page. Each card can unlock only the contacts and its own driver name. The password never leaves this device.</p>
+      </section>
+    </div>
+  </main>
+
+  <div id="publish-bar" class="publish-bar" hidden>
+    <div class="wrap publish-bar-inner">
+      <span id="publish-bar-text"></span>
+      <button id="publish-bar-btn" class="btn btn-primary" type="button">Publish</button>
+    </div>
+  </div>
+</body>
+</html>

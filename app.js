@@ -1,9 +1,11 @@
 // app.js — the emergency page (index.html).
 // A card's link ends in #<card key>. Browsers never send the part after # to any
 // server, so the key stays on the phone. We download the locked contacts file,
-// unlock it with the key (see crypto.js) and fill in the buttons.
+// unlock it with the key (crypto.js), and show who to call, based on who is on
+// shift right now (schedule.js).
 
 const $ = id => document.getElementById(id);
+let card = null; // what the card unlocked: { driver, message, contacts, schedule }
 
 // Show exactly one of the three states.
 function show(id) {
@@ -13,13 +15,17 @@ function show(id) {
 async function load() {
   show('loading');
   try {
-    const res = await fetch('contacts.enc.json', { cache: 'no-store' });
+    // ?v= skips GitHub's 10-minute cache, so changes from the dashboard show up within a minute.
+    const res = await fetch('contacts.enc.json?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('No contacts file.');
-    const card = await openCard(location.hash.slice(1).trim(), await res.json());
-    render(card, res.headers.get('X-Offline-Copy') === '1');
+    card = await openCard(location.hash.slice(1).trim(), await res.json());
+    renderTextButtons();
+    renderOrder();
+    $('offline-note').hidden = res.headers.get('X-Offline-Copy') !== '1';
     show('card');
   } catch {
     // Missing, wrong or removed key, no internet, or no file: families only see the friendly message.
+    card = null;
     show('error');
   }
 }
@@ -27,15 +33,14 @@ async function load() {
 // Keep only digits and "+" so a phone number can't become anything else inside a link.
 const clean = phone => phone.replace(/[^\d+]/g, '');
 
-function render({ driver, message, primary, contacts }, offline) {
-  $('driver').textContent = driver;
-
-  const numbers = contacts.map(c => clean(c.phone));
-  const body = encodeURIComponent(message.split('{driver}').join(driver));
+function renderTextButtons() {
+  $('driver').textContent = card.driver;
+  const numbers = card.contacts.map(c => clean(c.phone));
+  const body = encodeURIComponent(card.message.split('{driver}').join(card.driver));
   const apple = /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
 
-  // Group text. iPhone and Android need different link formats.
-  $('text-all').textContent = `Text all ${contacts.length} contacts`;
+  // Group text to everyone. iPhone and Android need different link formats.
+  $('text-all').textContent = `Text all ${numbers.length} contacts`;
   $('text-all').href = apple
     ? `sms:/open?addresses=${numbers.join(',')}&body=${body}`
     : `sms:${numbers.join(',')}?body=${body}`;
@@ -43,28 +48,40 @@ function render({ driver, message, primary, contacts }, offline) {
   // Some Android apps (e.g. Samsung Messages) want ";" between numbers instead of ",".
   $('text-retry').href = `sms:${numbers.join(';')}?body=${body}`;
   $('text-retry').hidden = apple;
-
-  const main = contacts[primary] || contacts[0];
-  $('call-primary').textContent = `Call ${main.name}`;
-  $('call-primary').href = 'tel:' + clean(main.phone);
-
-  $('contacts').replaceChildren(...contacts.map(contactRow));
-  $('offline-note').hidden = !offline;
 }
 
-function contactRow(c) {
+// Who's on shift now gets the big button, then others working, then everyone off shift.
+function renderOrder() {
+  const { main, also, off } = arrange(card, yardNow(card.schedule.timeZone));
+  $('main-label').textContent = main.shift ? 'On shift now' : 'Main contact';
+  $('main-name').textContent = main.contact.name;
+  $('main-detail').textContent = detailLine(main);
+  $('call-main').textContent = 'Call ' + main.contact.name;
+  $('call-main').href = 'tel:' + clean(main.contact.phone);
+
+  $('also-section').hidden = !also.length;
+  $('also-list').replaceChildren(...also.map(row));
+  $('off-section').hidden = !off.length;
+  $('off-list').replaceChildren(...off.map(row));
+
+  const tz = card.schedule.timeZone;
+  $('tz-note').hidden = Intl.DateTimeFormat().resolvedOptions().timeZone === tz;
+  $('tz-note').textContent = `Shift times are yard time (${tz.replace(/_/g, ' ')}).`;
+}
+
+function row(entry) {
   const name = document.createElement('strong');
-  name.textContent = c.name;
-  const role = document.createElement('span');
-  role.textContent = c.role;
+  name.textContent = entry.contact.name;
+  const detail = document.createElement('span');
+  detail.textContent = detailLine(entry);
   const who = document.createElement('div');
-  who.append(name, role);
+  who.append(name, detail);
 
   const call = document.createElement('a');
-  call.className = 'btn btn-small blue';
-  call.href = 'tel:' + clean(c.phone);
+  call.className = 'btn btn-outline';
+  call.href = 'tel:' + clean(entry.contact.phone);
   call.textContent = 'Call';
-  call.setAttribute('aria-label', 'Call ' + c.name);
+  call.setAttribute('aria-label', 'Call ' + entry.contact.name);
 
   const li = document.createElement('li');
   li.append(who, call);
@@ -73,6 +90,7 @@ function contactRow(c) {
 
 $('retry').onclick = load;
 addEventListener('hashchange', load);
+setInterval(() => card && renderOrder(), 60 * 1000); // keep the order right across shift changes
 
 // Save a copy on the phone so the page still opens with weak or no data (see sw.js).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

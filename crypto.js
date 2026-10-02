@@ -3,15 +3,16 @@
 // The repo is public, so contacts.enc.json is fully encrypted (AES-GCM, 128-bit keys,
 // using the browser's built-in Web Crypto). It has three parts:
 //
-//   "data"   The contacts and the text message, locked with a random data key.
+//   "data"   The contacts, shifts and text message, locked with a random data key.
 //   "cards"  One entry per card. Each holds the data key plus that card's driver name,
 //            locked with that card's own key. A card's key exists only in the card's
 //            link (after the #), which browsers never send to any server.
-//   "admin"  What the editor needs (data key, every card's key and name), locked with
-//            the admin key, which only the admin keeps.
+//   "admin"  What the dashboard needs (data key, every card's key and name, the GitHub
+//            token, the change history), locked with a key made from the dashboard
+//            password. Password stretching (PBKDF2, 600,000 rounds) makes guessing slow.
 //
-// The editor makes a brand-new data key on every save, so a removed card can't read
-// anything saved after it was removed.
+// The dashboard makes a brand-new data key on every publish, so a removed card can't
+// read anything published after it was removed.
 
 const KEY_BYTES = 16; // 128-bit keys, written as 22 characters
 
@@ -43,6 +44,17 @@ async function importKey(keyText) {
   return crypto.subtle.importKey('raw', fromB64(keyText), 'AES-GCM', false, ['encrypt', 'decrypt']);
 }
 
+// Turn the dashboard password into a key. The salt is random and stored in the file.
+async function passwordKey(password, salt, iterations) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password.normalize('NFKC')), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: fromB64(salt), iterations }, base, KEY_BYTES * 8);
+  return toB64(new Uint8Array(bits));
+}
+
+function newSalt() {
+  return toB64(crypto.getRandomValues(new Uint8Array(16)));
+}
+
 // ---- Lock / unlock any value. A wrong key or a changed file makes unlock() fail. ----
 
 async function lock(keyText, value) {
@@ -67,8 +79,10 @@ async function slotId(cardKey) {
 
 // ---- The whole file ----
 
-// Editor: build a new contacts.enc.json from { data, cards }.
-async function buildFile(adminKey, { data, cards }) {
+// Dashboard: build a new contacts.enc.json.
+//   admin = { key, salt, iterations } from the password
+//   extra = anything else only the dashboard should see (GitHub token, history)
+async function buildFile(admin, { data, cards, extra }) {
   const dataKey = newKey();
   const slots = [];
   for (const card of cards) {
@@ -76,14 +90,17 @@ async function buildFile(adminKey, { data, cards }) {
   }
   slots.sort(([a], [b]) => (a < b ? -1 : 1)); // order reveals nothing about when cards were added
   return {
-    version: 2,
+    version: 3,
     data: await lock(dataKey, data),
     cards: Object.fromEntries(slots),
-    admin: await lock(adminKey, { dataKey, cards }),
+    admin: {
+      kdf: 'PBKDF2-SHA256', iterations: admin.iterations, salt: admin.salt,
+      ...(await lock(admin.key, { ...extra, dataKey, cards })),
+    },
   };
 }
 
-// Emergency page: open the file with a card key → { driver, message, primary, contacts }.
+// Emergency page: open the file with a card key → { driver, message, contacts, schedule }.
 async function openCard(cardKey, file) {
   const slot = file.cards[await slotId(cardKey)];
   if (!slot) throw new Error('This card is not in the file.');
@@ -91,8 +108,8 @@ async function openCard(cardKey, file) {
   return { driver, ...(await unlock(dataKey, file.data)) };
 }
 
-// Editor: open the file with the admin key → { cards, data }.
+// Dashboard: open the file with the password's key → { cards, data, ...extra }.
 async function openAdmin(adminKey, file) {
-  const { dataKey, cards } = await unlock(adminKey, file.admin);
-  return { cards, data: await unlock(dataKey, file.data) };
+  const { dataKey, ...rest } = await unlock(adminKey, file.admin);
+  return { ...rest, data: await unlock(dataKey, file.data) };
 }

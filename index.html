@@ -8,42 +8,65 @@
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#b00020">
-  <title>Emergency Contact</title>
+  <meta name="theme-color" content="#373c41">
+  <title>Driver Emergency Contact</title>
   <link rel="stylesheet" href="style.css">
   <script src="crypto.js" defer></script>
+  <script src="schedule.js" defer></script>
   <script src="app.js" defer></script>
 </head>
 <body>
-  <!-- Always visible, even if everything else fails. -->
-  <header class="banner">
-    <p>Life-threatening emergency?</p>
-    <a class="btn btn-big white" href="tel:911">Call 911</a>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <span class="brand">Tenaris</span>
+      <span class="product">Driver emergency contact</span>
+    </div>
   </header>
 
-  <main>
+  <!-- Always visible, even if everything else fails. -->
+  <div class="alert-911">
+    <div class="wrap alert-inner">
+      <p>Life-threatening emergency?</p>
+      <a class="btn btn-911" href="tel:911">Call 911</a>
+    </div>
+  </div>
+
+  <main class="wrap">
     <p id="loading" class="status" role="status">Loading…</p>
 
     <section id="card" hidden>
-      <p class="label">Emergency contact for:</p>
+      <p class="eyebrow">Emergency contact for</p>
       <h1 id="driver"></h1>
 
-      <a id="text-all" class="btn btn-huge green">Text all contacts</a>
-      <p class="hint">Then tap <strong>Send</strong>.<br>The text comes from your phone, so they can call you back.</p>
+      <a id="text-all" class="btn btn-text">Text all contacts</a>
+      <p class="hint">Then tap <strong>Send</strong>. The text comes from your phone, so they can call you back.</p>
       <a id="text-retry" class="small-link" hidden>Didn't get all of them? Try again</a>
 
-      <a id="call-primary" class="btn btn-big blue spaced">Call</a>
+      <h2 id="main-label" class="section">On shift now</h2>
+      <div class="main-contact">
+        <p id="main-name" class="main-name"></p>
+        <p id="main-detail" class="detail"></p>
+        <a id="call-main" class="btn btn-call">Call</a>
+      </div>
 
-      <h2>All contacts</h2>
-      <ul id="contacts" class="rows"></ul>
+      <div id="also-section">
+        <h2 class="section">Also working now</h2>
+        <ul id="also-list" class="rows"></ul>
+      </div>
 
+      <div id="off-section">
+        <h2 class="section">Off shift · still emergency contacts</h2>
+        <ul id="off-list" class="rows"></ul>
+      </div>
+
+      <p id="tz-note" class="small muted" hidden></p>
       <p id="offline-note" class="note" hidden>Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.</p>
     </section>
 
     <section id="error" hidden>
       <p class="error-text">This card couldn't be loaded.</p>
       <p class="error-text">Call the backup number printed on your card.</p>
-      <button id="retry" class="btn btn-big dark" type="button">Retry</button>
+      <button id="retry" class="btn btn-dark" type="button">Retry</button>
     </section>
 
     <noscript>
