@@ -18,7 +18,7 @@ const TEXT = {
     call911: 'Call 911',
     loading: 'Loading…',
     contactFor: 'Emergency contact for',
-    textAll: n => `Text all ${n} contacts`,
+    textAll: 'Text All Yard Supervisors (Preferred)',
     primary: 'Primary call',
     alsoWorking: 'Also working now',
     offShift: 'Not scheduled · still emergency contacts',
@@ -49,7 +49,7 @@ const TEXT = {
     call911: 'Llame al 911',
     loading: 'Cargando…',
     contactFor: 'Contacto de emergencia para',
-    textAll: n => `Enviar mensaje a los ${n} contactos`,
+    textAll: 'Enviar mensaje a todos los supervisores del patio (preferido)',
     primary: 'Llamada principal',
     alsoWorking: 'También trabajando ahora',
     offShift: 'No programados · también son contactos de emergencia',
@@ -163,7 +163,7 @@ function renderTextButtons() {
   const body = encodeURIComponent(textFor());
 
   // Group text to everyone. iPhone and Android need different link formats.
-  $('text-all').textContent = t.textAll(numbers.length);
+  $('text-all').textContent = t.textAll;
   $('text-all').href = apple()
     ? `sms:/open?addresses=${numbers.join(',')}&body=${body}`
     : `sms:${numbers.join(',')}?body=${body}`;

@@ -7,7 +7,7 @@ Drivers can't carry phones while working, so each family gets a card with an **N
 The page shows:
 
 1. **Call 911** banner at the top.
-2. **Text all contacts** button: one group text to every emergency contact, naming the driver. It's sent from the family's own phone, so the yard can call them back.
+2. **Text All Yard Supervisors (Preferred)** button: one group text to every emergency contact, naming the driver. It's sent from the family's own phone, so the yard can call them back.
 3. **Primary call**: a big Call button for whoever is on shift at that moment.
 4. **Also working now**: others on duty right now, each with a Call button.
 5. **Not scheduled · still emergency contacts**: everyone else, each with a Call button.
@@ -79,6 +79,7 @@ Open the owner link and sign in with **your own owner password**; the supervisor
   - plain QR images
   - all of these in one ZIP
 - **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
+- **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen, paper and labels; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
 - **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or the password, the data file is unreadable.
 - **Separate owner access:** supervisors share one password, and the site owner has their own password plus a recovery code. The owner can always set a new supervisors' password, and nothing breaks any cards.
 
@@ -97,8 +98,8 @@ Open the owner link and sign in with **your own owner password**; the supervisor
 | `manifest.json`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` | Home-screen name and icon for the emergency page |
 | `style.css` | Styling for both pages (Tenaris colours) |
 | `contacts.enc.json` | The encrypted data. **Written only by the dashboard's Publish button; never edit it by hand.** |
-| `logo.js`, `logo.svg` | Tenaris logo outlines (from the official Tenaris media kit) |
-| `dejavu-sans-bold.ttf` | Lettering used on printed cards (DejaVu Sans Bold, Latin subset) |
+| `logo.svg`, `logo.js` | The Tenaris signature: official full-colour artwork from tenaris.com, and the same outlines for the card maker |
+| `source-sans-3-*.woff2`, `source-sans-3-bold.ttf` | Source Sans 3 (free, in the style of Frutiger, the Tenaris typeface), for the pages and the printed cards |
 | `qrcode.js`, `opentype.js`, `earcut.js` | Third-party libraries: QR encoder, font reader, shape triangulation (unmodified npm releases) |
 | `words.js` | Word list for suggested passwords (EFF Large Wordlist, minus 4 hyphenated words) |
 | `THIRD-PARTY-NOTICES.txt` | Licences and credits for everything above that came from elsewhere |

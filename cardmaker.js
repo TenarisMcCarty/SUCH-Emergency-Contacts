@@ -4,7 +4,9 @@
 //   • Paper card: front and back side by side, three copies on a Letter page, to cut and fold (PDF)
 //   • 3D-print card: two STL files (black and white filament) with a sealed pocket for a 25 mm NFC tag
 //   • all of it in one ZIP, with print notes.
-// Needs qrcode.js, opentype.js, earcut.js, logo.js and dejavu-sans-bold.ttf.
+// Needs qrcode.js, opentype.js, earcut.js, logo.js and source-sans-3-bold.ttf.
+// The Tenaris signature follows the Tenaris Brandmark Basic Guidelines: official artwork only, Multibar at least
+// 5.5 mm tall, clear space of 80% of the Multibar height all round, colour only on paper (one colour on the 3D card).
 // Units are millimetres with y pointing up. The back is laid out as seen from the back.
 
 const CardMaker = (() => {
@@ -16,21 +18,34 @@ const CardMaker = (() => {
   const TAG_BACK_X = W - TAG.x;             // the same spot seen from the back
   const BAND = 16.5;                        // white band along the bottom of the front
   const QRBOX = { x: 40.6, y: 7, size: 40 }; // QR area on the back, including its white margin
-  const MARGIN = 6;                         // left text margin on the front
+  const MARGIN = 6.4;                       // left margin on the front (also the logo's clear space from the edge)
   const MIN_MODULE = 0.8;                   // smallest QR square a 0.4 mm nozzle prints reliably
   const MIN_CAP = 2.3;                      // smallest capital height that prints cleanly
   const POCKETS = { 0.3: 0.4, 0.5: 0.6, 0.7: 0.8 }; // tag thickness (max) → pocket depth
 
-  // Paper colours (Tenaris charcoal, green and red from tenaris.com).
-  const PAPER = { black: '#2b2f33', white: '#ffffff', green: '#4caf50', accent: '#009900', red: '#c8102e', grey: '#5f6368' };
+  // Paper colours: Tenaris Green and Tenaris Gray (brand guide), dark text, and red kept for 911.
+  const PAPER = { black: '#2b2f33', white: '#ffffff', green: '#009900', red: '#c8102e', grey: '#666666' };
+
+  // The signature at `width` mm with its bottom-left corner at (x, y). One item per colour for paper,
+  // or a single one-colour item (white on the black 3D face).
+  const LOGO_LINE = 0.8; // clear space = 80% of the Multibar height
+  function logoItems(x, y, width, colour) {
+    const groups = colour ? Object.keys(LOGO.colors) : [null];
+    return groups.map(g => ({
+      contours: move(LOGO.contours.filter(c => !g || c.color === g).map(c => pairs(c.points)), x, y, width),
+      kind: 'logo', color: g && LOGO.colors[g],
+    }));
+  }
+  const logoHeight = width => LOGO.height * width;
+  const clearSpace = width => LOGO_LINE * LOGO.multibar.height * width;
 
   // ================= Lettering =================
   let font = null;
-  let capRatio = 0.729;
+  let capRatio = 0.66;
 
   async function load() {
     if (font) return;
-    font = opentype.parse(await (await fetch('dejavu-sans-bold.ttf')).arrayBuffer());
+    font = opentype.parse(await (await fetch('source-sans-3-bold.ttf')).arrayBuffer());
     capRatio = font.charToGlyph('H').getBoundingBox().y2 / font.unitsPerEm;
   }
 
@@ -201,8 +216,9 @@ const CardMaker = (() => {
 
     // ---- Front ----
     const upper = [], band = [];
-    // Logo: 44 mm wide keeps its thinnest bars printable (0.42 mm).
-    upper.push({ contours: move(LOGO.contours.map(c => pairs(c)), MARGIN, 37.6, 44), kind: 'logo' });
+    // Signature 44 mm wide: Multibar 7.9 mm (minimum 5.5), clear space 6.3 mm to the top edge and the text below.
+    const LOGO_W = 44, logoY = H - clearSpace(LOGO_W) - logoHeight(LOGO_W) - 0.05;
+    upper.push(...logoItems(MARGIN, logoY, LOGO_W, medium === 'paper'));
 
     const name = driver.trim().toUpperCase();
     let lines = [name];
@@ -220,7 +236,7 @@ const CardMaker = (() => {
     } else {
       upper.push({ contours: text(name, cap, MARGIN, 20.2), kind: 'name' });
     }
-    const eyebrowY = 28.6;
+    const eyebrowY = Math.min(28.6, logoY - clearSpace(LOGO_W) - 2.4 - 0.05); // stays out of the logo's clear space
     const eyebrowCap = fit(['EMERGENCY CONTACT'], 2.4, [pocketLimit(eyebrowY + 2.4) - MARGIN], 0.1);
     upper.push({ contours: text('EMERGENCY CONTACT', eyebrowCap, MARGIN, eyebrowY, { track: 0.1 }), kind: 'eyebrow' });
 
@@ -231,7 +247,8 @@ const CardMaker = (() => {
     const radius = medium === '3d' ? R : 0;
     const front = {
       zones: [
-        { contour: outline(BAND, H, radius), color: 'black', items: upper },
+        // Paper is white all over so the full-colour signature sits on white, as the brand guide prefers.
+        { contour: outline(BAND, H, radius), color: medium === 'paper' ? 'white' : 'black', items: upper },
         { contour: outline(0, BAND, radius), color: 'white', items: band },
       ],
     };
@@ -249,12 +266,12 @@ const CardMaker = (() => {
       items.push({ contours: text('TAP PHONE', tapCap, cx, 21.6, { align: 'center', track: 0.06 }), kind: 'label' });
       items.push({ contours: text('HERE', tapCap, cx, 17.8, { align: 'center', track: 0.06 }), kind: 'label' });
     } else {
-      // Paper has no tag: point people at the code instead.
-      items.push({ contours: move(LOGO.contours.map(c => pairs(c)), cx - 14, 41.5, 28), kind: 'logo' });
-      const sCap = fit(['SCAN WITH YOUR', 'PHONE CAMERA'], 2.8, [29, 29], 0.06);
-      items.push({ contours: text('SCAN WITH YOUR', sCap, cx, 31.5, { align: 'center', track: 0.06 }), kind: 'label' });
-      items.push({ contours: text('PHONE CAMERA', sCap, cx, 27.3, { align: 'center', track: 0.06 }), kind: 'label' });
-      items.push({ contours: [[[cx - 6, 21.6], [cx + 3, 21.6], [cx + 3, 19.6], [cx + 8, 22.6], [cx + 3, 25.6], [cx + 3, 23.6], [cx - 6, 23.6]]], kind: 'arrow' });
+      // Paper has no tag: point people at the code instead. (No logo here: at this width it would be
+      // below the brand guide's minimum size, and the front already carries the signature.)
+      const sCap = fit(['SCAN WITH YOUR', 'PHONE CAMERA'], 3.2, [29, 29], 0.06);
+      items.push({ contours: text('SCAN WITH YOUR', sCap, cx, 38.5, { align: 'center', track: 0.06 }), kind: 'label' });
+      items.push({ contours: text('PHONE CAMERA', sCap, cx, 33.5, { align: 'center', track: 0.06 }), kind: 'label' });
+      items.push({ contours: [[[cx - 7, 23.8], [cx + 3, 23.8], [cx + 3, 21.3], [cx + 9, 25], [cx + 3, 28.7], [cx + 3, 26.2], [cx - 7, 26.2]]], kind: 'arrow' });
     }
     if (backup) {
       items.push({ contours: [rect(cx - 8, 14.7, 16, 0.5)], kind: 'rule' });
@@ -434,7 +451,7 @@ const CardMaker = (() => {
     for (const zone of face.zones) {
       fill([zone.contour], palette[zone.color]);
       const ink = zone.color === 'black' ? 'white' : 'black';
-      for (const item of zone.items) fill(item.contours, palette[item.kind] && palette[item.kind][zone.color] || palette[ink]);
+      for (const item of zone.items) fill(item.contours, item.color || palette[item.kind] && palette[item.kind][zone.color] || palette[ink]);
     }
     if (palette.bandLine && face.zones.length > 1) fill([rect(0, BAND - 0.35, W, 0.7)], palette.bandLine);
     if (face.qr) drawQR(ctx, face.qr.m, face.qr.box, pxPerMm);
@@ -443,7 +460,7 @@ const CardMaker = (() => {
 
   const PAPER_PALETTE = {
     black: PAPER.black, white: PAPER.white, bandLine: PAPER.green,
-    eyebrow: { black: '#7fd36b', white: PAPER.grey }, urgent: { white: PAPER.red }, arrow: { white: PAPER.accent }, rule: { white: PAPER.green },
+    eyebrow: { white: PAPER.grey }, urgent: { white: PAPER.red }, arrow: { white: PAPER.green }, rule: { white: PAPER.green },
   };
   const PRINT_PALETTE = { black: '#141414', white: '#f4f4f2' }; // how the 3D print will look
 
@@ -493,9 +510,10 @@ const CardMaker = (() => {
     };
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, Wl, Hl);
-    fill([rect(0, Hl - 24, Wl, 24)], PAPER.black);
-    fill([rect(0, Hl - 25.2, Wl, 1.2)], PAPER.green);
-    fill(move(LOGO.contours.map(pairs), (Wl - 52) / 2, Hl - 12 - 52 * LOGO.height / 2, 52), '#fff');
+    // Full-colour signature on white, 48 mm wide (Multibar 8.6 mm), with its clear space kept free.
+    const lw = 48, ly = Hl - 8 - logoHeight(lw);
+    for (const item of logoItems((Wl - lw) / 2, ly, lw, true)) fill(item.contours, item.color);
+    fill([rect(12, ly - clearSpace(lw) - 1.2, Wl - 24, 0.8)], PAPER.green);
     const center = (str, cap, y, color, opts = {}) => fill(text(str, cap, Wl / 2, y, { align: 'center', step: 0.05, ...opts }), color);
     center('EMERGENCY CONTACT FOR', 3, 118, PAPER.grey, { track: 0.12 });
     const name = driver.trim().toUpperCase();
@@ -638,6 +656,8 @@ const CardMaker = (() => {
       '  Print flat with the QR side DOWN. Do not mirror.',
       '  Layer height 0.2 mm (first layer 0.2 mm), 100% infill, supports OFF, by-layer sequence.',
       '  Smooth plate for a clean QR face. Slow first layer (about 20 mm/s).',
+      '  Tenaris logo: its thinnest bars are 0.27 mm wide (official proportions). Keep Arachne walls on',
+      '  (the default) so they print; check in the sliced preview that all 7 bars are there.',
       '',
       'INSERT THE NFC TAG',
       `  Add a pause after Z = ${pause} mm (before layer ${layer}). At the pause, press the tested`,

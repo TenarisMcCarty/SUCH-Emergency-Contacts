@@ -99,9 +99,9 @@ The Print & QR tab shows both faces before you download.
 | NFC pocket | 25.6 mm round (for a 25 mm sticker), centred 67 mm from the left and 39 mm from the bottom of the front; sealed above and below by 0.4 mm |
 | QR code | 40 × 40 mm including its white margin of 4 squares; error-correction level M (still reads with about 15% damage). Current card links give 37 × 37 squares, about 0.89 mm each. |
 | Smallest details | the generator never makes a QR square smaller than 0.8 mm, or a capital letter shorter than 2.3 mm; both print cleanly with a 0.4 mm nozzle |
-| Logo | 44 mm wide, so its thinnest bars stay printable |
+| Logo | The official Tenaris signature, one colour (white on the black face), 44 mm wide: Multibar 7.9 mm tall (brand minimum 5.5 mm), with clear space of 80% of the Multibar height all round. Its thinnest bars are 0.27 mm wide; the slicer prints them at its narrowest line, so check them in the preview. |
 | Driver name | up to 5 mm capital height; long names shrink, then wrap onto two lines. If a name still can't print cleanly, the dashboard refuses and asks you to shorten it. Lettering never sits over the tag. |
-| Lettering | DejaVu Sans Bold |
+| Lettering | Source Sans 3 Bold (a free typeface in the style of Frutiger, the Tenaris typeface) |
 | Core colour | white, so white areas stay bright (thin white PLA over a black core looks grey) |
 
 ### Choosing the NFC sticker thickness
@@ -129,7 +129,7 @@ The **Print notes** file states the right numbers for the thickness you picked.
    - keep normal purging, but don't flush into the card itself
 
    These are starting points, not a tested profile.
-5. **Slice**, then check the preview: every QR square, every letter, and an empty pocket (no support inside).
+5. **Slice**, then check the preview: every QR square, every letter, all 7 bars of the Tenaris logo, and an empty pocket (no support inside). If thin logo bars are missing, check that **Quality → Wall generator** is **Arachne** (the default).
 6. **Add the pause:** in the sliced preview, drag the layer slider to the layer given in the table above (the first layer that covers the pocket). Right-click its handle → **Add Pause**. Check it sits right after Z = 0.8 / 1.0 / 1.2 mm.
 7. **Print.** At the pause, press the written and tested sticker into the pocket, sticky side down, flat and below the rim. Then resume. The next layers seal it in.
 8. When it's cool, **test**: scan the QR and tap the card with an iPhone and an Android phone.
@@ -157,7 +157,7 @@ Print and test **one** card before making a batch.
 4. Glue the halves together, or laminate.
 5. Scan the QR with a phone before handing it out.
 
-The paper card has the same front as the 3D card, in Tenaris charcoal with a green accent and the 911 line in red. A paper card has no NFC tag, so its back says **SCAN WITH YOUR PHONE CAMERA** with an arrow pointing to the QR code. It also has a small Tenaris logo and the backup line, if set. The card images are 600 dpi.
+The paper card has the same layout as the 3D card's front, but on white with the **full-colour Tenaris signature** (the brand guide's preferred version), a Tenaris Green line above the instructions and the 911 line in red. A paper card has no NFC tag, so its back says **SCAN WITH YOUR PHONE CAMERA** with a green arrow pointing to the QR code, plus the backup line, if set. The back has no logo: at that size it would be below the brand guide's minimum, and the front already carries it. The card images are 600 dpi.
 
 You can stick an NFC sticker to a paper card and write the same link to it; it works the same way.
 
@@ -165,7 +165,7 @@ You can stick an NFC sticker to a paper card and write the same link to it; it w
 
 ## 6. QR label and QR images
 
-- **QR label with name (PNG):** a 4 × 6 inch label at 300 dpi (1200 × 1800 pixels). It has a charcoal header with the Tenaris logo, "EMERGENCY CONTACT FOR" and the driver's name, a large QR code, then:
+- **QR label with name (PNG):** a 4 × 6 inch label at 300 dpi (1200 × 1800 pixels). It has the full-colour Tenaris signature on white with its clear space, a Tenaris Green line, "EMERGENCY CONTACT FOR" and the driver's name, a large QR code, then:
   > Scan with your phone camera to reach Tenaris emergency contacts.
   >
   > Life-threatening? Call 911 first.
@@ -215,7 +215,7 @@ Do this once, with a real printed card and real phones, before making cards for 
 
 - [ ] **Tag tap** on an iPhone and an Android phone opens the page with the right driver.
 - [ ] **QR scan** with both phones' cameras opens the same page.
-- [ ] **Text all contacts** opens Messages with every number and the message filled in, on an iPhone **and** a Samsung phone. If a phone leaves numbers out, report it; the link format can be adjusted.
+- [ ] **Text All Yard Supervisors (Preferred)** opens Messages with every number and the message filled in, on an iPhone **and** a Samsung phone. If a phone leaves numbers out, report it; the link format can be adjusted.
 - [ ] The **Primary call** shows the person on shift now, and every Call button dials the right number.
 - [ ] **Español** switches the page to Spanish, and the Spanish text message appears.
 - [ ] **Save numbers to Contacts** adds every person, named "*Name* (Tenaris)", on an iPhone and an Android phone.

@@ -4,8 +4,8 @@
 // falls back to the saved copy when the internet fails or takes too long.
 // Only the emergency page's own files are handled; the dashboard always goes online.
 
-const CACHE = 'emergency-v4'; // change this to throw away every phone's saved copy
-const PATHS = ['', 'index.html', 'app.js', 'crypto.js', 'schedule.js', 'style.css', 'logo.svg', 'contacts.enc.json'];
+const CACHE = 'emergency-v5'; // change this to throw away every phone's saved copy
+const PATHS = ['', 'index.html', 'app.js', 'crypto.js', 'schedule.js', 'style.css', 'logo.svg', 'source-sans-3-regular.woff2', 'source-sans-3-bold.woff2', 'contacts.enc.json'];
 const WAIT_MS = 4000; // how long to wait for the internet before using the saved copy
 
 self.addEventListener('install', event => {

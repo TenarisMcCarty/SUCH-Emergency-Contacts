@@ -44,15 +44,17 @@ supervisor ──(password)──► dashboard.html ──GitHub API PUT──�
 | `dashboard.html` | Dashboard markup | Sign-in, setup steps, tabs, Owner tab |
 | `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (supervisor, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing, deploy watching, Print & QR, Owner tab |
 | `cardmaker.js` | Print files | Card layout, 3D model and STL writer, canvas drawing, PDF writer, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
-| `style.css` | Styling | Tenaris colours from tenaris.com. Frutiger only if installed locally. |
-| `logo.js`, `logo.svg` | Tenaris logo | Outlines from the official media kit: `logo.js` for drawing and 3D, `logo.svg` for the page headers |
-| `dejavu-sans-bold.ttf` | Card lettering | DejaVu Sans Bold, subset to Basic Latin + Latin-1 + common punctuation |
+| `style.css` | Styling | Brand colours and type ([Tenaris brand](#tenaris-brand)). Frutiger if installed locally, otherwise Source Sans 3. |
+| `logo.svg` | Tenaris signature | The official full-colour artwork from tenaris.com, unchanged (only a `<title>` added). Used in both page headers and for the home-screen icons. |
+| `logo.js` | Tenaris signature outlines | The same artwork as flattened outlines with their colours, for the card maker (paper in colour, 3D in one colour). Also records the Multibar's size for clear-space and minimum-size checks. |
+| `source-sans-3-regular.woff2`, `source-sans-3-bold.woff2` | Page typeface | Source Sans 3 (Adobe, SIL Open Font License), unmodified release files. Also kept in the offline copy. |
+| `source-sans-3-bold.ttf` | Card lettering | Source Sans 3 Bold, unmodified, read by opentype.js |
 | `qrcode.js` | QR encoder | qrcode-generator 2.0.4 (MIT), unmodified. SHA-256 `79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c` |
 | `opentype.js` | Font reader | opentype.js 2.0.0 (MIT), unmodified `dist/opentype.min.js`. SHA-256 `b39d7bf9661481cec5c118a0d92b02951171d99c30d4d11252a72ecb0285439e` |
 | `earcut.js` | Polygon triangulation | earcut 3.2.4 (ISC), unmodified `dist/earcut.min.js`. SHA-256 `29df76691215df89bf904051f35eb7aae1831011093d9783e843c3421931a334` |
 | `words.js` | Password word list | EFF Large Wordlist (CC BY 3.0 US), minus the 4 hyphenated words: 7,772 words |
 | `contacts.enc.json` | Data | Written only by the dashboard |
-| `THIRD-PARTY-NOTICES.txt` | Licences | Licences for qrcode-generator, opentype.js, earcut, DejaVu and the EFF list, plus the logo's source |
+| `THIRD-PARTY-NOTICES.txt` | Licences | Licences for qrcode-generator, opentype.js, earcut, Source Sans 3 and the EFF list, plus the logo's source |
 
 ---
 
@@ -201,6 +203,16 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
 | Pocket depth by tag thickness | ≤ 0.3 mm tag → 0.4 mm · ≤ 0.5 mm → 0.6 mm · ≤ 0.7 mm → 0.8 mm |
 
 ---
+
+## Tenaris brand
+
+Everything follows the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communications):
+
+- **Signature:** only the official artwork (`logo.svg` / `logo.js`, from tenaris.com), never redrawn, stretched, recoloured or boxed in. Full colour on white (page headers, home-screen icons, paper card, QR label); one colour (white on black) on the two-colour 3D card, which the guide allows.
+- **Minimum size:** Multibar at least 5.5 mm tall in print. The 3D and paper card use a 44 mm signature (Multibar 7.9 mm) and the label 48 mm (8.6 mm). The paper card's back has no logo, because it would be too small there.
+- **Clear space:** 80% of the Multibar's height on every side. `cardmaker.js` computes it (`clearSpace`) and places the logo and the text below it accordingly. On screen, the header's padding and gap give the same.
+- **Colours:** on screen, the guide's values: Tenaris Green `#009900`, Tenaris Blue `#000099`, Tenaris Gray `#666666`. A darker green `#007a00` is used only where small white text needs more contrast. Red stays for 911 and amber for dashboard warnings, for safety. The signature keeps the colours of its own artwork.
+- **Type:** Frutiger is the Tenaris typeface but needs a paid licence, so the site and the cards use Source Sans 3, a free typeface in the same humanist style. Computers with Frutiger installed show Frutiger.
 
 ## Changing the code safely
 

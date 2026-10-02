@@ -1,22 +1,31 @@
-/* style.css — Tenaris look for the emergency page and the dashboard.
-   Colours from tenaris.com: charcoal #373c41, green #009900, blue #023da5, grey neutrals.
-   Tenaris's typeface is Frutiger (licensed), used here only if it's installed on the device. */
+/* style.css — Tenaris look for the emergency page and the dashboard, following the
+   Tenaris Brandmark Basic Guidelines:
+   - Colours: the guide's on-screen values for Tenaris Green #009900, Tenaris Blue #000099 and
+     Tenaris Gray #666666 (a darker green is used where small white text needs more contrast).
+     Red is kept only for 911 and amber only for dashboard warnings.
+   - Signature: the official full-colour artwork (logo.svg) on white, at least 80% of the
+     Multibar's height of clear space all round.
+   - Type: Frutiger, the Tenaris typeface, where it's installed; otherwise Source Sans 3, a free
+     typeface of the same humanist style, served with the site so every phone looks the same. */
+
+@font-face { font-family: "Source Sans 3"; font-weight: 400; font-style: normal; font-display: swap; src: url(source-sans-3-regular.woff2) format("woff2"); }
+@font-face { font-family: "Source Sans 3"; font-weight: 700; font-style: normal; font-display: swap; src: url(source-sans-3-bold.woff2) format("woff2"); }
 
 :root {
-  --charcoal: #373c41;
+  --charcoal: #333333;     /* dark neutral for outlines and dark buttons */
   --charcoal-dark: #2b2f33;
   --green: #009900;
   --green-dark: #007a00;   /* white text on this passes contrast checks */
-  --blue: #023da5;
+  --blue: #000099;         /* Tenaris Blue */
+  --gray: #666666;         /* Tenaris Gray */
   --red: #c8102e;          /* reserved for 911 and destructive actions */
   --amber: #ffa400;
   --text: #2b2f33;
-  --muted: #666;
+  --muted: #666666;
   --line: #d3d6d3;
   --line-dark: #babbba;
   --soft: #f5f5f5;
-  --font: Frutiger, "Frutiger LT Std", FrutigerRoman, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-bold-cn: "Frutiger LT Std Bold Cn", FrutigerBoldCn, "Avenir Next Condensed", "Arial Narrow", "Roboto Condensed", sans-serif-condensed, Arial, sans-serif;
+  --font: Frutiger, "Frutiger LT Std", FrutigerRoman, "Source Sans 3", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -28,11 +37,11 @@ main.wrap { padding-top: 1.25rem; padding-bottom: 2rem; }
 .dash main.wrap { max-width: 46rem; padding-bottom: 6rem; }
 .dash .wrap { max-width: 46rem; }
 
-h1 { margin: .2rem 0 0; font: 700 2rem/1.15 var(--font-bold-cn); letter-spacing: .01em; overflow-wrap: anywhere; }
-h3 { margin: 0 0 .25rem; font: 700 1.15rem/1.3 var(--font-bold-cn); }
+h1 { margin: .2rem 0 0; font: 700 2rem/1.15 var(--font); letter-spacing: .01em; overflow-wrap: anywhere; }
+h3 { margin: 0 0 .25rem; font: 700 1.15rem/1.3 var(--font); }
 p { margin: .5rem 0; }
-.eyebrow { margin: 0; font: 700 .8rem/1.3 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-h2.section { margin: 2rem 0 .6rem; padding-top: .6rem; font: 700 .95rem/1.3 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .07em; color: var(--charcoal); border-top: 1px solid var(--line); position: relative; }
+.eyebrow { margin: 0; font: 700 .8rem/1.3 var(--font); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+h2.section { margin: 2rem 0 .6rem; padding-top: .6rem; font: 700 .95rem/1.3 var(--font); text-transform: uppercase; letter-spacing: .07em; color: var(--gray); border-top: 1px solid var(--line); position: relative; }
 h2.section::before { content: ""; position: absolute; top: -2px; left: 0; width: 2.5rem; height: 3px; background: var(--green); }
 .small { font-size: .92rem; }
 .muted { color: var(--muted); }
@@ -40,18 +49,20 @@ h2.section::before { content: ""; position: absolute; top: -2px; left: 0; width:
 code { font: .9em ui-monospace, Menlo, Consolas, monospace; }
 
 /* ---- Top bar ---- */
-.topbar { background: var(--charcoal); color: #fff; border-bottom: 3px solid var(--green); }
-.topbar-inner { display: flex; align-items: center; gap: .75rem; min-height: 3.25rem; }
-.brand-logo { display: block; height: 1.15rem; width: auto; }
-.owner-flag { padding: .15rem .45rem; background: var(--amber); color: var(--charcoal-dark); font: 700 .75rem/1.2 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .06em; }
-.product { padding-left: .75rem; border-left: 1px solid #6b7177; color: #d3d6d3; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* White, so the full-colour signature sits on white as the brand guide prefers. The logo is 1.6rem tall,
+   so its Multibar is about 1.13rem: clear space (80%) is 0.9rem above, below and to its right. */
+.topbar { background: #fff; color: var(--text); border-bottom: 1px solid var(--line); }
+.topbar-inner { display: flex; align-items: center; gap: 1rem; min-height: 3.5rem; padding-top: .95rem; padding-bottom: .95rem; }
+.brand-logo { display: block; height: 1.6rem; width: auto; flex: none; }
+.owner-flag { padding: .15rem .45rem; background: var(--amber); color: var(--charcoal-dark); font: 700 .75rem/1.2 var(--font); text-transform: uppercase; letter-spacing: .06em; }
+.product { padding-left: .75rem; border-left: 1px solid var(--line); color: var(--gray); font-size: .95rem; line-height: 1.2; min-width: 0; }
 @media (max-width: 400px) { .product { font-size: .85rem; } }
-.topbar-btn { margin-left: auto; padding: .4rem .8rem; border: 1px solid #8a9096; background: none; color: #fff; font: inherit; font-size: .9rem; cursor: pointer; }
+.topbar-btn { flex: none; margin-left: auto; padding: .4rem .8rem; border: 1px solid var(--line-dark); background: #fff; color: var(--text); font: inherit; font-size: .9rem; cursor: pointer; }
 
 /* ---- Buttons ---- */
-.btn { display: block; width: 100%; margin-top: .75rem; padding: .85rem 1rem; border: 2px solid transparent; border-radius: 2px; font: 700 1.15rem/1.2 var(--font-bold-cn); letter-spacing: .02em; text-align: center; text-decoration: none; cursor: pointer; }
+.btn { display: block; width: 100%; margin-top: .75rem; padding: .85rem 1rem; border: 2px solid transparent; border-radius: 2px; font: 700 1.15rem/1.2 var(--font); letter-spacing: .02em; text-align: center; text-decoration: none; cursor: pointer; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
-.btn-text { margin-top: 1.25rem; padding: 1.15rem 1rem; font-size: 1.45rem; background: var(--green-dark); color: #fff; }
+.btn-text { margin-top: 1.25rem; padding: 1.05rem 1rem; font-size: 1.35rem; line-height: 1.25; background: var(--green); color: #fff; }
 .btn-call { background: var(--blue); color: #fff; font-size: 1.3rem; }
 .btn-outline { width: auto; flex: none; margin: 0; padding: .55rem 1.1rem; border-color: var(--charcoal); color: var(--charcoal); background: #fff; font-size: 1.05rem; }
 .btn-911 { width: auto; flex: none; margin: 0; padding: .65rem 1.25rem; background: #fff; color: var(--red); font-size: 1.2rem; }
@@ -67,11 +78,11 @@ code { font: .9em ui-monospace, Menlo, Consolas, monospace; }
 /* ---- Emergency page ---- */
 .alert-911 { background: var(--red); color: #fff; }
 .alert-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: .75rem; padding-bottom: .75rem; }
-.alert-inner p { flex: 1; min-width: 0; margin: 0; font: 700 1.15rem/1.25 var(--font-bold-cn); }
+.alert-inner p { flex: 1; min-width: 0; margin: 0; font: 700 1.15rem/1.25 var(--font); }
 .hint { margin-top: .6rem; font-size: .95rem; color: var(--muted); }
 .small-link { display: inline-block; margin-top: .25rem; font-size: .95rem; color: var(--blue); }
 .main-contact { padding: 1rem; background: var(--soft); border-left: 4px solid var(--green); }
-.main-name { margin: 0; font: 700 1.5rem/1.2 var(--font-bold-cn); overflow-wrap: anywhere; }
+.main-name { margin: 0; font: 700 1.5rem/1.2 var(--font); overflow-wrap: anywhere; }
 .detail { margin: .2rem 0 0; color: var(--muted); font-size: .95rem; }
 .rows { list-style: none; margin: 0; padding: 0; }
 .rows li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .75rem 0; border-bottom: 1px solid var(--line); }
@@ -80,7 +91,7 @@ code { font: .9em ui-monospace, Menlo, Consolas, monospace; }
 .rows span { display: block; color: var(--muted); font-size: .92rem; }
 .rows span.badge { display: inline-block; color: #fff; }
 .rows span.badge.changes { color: var(--charcoal-dark); }
-.error-text { font: 700 1.3rem/1.3 var(--font-bold-cn); }
+.error-text { font: 700 1.3rem/1.3 var(--font); }
 .note { margin-top: 1.5rem; padding: .75rem; background: var(--soft); border-left: 4px solid var(--amber); font-size: .95rem; }
 
 /* ---- Forms (dashboard) ---- */
@@ -94,7 +105,7 @@ input[readonly] { font: .85rem/1.4 ui-monospace, Menlo, Consolas, monospace; bac
 textarea { resize: vertical; }
 fieldset { margin: 1rem 0 0; padding: .5rem 1rem 1rem; border: 1px solid var(--line); border-top: 3px solid var(--charcoal); border-radius: 0; }
 fieldset .eyebrow { margin-top: 1rem; }
-legend { padding: 0 .35rem; font: 700 1rem/1.3 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .05em; }
+legend { padding: 0 .35rem; font: 700 1rem/1.3 var(--font); text-transform: uppercase; letter-spacing: .05em; }
 .field-row { display: flex; flex-wrap: wrap; gap: 0 .75rem; }
 .field-row > label { flex: 1 1 9rem; }
 label.check { display: flex; align-items: center; gap: .5rem; font-weight: 400; }
@@ -115,7 +126,7 @@ summary { cursor: pointer; font-weight: 600; color: var(--blue); }
 .panel.narrow { max-width: 30rem; margin: 1rem auto 0; }
 .status-panel { padding: 1rem; border: 1px solid var(--line); border-top: 3px solid var(--charcoal); }
 .status-line { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
-.badge { display: inline-block; padding: .2rem .55rem; font: 700 .8rem/1.3 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .07em; color: #fff; background: var(--muted); }
+.badge { display: inline-block; padding: .2rem .55rem; font: 700 .8rem/1.3 var(--font); text-transform: uppercase; letter-spacing: .07em; color: #fff; background: var(--muted); }
 .badge.live { background: var(--green-dark); }
 .badge.changes { background: var(--amber); color: var(--charcoal-dark); }
 .badge.updating { background: var(--blue); }
@@ -126,7 +137,7 @@ summary { cursor: pointer; font-weight: 600; color: var(--blue); }
 .now { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); }
 .now-main { margin: .25rem 0 0; font-weight: 700; }
 .tabs { display: flex; gap: 0; margin: 1.25rem 0 0; overflow-x: auto; border-bottom: 1px solid var(--line); }
-.tabs button { flex: none; padding: .7rem .6rem; border: 0; border-bottom: 3px solid transparent; background: none; font: 700 .9rem/1.2 var(--font-bold-cn); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); cursor: pointer; }
+.tabs button { flex: none; padding: .7rem .6rem; border: 0; border-bottom: 3px solid transparent; background: none; font: 700 .9rem/1.2 var(--font); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); cursor: pointer; }
 .tabs button.active { color: var(--charcoal); border-bottom-color: var(--green); }
 [data-panel] { padding-top: .5rem; }
 .rows .actions { display: flex; flex-wrap: wrap; gap: .4rem; }

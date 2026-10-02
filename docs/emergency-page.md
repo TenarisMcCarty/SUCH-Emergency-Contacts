@@ -24,7 +24,7 @@ From top to bottom:
 | Header | Tenaris logo, "Driver emergency contact", and a language button (**Español** / **English**) |
 | Red banner | "Life-threatening emergency?" with a **Call 911** button. It's built into the page, so it shows even if everything else fails. |
 | Driver | "Emergency contact for" and the driver's name from the card |
-| **Text all N contacts** | Opens the phone's Messages app with a group text to every contact, pre-filled with the message and the driver's name. The family taps Send. |
+| **Text All Yard Supervisors (Preferred)** | (Spanish: *Enviar mensaje a todos los supervisores del patio (preferido)*.) Opens the phone's Messages app with a group text to every contact, pre-filled with the message and the driver's name. The family taps Send. |
 | **Primary call** | The person who should be called first right now: name, role, which shift and until when, and a big **Call** button. If supervisors switch WhatsApp on, a **WhatsApp** button sits under it ([section 8](#8-whatsapp-yard-address-save-to-contacts-home-screen)). |
 | **Also working now** | Others on a shift right now, each with a **Call** button |
 | **Not scheduled · still emergency contacts** | Everyone else, each with a **Call** button. It's titled **Other contacts** if no shifts are set up. |
