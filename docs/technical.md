@@ -247,7 +247,7 @@ Code changes are tried on a separate **test copy** before they go live, so a hal
 
 ## Changing the code safely
 
-Try every change on the test copy first ([above](#the-test-copy-staging)), and go live only with the owner's approval. Then:
+Try every change on the test copy first ([above](#the-test-copy-staging)), and go live only with the owner's approval. The full release steps, the reasons behind every design decision and the testing approach are in [project-history.md](project-history.md). Then:
 
 1. **Never break existing card links.** Printed cards and locked tags can't be updated. The very first printed demo card already depends on these staying exactly as they are:
    - the link format: site + `#` + 22-character base64url key

@@ -42,6 +42,7 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 | [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the call order is chosen, English/Spanish, offline behaviour, error messages |
 | [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
 | [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
+| [Project history](docs/project-history.md) | Owner / maintainers | Every release and decision with the reasons, the brand and 3D-card work, how changes are tested and released safely, incidents, open items, and what must never change |
 
 ---
 
