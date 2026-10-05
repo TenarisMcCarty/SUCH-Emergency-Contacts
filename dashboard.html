@@ -99,7 +99,7 @@
         </div>
         <details class="minor">
           <summary>Use my own password instead</summary>
-          <label for="own-password">Own password (8+ characters, with a number and a symbol)</label>
+          <label for="own-password">Own password (10+ characters, with a number and a symbol)</label>
           <input id="own-password" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false">
         </details>
         <label class="check"><input id="pw-saved" type="checkbox"> I've saved it in a password manager</label>
@@ -168,7 +168,7 @@
         </div>
         <p id="publish-msg" class="msg" role="status"></p>
         <p id="gh-problem" class="msg bad" hidden></p>
-        <p id="due-note" class="warn small" hidden><span id="due-text"></span> <button id="due-open" class="link-btn" type="button">Open People</button></p>
+        <p id="due-note" class="warn small" hidden><span id="due-text"></span> <button id="due-open" class="link-btn" type="button">Open Supervisors</button></p>
 
         <div class="now">
           <p class="eyebrow">Right now <span id="now-time"></span></p>
@@ -180,8 +180,8 @@
 
       <nav class="tabs" aria-label="Sections">
         <button type="button" data-tab="shifts" class="active" aria-current="page">Shifts</button>
-        <button type="button" data-tab="people">People</button>
-        <button type="button" data-tab="cards">Cards</button>
+        <button type="button" data-tab="people">Supervisors</button>
+        <button type="button" data-tab="cards">People</button>
         <button type="button" data-tab="print">Print &amp; QR</button>
         <button type="button" data-tab="history" class="tab-gap">History</button>
         <button type="button" data-tab="settings">Settings</button>
@@ -200,6 +200,15 @@
         <h2 class="section">Who works each shift</h2>
         <div class="table-scroll"><table id="shift-matrix" class="matrix"></table></div>
 
+        <!-- Shown by dashboard.js (an older cached script doesn't know time off). -->
+        <div id="away-box" hidden>
+          <h2 class="section">Time off</h2>
+          <div id="away-head" class="list-head away-cols" aria-hidden="true" hidden><span>Supervisor</span><span>First day</span><span>Last day</span><span>Covered by</span><span></span><span></span></div>
+          <div id="away-list"></div>
+          <p id="no-away" class="small muted">No time off planned.</p>
+          <button id="add-away" class="btn btn-light" type="button">Add time off</button>
+        </div>
+
         <h2 class="section">Shift times</h2>
         <div id="shift-list" class="shift-grid"></div>
         <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
@@ -213,9 +222,11 @@
           <div>
             <h2 class="section">Check a time</h2>
             <div class="field-row">
-              <label>Day <select id="preview-day"></select></label>
+              <label>Date <input id="preview-date" type="date"></label>
               <label>Time <input id="preview-time" type="time" value="15:00"></label>
             </div>
+            <!-- Empty placeholder: an older cached dashboard.js still fills and reads this. -->
+            <select id="preview-day" class="retired" hidden></select>
             <ol id="preview" class="preview"></ol>
           </div>
         </div>
@@ -223,10 +234,10 @@
 
       <!-- People -->
       <section data-panel="people" hidden>
-        <div class="page-head"><h1>People</h1></div>
+        <div class="page-head"><h1>Supervisors</h1></div>
         <div class="list-head people-cols" aria-hidden="true"><span>Name</span><span>Role</span><span>Role in Spanish</span><span>Phone</span><span>Number checked</span><span></span></div>
         <div id="people-list"></div>
-        <button id="add-person" class="btn btn-light" type="button">Add person</button>
+        <button id="add-person" class="btn btn-light" type="button">Add supervisor</button>
 
         <h2 class="section">Text message</h2>
         <div class="pair">
@@ -251,7 +262,7 @@
 
       <!-- Cards -->
       <section data-panel="cards" hidden>
-        <div class="page-head"><h1>Cards</h1></div>
+        <div class="page-head"><h1>People</h1></div>
         <div class="inline-form add-card-form">
           <div><label for="new-driver">Driver name and ID</label>
           <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)"></div>
@@ -273,7 +284,7 @@
       <!-- Print & QR -->
       <section data-panel="print" hidden>
         <div class="page-head"><h1>Print &amp; QR</h1></div>
-        <p id="print-empty" class="small muted">Add a card first (Cards tab).</p>
+        <p id="print-empty" class="small muted">Add a card first (People tab).</p>
         <div id="print-body">
           <label for="print-card">Card</label>
           <select id="print-card"></select>
@@ -359,12 +370,13 @@
         <h2 class="section">Common tasks</h2>
         <dl class="tasks">
           <dt>Shift rotation changed</dt><dd>Shifts → tick who works each shift → Publish</dd>
-          <dt>Someone joins or leaves</dt><dd>People → Add person or remove them → check Shifts → Publish</dd>
-          <dt>New card</dt><dd>Cards → Add card → Publish → Print &amp; QR</dd>
-          <dt>Lost card</dt><dd>Cards → Remove → Publish. Only that card stops working.</dd>
-          <dt>Name typo on a card</dt><dd>Cards → Rename → Publish, then print a new card. The tag stays the same.</dd>
+          <dt>A supervisor joins or leaves</dt><dd>Supervisors → Add supervisor or remove them → check Shifts → Publish</dd>
+          <dt>New card</dt><dd>People → Add card → Publish → Print &amp; QR</dd>
+          <dt>Lost card</dt><dd>People → Remove → Publish. Only that card stops working.</dd>
+          <dt>Name typo on a card</dt><dd>People → Rename → Publish, then print a new card. The tag stays the same.</dd>
+          <dt>Someone on holiday or out</dt><dd>Shifts → Time off → Add time off → who, first and last day, who covers → Publish</dd>
           <dt>Number not checked</dt><dd>Call or text the person, then Still right → Publish</dd>
-          <dt>Spanish</dt><dd>Fill in the Spanish boxes in People and Shifts. Blank boxes show in English.</dd>
+          <dt>Spanish</dt><dd>Fill in the Spanish boxes in Supervisors and Shifts. Blank boxes show in English.</dd>
           <dt>Access for someone new</dt><dd>Ask the site owner</dd>
         </dl>
 
@@ -390,13 +402,13 @@
         <div class="page-head"><h1>Owner</h1></div>
         <div class="tiles">
           <div class="tile tile-wide">
-            <h2 class="section">People who can sign in</h2>
+            <h2 class="section">Sign-ins</h2>
             <ul id="account-list" class="rows"></ul>
             <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
             <div class="inline-form add-account-form">
               <label>Email <input id="new-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="jane.doe@tenaris.com"></label>
               <label>Name <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
-              <button id="add-account" class="btn btn-light" type="button">Add person</button>
+              <button id="add-account" class="btn btn-light" type="button">Add sign-in</button>
             </div>
             <p id="account-msg" class="msg" role="status"></p>
             <p id="token-advice" class="warn small" hidden><span id="token-advice-text"></span> <button id="token-advice-btn" class="link-btn" type="button">Replace GitHub token</button></p>

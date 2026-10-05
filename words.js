@@ -1,4 +1,5 @@
-// words.js — word list for the dashboard's suggested passwords.
+// words.js — word lists for the dashboard's suggested passwords.
+// WORDS (below) is only used by older cached copies of dashboard.js; the current one uses HSE_WORDS (at the end).
 // EFF Large Wordlist for passphrases (https://www.eff.org/dice), CC BY 3.0 US,
 // minus the 4 words containing hyphens: 7772 words, so each word adds ~12.9 bits.
 const WORDS = (
@@ -581,4 +582,51 @@ const WORDS = (
   'yanking yapping yard yarn yeah yearbook yearling yearly yearning yeast yelling yelp yen yesterday yiddish ' +
   'yield yin yippee yodel yoga yogurt yonder yoyo yummy zap zealous zebra zen zeppelin zero zestfully zesty ' +
   'zigzagged zipfile zipping zippy zips zit zodiac zombie zone zoning zookeeper zoologist zoology zoom'
+).split(' ');
+
+// HSE words (health, safety and environment, the steel mill, the yard and Texas nature) for the dashboard's suggested and
+// temporary passwords, which are often read out over the phone: 601 everyday words, each singular, spelled one common way,
+// with no soundalikes (no brake/break, flare/flair), no words people often misspell, and one word per family (weld, not
+// welder too). Each adds ~9.23 bits; five of them, two digits and a symbol make about 56 bits.
+const HSE_WORDS = (
+  'acorn alarm alert alloy anchor answer anvil apron armadillo armband arrow assembly assess assist attentive ' +
+  'audit auger aware awning badge balance ballast bandage barrel barricade barrier battery bay bayou beacon beam ' +
+  'bearing beaver belt billet birch bird bison blanket block blower bluebonnet boiler bollard bolt bonding boot ' +
+  'boulder boundary brace bracket brave breaker breathe breeze briefing brigade brook bucket buckle buddy buffer ' +
+  'bullhorn bumper bundle burner bushing butterfly button cable cactus calibrate calm camera canopy canteen ' +
+  'canyon captain carbon cardinal care carton casing casting catwalk caution cement certified chain champion ' +
+  'checklist checkpoint cheer chiller chimney chisel chrome circuit clamp clarity clean clearance climate clinic ' +
+  'clipboard cloud clover coaching coast coating coil comfort compass compost compressor cone confirm conserve ' +
+  'contain control cooler copper cordon corridor coupling courage coverall cradle crane crate crew crossing ' +
+  'crosswalk crosswind cushion cylinder daisy damper declutter deliver delta depot detect detour distance dolly ' +
+  'door doorway dragonfly drain drill drizzle dune durable duty eagle earpiece earplug earth east ecology ' +
+  'elevator elm energy engage engine entrance ergonomic evening exhaust exit extinguish extract falcon family fan ' +
+  'feedback fence fern filter firebreak firefly fireproof firewall fitness fixture flange flashlight flatbed ' +
+  'floodlight flowline foam focus foothold footing forecast forest forge forklift foundry friend frost funnel ' +
+  'furnace fuse gangway gantry garden gasket gear gearbox generator girder glove goal grass grating green grinder ' +
+  'grip grit ground grove guard guardrail guide gust habit habitat hallway hammer handhold handle handrail ' +
+  'handset harness haven hawk hazard headlamp headset health heartbeat helmet helper hero heron hickory hill ' +
+  'hinge hoist honesty hood hook hopper horizon horn hotline hub huddle humble humid hydrant hydrate improve ' +
+  'include ingot inspect insulate integrity intercom interlock involve iron island isolate jack jig junction ' +
+  'keeper kettle key label ladle lagoon lake lamp landing lantern laser latch lathe laugh leader learn lifeline ' +
+  'lift limit listen loader lobby locker logbook lookout loyal magnolia mallet manifold map maple marker marsh ' +
+  'mask matting meadow measure medic megaphone mentor merge mesa mesh mill mindful mirror mission mixer monitor ' +
+  'monsoon mooring moss motor mulch muster nap nature noon north notice nozzle nurse nutrition oak observe office ' +
+  'orchard otter outlet overhead owl oxygen ozone packer padding padlock paint panel parking partner pathway ' +
+  'patrol pattern pebble pecan pelican perimeter permit piercer pipe pipeline piston placard planet plate ' +
+  'platform pledge plug polish poncho pond posture powder prepare press prevent primer progress promise protect ' +
+  'proud pulley pulse pump purify qualified quality quench question rabbit radiator radio rail rainbow raincoat ' +
+  'rainwater ramp rasp ready reamer rebar recycle reduce reef reflector refuge regulator rehearse relax reliable ' +
+  'relief report rescue respect respirator rested restrain reuse reverse review ridge rig ripple riser river ' +
+  'rivet robin robust roller rope roster rotary routine ruler saddle safe sample sand sandbag sapling saw ' +
+  'scaffold schedule seal sector secure seedling serve shackle shade share sheet shelf shelter shift shore shower ' +
+  'signage signal signpost silo skid slab sleep sling slow smelter smile smoke soap socket soil solar solid ' +
+  'solvent sorting south spanner sparrow speak speed spoke spool spotter spring sprinkler sprocket square stack ' +
+  'stairwell standard standpipe station steady stencil stop storm strainer strap stream stretch strobe strong ' +
+  'sturdy substitute summit sunflower sunlight sunrise sunscreen sunset sunshine support switch swivel tackle ' +
+  'tagline tally tank target tarp teach team teamwork temper template tether thaw thread thrive throttle tidy ' +
+  'together toolbox topsoil torch tough towel track trail trained tread tree tripod truck trust tube turbine ' +
+  'turnstile turtle umbrella unity upwind valley value valve varnish vent ventilate verify vessel vest vigilant ' +
+  'visor vitamin voltage volunteer walkway walnut warehouse warning washer watch water wedge welcome weld ' +
+  'wellhead wellness west wetland whistle wildlife willow wind windsock wire wireline wrench wristband yard zinc'
 ).split(' ');

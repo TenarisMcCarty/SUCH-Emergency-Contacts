@@ -69,7 +69,7 @@ Every choice the owner made, with the reason. When in doubt later, these are the
 | No "Then tap Send" hint, no Samsung retry link | Owner removed them; `#hint` and `#text-retry` stay as hidden placeholders for older cached scripts. |
 | **"Emergency contact for"** is the big heading; the driver's name is small and gray | Cards go to the driver's own family, who know who it's for. |
 | **Yard address** 302 McCarty St, Houston, TX 77029 with **Directions** (Apple Maps on iPhone, Google Maps elsewhere) | Built in as `YARD_ADDRESS` in `schedule.js`; supervisors can change it or empty it to hide it. |
-| **WhatsApp** button for the primary call, **off** unless switched on (People tab) | WhatsApp links can only message one person; only useful if the yard watches WhatsApp. Off on the live site so far. |
+| **WhatsApp** button for the primary call, **off** unless switched on (Supervisors tab) | WhatsApp links can only message one person; only useful if the yard watches WhatsApp. Off on the live site so far. |
 | **Save yard numbers to Contacts** makes **one** contact, "Tenaris Yard Supervisors", every number labelled with name and role | iPhone imported only the first of several contacts. One contact also means any callback from the yard shows as "Tenaris Yard Supervisors". |
 | **Add to home screen** link removed | Owner found it useless. The web-app manifest and icons stay, so people can still add it from the browser menu, and the page remembers the last card so the icon works. |
 | Spanish follows the phone's language, with a switch | Many families prefer Spanish. Printed cards are English only (Spanish is about 30% longer and doesn't fit at printable sizes). |
@@ -83,12 +83,14 @@ Every choice the owner made, with the reason. When in doubt later, these are the
 | The owner adds, resets and removes people; adding or resetting shows a **temporary password once**; the person must choose their own at first sign-in | No server means no email sending; the owner hands passwords over in person or by phone. |
 | **Forgot password?** opens an email to **salil@tenaris.com** from the person's own mail app | No server. The owner confirms by phone, then resets. The address is in `dashboard.js` and `dashboard.html`. |
 | The old **shared password** works (Email left empty) until the owner turns it off | Smooth migration; turn it off once everyone has their own sign-in, then replace the GitHub token. |
-| **Password rule: at least 8 characters, with a number and a symbol** | Owner's choice. Suggested and temporary passwords look like `maple-river-47!` (about 36 bits). Trade-off documented in [security.md](security.md). |
+| **Password rule: at least 10 characters, with a number and a symbol** (8 until 2026-10-05; passwords chosen before still work) | Owner's choice. Suggested and temporary passwords (since 2026-10-05, owner's request: longer, with a symbol, HSE-themed) are five HSE words, two digits and a symbol, e.g. `harness-bayou-muster-flange-teamwork-47!` (about 56 bits); before that `maple-river-47!` (about 36 bits). Trade-off documented in [security.md](security.md). |
 | **No explanatory text on screens**; only labels, data and buttons (one short line only where it prevents an irreversible mistake) | Owner: the site must look professional, not homemade. Explanations live in these docs and are given in person. |
 | **90-day number checks**: each number shows when it was last checked; amber after 90 days with **Still right** | Keeps numbers current. Dates are stored only in the dashboard's encrypted data, never on cards. Changing a number counts as checking it. |
 | **Shift-gap warning** on the Shifts tab | Shows every time in the week with nobody on shift (the fallback person gets the primary call then). Gaps aren't errors. |
 | GitHub token set to **never expire** | Owner's setting, so there's no expiry warning feature. |
 | **Dashboard laid out for a computer**, opening on **Shifts** | Supervisors use it from a PC; the family page stays phone-first. Shifts is what changes at every rotation. |
+| Tabs named **Supervisors** (the emergency contacts) and **People** (the drivers' cards) | Owner's wording (2026-10-05). The tabs' internal names (`people`, `cards`) stay the same for older cached files. |
+| **Time off** (Shifts tab): person, first and last day, optional cover; the person is left off the card page and the group text, the cover takes their shifts | A supervisor on holiday shouldn't get emergency calls they may not answer. Kept with the shifts in the card-readable data so the page works it out live, with no republishing when someone comes back. |
 | **Locks by itself after 30 minutes without use**, never with unpublished changes | An office computer left signed in shouldn't stay open; nobody should lose unpublished work. |
 
 ### Cards and printing
@@ -216,6 +218,15 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
   - an emptied time box looked empty but kept the old time; it now shows the saved time again;
   - the supervisor guide described the old five-word suggested passwords.
 - **Idle lock:** 30 minutes without input locks the dashboard, unless changes are waiting or a publish or all-cards download is running.
+
+### 2026-10-05: time off, tab names, longer passwords
+
+- **Problem:** nothing marked a supervisor or the manager as away, so someone on holiday stayed the primary call for their shift and in the group text.
+- **Design:** `schedule.away` entries `{ id, who, from, to, cover }`, whole Houston days, both days included. `arrange` (shared by the card page and the dashboard) leaves the person off their shifts and puts the cover on them; a night shift counts from the day it starts. People away today aren't shown and aren't texted. If time off would leave nobody, it's ignored. The fallback person on time off passes to the first available person.
+- **Dashboard:** Shifts → Time off (table), *Away through* / *Covering for* tags in Who works each shift, Away in the status panel, Check a time by date, checks before publishing (complete, in order, under a year, cover not away too, never everyone away). Ended entries are dropped when the dashboard opens (not counted as a change) and on publish.
+- **Tab names:** People → **Supervisors**, Cards → **People** (owner's wording); buttons and messages follow (Add supervisor, Open Supervisors).
+- **Passwords:** suggested and temporary passwords are five words from a 601-word HSE list (`HSE_WORDS` in `words.js`), two digits and a symbol, about 56 bits (was two words, about 36 bits). The list was pruned after review for reading out by phone: no soundalikes, plurals, spelling variants, often-misspelled words or near-duplicates. People can still choose their own shorter password; the minimum went from 8 to 10 characters (still with a number and a symbol).
+- **Older cached files:** time off lives inside `schedule`, which every dashboard version copies as a whole, so an older dashboard publishing in the 10-minute window keeps it. An older `schedule.js` ignores it (the dashboard then hides the section); an older `app.js` with the new `schedule.js` already leaves away people out of the list.
 
 ## 6. Individual sign-ins: design notes
 
@@ -350,6 +361,8 @@ The automated tests ran on the owner's Mac. They lived in a temporary working fo
   | Print & QR | 25/0 |
   | Test data | 6/0 |
   | Dashboard for a computer (2026-10-05) | 89/0 |
+  | Time off (2026-10-05) | 49/0 |
+  | HSE passwords and tab names (2026-10-05) | 12/0 |
 - **Practical notes for this Mac:**
   - Headless Chrome needs the command sandbox off.
   - `--dump-dom` hangs, so use the DevTools protocol.

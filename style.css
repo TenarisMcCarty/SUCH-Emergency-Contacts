@@ -269,6 +269,7 @@ fieldset.box { position: relative; }
    The dashboard is mostly used on a computer. From 820px wide: sections listed on the left, the open section
    in the middle. From 1400px: status and Publish stay in view on the right, so the bottom bar goes.
    Narrower windows (a phone) keep the single column above. Everything here is dashboard-only (.dash). */
+.dash .key { word-break: normal; overflow-wrap: anywhere; } /* long passwords wrap at a hyphen */
 .dash .vh, .dash .lbl.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .dash .page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1.25rem; margin: 1.25rem 0 .75rem; }
 .dash .page-head h1 { display: none; margin: 0; font-size: 1.6rem; line-height: 1.2; }
@@ -328,6 +329,19 @@ fieldset.box { position: relative; }
 .dash .day:hover span { background: var(--soft); }
 .dash .day input:checked + span { background: var(--green-dark); color: #fff; }
 .dash .day input:focus-visible + span { outline: 2px solid var(--blue); outline-offset: -2px; }
+
+/* Time off: one row per entry; the shift table marks who's away and who's covering today */
+.dash .away-row { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; padding: .5rem 0 1rem; border-bottom: 1px solid var(--line); }
+.dash .away-row > label { min-width: 0; margin-top: .6rem; }
+.dash .away-row .away-status { grid-column: 1 / -1; margin-top: .6rem; font-size: .85rem; color: var(--muted); }
+.dash .away-row .away-status:empty { display: none; }
+.dash .away-row .away-status .badge { margin: 0; }
+.dash .away-row .row-remove { position: absolute; top: .4rem; right: 0; }
+.dash #away-list:not(:empty) { border-top: 1px solid var(--line); }
+.dash #away-list + p { margin: .5rem 0 0; }
+.dash .matrix th em.tag { display: table; margin-top: .3rem; padding: .05rem .45rem; background: var(--soft); font: 600 .75rem/1.4 var(--font); color: var(--text); white-space: nowrap; }
+.dash .matrix th em.tag-away { background: #fff8eb; border-left: 3px solid var(--amber); }
+.dash .matrix tr.is-away td.on { background: #f1f1f1; }
 
 /* Cards: add form on one line, then the list */
 .dash .inline-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 1rem; align-items: end; }
@@ -409,6 +423,17 @@ fieldset.box { position: relative; }
   .dash .person-row .check-cell.due { padding: .25rem .4rem; font-size: .8rem; }
   .dash .person-row .row-remove { position: static; }
   .dash #people-list:not(:empty) { border-top: 0; }
+
+  /* Time off as a table */
+  .dash .away-cols, .dash .away-row { grid-template-columns: minmax(0, 1.3fr) 10rem 10rem minmax(0, 1.2fr) 7.5rem 2rem; gap: .6rem; align-items: center; }
+  .dash .away-row { padding: .45rem 0; }
+  .dash .away-row > label { margin: 0; }
+  .dash .away-row .lbl { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .dash .away-row input, .dash .away-row select { margin-top: 0; }
+  .dash .away-row .away-status { grid-column: auto; margin: 0; }
+  .dash .away-row .away-status:empty { display: block; }
+  .dash .away-row .row-remove { position: static; }
+  .dash #away-list:not(:empty) { border-top: 0; }
 
   /* Cards as a table */
   .dash .card-cols, .dash .card-rows li { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) 9rem 16.5rem; gap: .5rem 1rem; align-items: center; }

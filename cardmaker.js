@@ -481,7 +481,7 @@ const CardMaker = (() => {
     // The name along the bottom, full width (the tag pocket is higher up). A long name wraps onto two lines.
     const name = cleanName(driver);
     const missing = [...new Set([...name].filter(ch => !NAME_CHARS.test(ch) || font.charToGlyphIndex(ch) === 0))];
-    if (missing.length) problems.push(`The driver name has characters the card can't print (${missing.join(' ')}). Rename the card (Cards → Rename).`);
+    if (missing.length) problems.push(`The driver name has characters the card can't print (${missing.join(' ')}). Rename the card (People → Rename).`);
     const nameMin = Math.max(MIN_CAP, ...[...name].map(minCapFor));
     const nameW = W - EDGE - MARGIN;
     const max2 = Math.max(3.8, nameMin); // two lines: a little smaller, so EMERGENCY CONTACT stays the big text
@@ -497,7 +497,7 @@ const CardMaker = (() => {
       }
       if (cap >= nameMin) break;
     }
-    if (cap < nameMin) problems.push('The driver name is too long to print. Shorten it (Cards → Rename).');
+    if (cap < nameMin) problems.push('The driver name is too long to print. Shorten it (People → Rename).');
     cap = Math.max(cap, nameMin);
     // Two lines: far enough apart that accents on the lower line clear brackets or a cedilla on the upper one.
     const ink = lines.map(l => bounds(text(l, cap, 0, 0, { track: nameTrack })));
@@ -899,7 +899,7 @@ const CardMaker = (() => {
       '  3. Tap and scan the finished card: it must show this driver\'s name. Then lock the tag.',
       'Print and test one card before the rest.',
       ...(cards.some(c => !c.live) ? ['', 'NOT PUBLISHED YET (links work only after publishing): ' + cards.filter(c => !c.live).map(c => c.driver).join(', ')] : []),
-      ...(skipped.length ? ['', 'LEFT OUT (fix in Cards > Rename, then download again):', ...skipped.map(t => '  ' + t)] : []),
+      ...(skipped.length ? ['', 'LEFT OUT (fix in People > Rename, then download again):', ...skipped.map(t => '  ' + t)] : []),
       '',
       'CARDS',
       ...cards.map(c => `  ${c.folder}  ${c.driver}${c.holder ? ' (' + c.holder + ')' : ''}`),

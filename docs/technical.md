@@ -37,7 +37,7 @@ supervisor ──(email + password)──► dashboard.html ──GitHub API PUT
 |---|---|---|
 | `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. |
 | `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, WhatsApp button, yard address and directions link, Save to Contacts (one vCard 3.0 contact with labelled numbers, made in the browser; opened directly on iPhone, downloaded elsewhere), remembering the last card key, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
-| `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow`, `shiftOn`, `arrange` (call order), `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
+| `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow` (weekday, minutes and Houston date), `shiftOn`, `arrange` (call order, time off and cover; returns `main`, `also`, `off` and `away`), `awayOn`, `shiftDate` (the day an overnight shift started), `addDays`, `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
 | `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, ECDH (`newRecovery`, `lockForOwner`), `openCard`; version 4: `personSlot`, `newSignIn`, `openLogin`, `openWithWrap`, `openForSignIn`, `openWithCode`, `openWithOwnerPassword`, `fromVersion3`, `buildFile4`; version 3, kept unchanged for older cached dashboards: `buildFile`, `openAdmin`, `openOwner`, `openRecovery`, `makeOwnerLogin`. Loaded by both pages into one global scope, so new names must not clash with `app.js` or `dashboard.js`. |
 | `manifest.json`, `icon-*.png`, `apple-touch-icon.png` | Home-screen app | Name "Emergency", Tenaris mark on charcoal. `start_url` is `./` (no card key), so `app.js` falls back to the last card key saved in `localStorage` when the link has no `#`. |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
@@ -54,7 +54,7 @@ supervisor ──(email + password)──► dashboard.html ──GitHub API PUT
 | `qrcode.js` | QR encoder | qrcode-generator 2.0.4 (MIT), unmodified. SHA-256 `79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c` |
 | `opentype.js` | Font reader | opentype.js 2.0.0 (MIT), unmodified `dist/opentype.min.js`. SHA-256 `b39d7bf9661481cec5c118a0d92b02951171d99c30d4d11252a72ecb0285439e` |
 | `earcut.js` | Polygon triangulation | earcut 3.2.4 (ISC), unmodified `dist/earcut.min.js`. SHA-256 `29df76691215df89bf904051f35eb7aae1831011093d9783e843c3421931a334` |
-| `words.js` | Password word list | EFF Large Wordlist (CC BY 3.0 US), minus the 4 hyphenated words: 7,772 words |
+| `words.js` | Password word lists | `HSE_WORDS`: 601 health, safety, environment, steel-mill, yard and Texas-nature words, chosen to be read out over the phone (singular, one common spelling, no soundalikes, no often-misspelled words, one word per family), used for suggested and temporary passwords (five words, two digits and a symbol, about 56 bits). `WORDS`: the EFF Large Wordlist (CC BY 3.0 US) minus 4 hyphenated words (7,772), kept for older cached `dashboard.js` copies and as the fallback. |
 | `contacts.enc.json` | Data | Written only by the dashboard |
 | `THIRD-PARTY-NOTICES.txt` | Licences | Licences for qrcode-generator, opentype.js, earcut, Source Sans 3 and the EFF list, plus the logo's source |
 
@@ -96,7 +96,9 @@ Version 4, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
     "fallback": "<contact id>",
     "shifts": [ { "name": "1st shift", "nameEs": "", "start": "06:00", "end": "14:00",
                   "days": [0,1,2,3,4,5,6],      // 0 = Monday … 6 = Sunday
-                  "people": ["<contact id>"] } ]
+                  "people": ["<contact id>"] } ],
+    "away": [ { "id": "short id", "who": "<contact id>", "from": "2026-10-10", "to": "2026-10-14",  // optional: time off,
+                "cover": "<contact id> or ''" } ]  // Houston dates, both days included; ended entries are dropped on publish
   },
   "backup": "+15555550199",  // optional, "" if unset
   "yardAddress": "302 McCarty St, Houston, TX 77029",  // optional: absent = the built-in YARD_ADDRESS, "" = hidden
@@ -269,7 +271,7 @@ Try every change on the test copy first ([above](#the-test-copy-staging)), and g
 
 An automated suite was used during development. It isn't included in this repository, because it depends on a local Chrome, Python and a simulated GitHub. It drove headless Chrome against the site plus a simulated GitHub API and Pages, and covered:
 
-- **Shift logic:** unit tests for overnight shifts, weekdays, 24-hour shifts, people on two shifts, time zones and daylight saving, and Spanish times and shift names.
+- **Shift logic:** unit tests for overnight shifts, weekdays, 24-hour shifts, people on two shifts, time zones and daylight saving, and Spanish times and shift names; time off (cover, night shifts that start before or end after it, the fallback away, the cover away too, everyone away, entries for removed people).
 - **Dashboard flows:**
   - first-time setup (supervisors' password, token checked against the repository owner, owner password, recovery code) and validation errors
   - owner sign-in with the owner password, and the supervisors' password refused on the owner link

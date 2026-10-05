@@ -5,15 +5,15 @@ How to keep the emergency cards up to date. You need two things from the site ow
 - **The dashboard link:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html
 - **Your sign-in:** your email and a temporary password (you choose your own the first time). Until the owner switches it off, the **shared supervisors' password** also works.
 
-You don't need a GitHub account, and you don't need to install anything. The dashboard is laid out for a computer (any up-to-date browser); it still works on a phone in a single column. It opens on **Shifts**, the tab you'll change most. The sections are listed down the left: Shifts, People, Cards, Print & QR, then History, Settings and Help.
+You don't need a GitHub account, and you don't need to install anything. The dashboard is laid out for a computer (any up-to-date browser); it still works on a phone in a single column. It opens on **Shifts**, the tab you'll change most. The sections are listed down the left: Shifts, Supervisors, People (the cards), Print & QR, then History, Settings and Help.
 
 **Contents**
 
 1. [Signing in](#1-signing-in)
 2. [The status panel](#2-the-status-panel)
-3. [People](#3-people)
+3. [Supervisors](#3-supervisors)
 4. [Shifts](#4-shifts)
-5. [Cards](#5-cards)
+5. [People (cards)](#5-people-cards)
 6. [Print & QR](#6-print--qr)
 7. [Publishing](#7-publishing)
 8. [History](#8-history)
@@ -33,15 +33,15 @@ You don't need a GitHub account, and you don't need to install anything. The das
 
 ### Your first sign-in
 
-The site owner gives you a **temporary password** (two words, two digits and a symbol, e.g. maple-river-47!), in person or by phone.
+The site owner gives you a **temporary password** (five safety and yard words, two digits and a symbol, e.g. `harness-bayou-muster-flange-teamwork-47!`), in person or by phone.
 
 1. Sign in with your email and the temporary password.
-2. **Choose your own password.** Save the suggested one in your password manager (or type your own: at least 8 characters, with a number and a symbol), tick **I've saved it in a password manager**, then **Next**.
+2. **Choose your own password.** Save the suggested one in your password manager (or type your own: at least 10 characters, with a number and a symbol), tick **I've saved it in a password manager**, then **Next**.
 3. The dashboard opens with one change waiting: "*Your name* chose a new password". Press **Publish**. **Until you publish, your new password doesn't work** and the temporary one stays in use. If you Lock without publishing, you'll be asked to choose a password again next time.
 
 ### Problems signing in
 
-- **"Wrong email or password."** Check both for typos. Suggested and temporary passwords are two lowercase words, two digits and a symbol, joined like `maple-river-47!`.
+- **"Wrong email or password."** Check both for typos. Suggested and temporary passwords are five lowercase safety and yard words, two digits and a symbol, joined with hyphens like `harness-bayou-muster-flange-teamwork-47!`.
 - **Forgot your password?** Type your email, then press **Forgot password?** under Unlock. It writes an email to the site owner asking for a reset; press Send. The owner gives you a new temporary password in person or by phone, and you choose a new password when you sign in. No cards stop working.
 - **"The shared supervisors' password is switched off."** Sign in with your own email and password. No sign-in yet? Ask the site owner.
 - **Forgot the shared password?** Ask the site owner.
@@ -67,19 +67,19 @@ The status panel always shows the current state. On a wide screen (1400 pixels o
 
 Below the badge:
 
-- **Right now (Houston time …):** who the cards would call at this moment: the primary call and anyone else working. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
-- **Facts line:** how many people and cards there are, and when the last change was published and by whom.
-- **Numbers to check:** "*N* phone numbers haven't been checked in 90 days", with an **Open People** link. Only shown when something is due ([section 3](#3-people)).
+- **Right now (Houston time …):** who the cards would call at this moment: the primary call, anyone else working, and anyone away on time off today. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
+- **Facts line:** how many supervisors and cards there are, and when the last change was published and by whom.
+- **Numbers to check:** "*N* phone numbers haven't been checked in 90 days", with an **Open Supervisors** link. Only shown when something is due ([section 3](#3-supervisors)).
 
 When there are unpublished changes and the screen is narrower than that, a dark bar with a **Publish** button also stays at the bottom of the screen.
 
 ---
 
-## 3. People
+## 3. Supervisors
 
 Everyone on this list receives the group text, and everyone appears on the card page with a Call button.
 
-On a computer, People is a table: one row per person, with the column names on top. On a phone each person is a box.
+The yard's emergency contacts: the supervisors and the manager. On a computer this tab is a table, one row per person, with the column names on top; on a phone each person is a box.
 
 Each person has:
 
@@ -90,7 +90,7 @@ Each person has:
 | **Role in Spanish (optional)** | Yes, on the Spanish page | Leave blank to show the English role on the Spanish page too. |
 | **Phone** | No (only used to dial and text) | Required. Any US 10-digit format works, e.g. `(555) 555-0100`, `555.555.0100`, `+1 555 555 0100`. It's tidied to `555-555-0100` when you leave the box. |
 
-- **Add person** adds a row; there's room for up to **10 people**.
+- **Add supervisor** adds a row; there's room for up to **10**.
 - **×** at the end of a row removes that person (after a confirm) and also takes them off every shift.
 
 ### Checking numbers every 90 days
@@ -129,7 +129,7 @@ This tab decides **who is the primary call** (the big Call button on the card pa
 ### How the order works
 
 1. The dashboard goes through the shifts **in order** (left to right in **Who works each shift**, and the order of the boxes under **Shift times**) and finds the first shift that is on right now.
-2. The first person ticked on that shift (top to bottom: the order of the People list) is the **primary call**.
+2. The first person ticked on that shift (top to bottom: the order of the Supervisors list) is the **primary call**.
 3. Everyone else on a shift that's on right now is listed under **Also working now**.
 4. Everyone else is listed under **Not scheduled · still emergency contacts**.
 5. If **nobody** is on shift, the primary call is the person chosen in **If nobody is on shift, the primary call is**.
@@ -162,13 +162,37 @@ The defaults for a new setup are:
 | 3rd shift | 22:00–06:00 | every day |
 | Day (8–5) | 08:00–17:00 | Monday–Friday |
 
+### Time off
+
+For anyone on holiday, sick or out of the office for some days. **Shifts → Time off → Add time off**, then:
+
+| Field | What to enter |
+|---|---|
+| **Supervisor** | Who is away. |
+| **First day**, **Last day** | Both days included, Houston dates. Changing the first day to after the last day moves the last day too. For one day, make them the same. |
+| **Covered by** | Who works their shifts while they're away, or **Nobody**. |
+
+Then **Publish**. From the first day to the last day:
+
+- they **don't appear on the card page** and **don't get the group text**, so families never call someone who's away;
+- the person covering takes their place on their shifts, in the same position (so if they were first on a shift, the cover becomes the primary call); with **Nobody**, the shift goes on without them and the next shift on, or the fallback person, takes the call;
+- **Who works each shift** marks them *Away through …* (their last day off) and the cover *Covering for …*, and the status panel lists them under **Away**.
+
+The day after the last day, everything is back to normal without anyone doing anything; ended time off disappears from the list. **×** removes an entry (for example, if the plans change). Removing someone from Supervisors also removes their time off, and anyone they were covering for shows **Nobody**.
+
+A night shift belongs to the day it starts: someone away from Saturday still works Friday night's shift until it ends on Saturday morning.
+
+Publishing stops if an entry has no person or dates, the last day is before the first or already past, it's longer than a year, the same person has two entries for the same days (combine them), the person covering is away at the same time, or **everyone** would be away on some day.
+
+Changing the **First day** of a one-day entry moves the last day with it; on longer entries the last day stays where it is.
+
 ### Check a time
 
-Pick a **Day** and **Time** to see exactly who a card would show then: the primary call, also working, and not scheduled. Use it after every rotation change.
+Pick a **Date** and **Time** to see exactly who a card would show then: the primary call, also working, not scheduled and away. Use it after every rotation change, and to check time off.
 
 ---
 
-## 5. Cards
+## 5. People (cards)
 
 Each card (family or school) has its own secret link, written to its NFC tag and printed as its QR code.
 
@@ -202,7 +226,7 @@ Everything needed to make the 3D-printed card, generated from the card's data.
 - **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 PVC coin tag, 25.4 mm (1 in) across, 0.8 mm thick).
 - **Backup line:** a phone number printed on every card. If the page ever can't load, it tells families to call the backup number on their card, so set this before printing cards. Publish after changing it.
 
-If a driver's name can't print cleanly (too long, or characters the card can't print), both download buttons are disabled with a message. Shorten or fix the name with **Cards → Rename**.
+If a driver's name can't print cleanly (too long, or characters the card can't print), both download buttons are disabled with a message. Shorten or fix the name with **People → Rename**.
 
 Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
@@ -216,6 +240,7 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
    - every person has a name and a valid US phone number
    - no two people share a phone number
    - both text messages are filled in and contain `{driver}`
+   - every time-off entry has a person and both days, the last day isn't before the first or already past, it's under a year, nobody has two entries for the same days, the person covering isn't away too, and somebody is available every day
    - every shift has a name and at least one day
 3. With your own sign-in, History shows your name automatically. With the shared password, the first time you publish on a device the dashboard asks for **your name**, for the History tab; you can change it later in **Settings**.
 4. The badge goes **Publishing → Updating → Live**.
@@ -239,7 +264,7 @@ Every publish adds an entry with the date and time, who published, and what chan
 - **Signed in as:** your name and email. History uses this name. If it's wrong, ask the site owner.
 - **Change my password:** changes only your own password; nobody else is affected.
   1. Press **Change my password**.
-  2. Save the suggested password, or type your own: at least 8 characters, with a number and a symbol.
+  2. Save the suggested password, or type your own: at least 10 characters, with a number and a symbol.
   3. Tick **I've saved it in a password manager**, then press **Next**.
   4. **Publish.** Your old password stops working the moment you publish.
 
@@ -258,24 +283,29 @@ Every publish adds an entry with the date and time, who published, and what chan
 3. **Publish.**
 
 **Someone new joined / someone left**
-1. **People** → **Add person** (fill in name, role, phone), or **×** at the end of someone's row.
+1. **Supervisors** → **Add supervisor** (fill in name, role, phone), or **×** at the end of someone's row.
 2. **Shifts** → tick the new person on their shift in **Who works each shift**.
 3. **Publish.**
 
+**Someone is on holiday or out of the office**
+1. **Shifts → Time off → Add time off**: choose the person, the first and last day, and who covers (or **Nobody**).
+2. **Check a time** on one of those days to confirm who the cards will call.
+3. **Publish.** Nothing to undo when they're back.
+
 **A phone number changed**
-**People** → edit **Phone** → **Publish.** No card needs reprinting.
+**Supervisors** → edit **Phone** → **Publish.** No card needs reprinting.
 
 **A new family or school needs a card**
-1. **Cards** → **Add card** → **Publish.**
+1. **People** → **Add card** → **Publish.**
 2. **Print & QR** → choose the card → **Bambu Studio project (3MF)**.
 3. Write the link to the NFC tag and print the card. See [Cards and printing](cards-and-printing.md).
 4. Test it with a phone before handing it over.
 
 **A card was lost**
-**Cards** → **Remove** next to it → **Publish.** Only that card stops working. Make a replacement with **Add card**.
+**People** → **Remove** next to it → **Publish.** Only that card stops working. Make a replacement with **Add card**.
 
 **A name on a card is misspelled**
-**Cards** → **Rename** → **Publish.** The page shows the corrected name within about a minute. To fix the printed name, print a new card with a new tag holding the same link (Print & QR), and destroy the old card.
+**People** → **Rename** → **Publish.** The page shows the corrected name within about a minute. To fix the printed name, print a new card with a new tag holding the same link (Print & QR), and destroy the old card.
 
 **Giving someone dashboard access**
 Ask the site owner to add them. The owner gives them a temporary password in person or by phone, and they choose their own at first sign-in.
@@ -298,10 +328,13 @@ Ask the site owner to add them. The owner gives them a temporary password in per
 | "Can't reach GitHub right now." | Check your internet connection. You can still edit; publish when you're back online. |
 | "Fix these first: …" | The message lists what's missing (a name, a phone number, …) and opens the right tab. |
 | "Add your name first (Settings → Your name)…" | Type your name in **Settings → Your name**, then publish again. |
-| "Put {driver} in the text message…" | **People → Text message:** put `{driver}` back where the driver's name should go. |
+| "Put {driver} in the text message…" | **Supervisors → Text message:** put `{driver}` back where the driver's name should go. |
+| "Time off: choose who is away." / "Time off for … : enter the first and last day." | **Shifts → Time off:** finish or remove (**×**) that entry. |
+| "… covers for … but is away then too." | Choose someone else under **Covered by**, or **Nobody**. |
+| "Everyone is away on …" | Someone has to stay reachable: shorten one of the entries. |
 | The sign-in screen appears by itself | The dashboard locks after 30 minutes without use (never with unpublished changes). Sign in again. |
 | Badge stuck on **Delayed** | GitHub is slow. It nearly always catches up within 10 minutes. |
-| "The driver name is too long to print." (Print & QR) | **Cards → Rename** to a shorter form, e.g. initials for middle names. |
-| "The driver name has characters the card can't print" (Print & QR) | **Cards → Rename** using letters, digits and . , - ' " ( ) & # / only. |
+| "The driver name is too long to print." (Print & QR) | **People → Rename** to a shorter form, e.g. initials for middle names. |
+| "The driver name has characters the card can't print" (Print & QR) | **People → Rename** using letters, digits and . , - ' " ( ) & # / only. |
 | "The Bambu Studio project maker (bambu3mf.js) didn't load." (Print & QR) | Reload the page. If it keeps happening, use **STL files and print notes (ZIP)** instead. |
-| A family says their card shows "This card couldn't be loaded" | Check the card is listed in **Cards** and shows **Active**. If it was removed, make a new card. If it's active, ask them to tap **Retry** or check their internet. |
+| A family says their card shows "This card couldn't be loaded" | Check the card is listed in **People** and shows **Active**. If it was removed, make a new card. If it's active, ask them to tap **Retry** or check their internet. |

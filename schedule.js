@@ -36,12 +36,35 @@ function shiftName(shift, lang = 'en') {
   return (shift.nameEs || '').trim() || SHIFT_NAMES_ES[shift.name.trim().toLowerCase()] || shift.name;
 }
 
-// Day (0 = Monday … 6 = Sunday) and minutes since midnight, in the yard's time zone.
+// Day (0 = Monday … 6 = Sunday), minutes since midnight and the date ("2026-10-05"), in the yard's time zone.
 function yardNow(timeZone, date = new Date()) {
   const parts = {};
-  const fmt = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' });
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' });
   for (const p of fmt.formatToParts(date)) parts[p.type] = p.value;
-  return { day: DAYS.indexOf(parts.weekday), minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute) };
+  return { day: DAYS.indexOf(parts.weekday), minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute), date: `${parts.year}-${parts.month}-${parts.day}` };
+}
+
+// "2026-10-05" plus n days. (Dates written this way also compare correctly as text.)
+function addDays(date, n) {
+  const d = new Date(date + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// Time off, set in the dashboard: schedule.away = [{ id, who, from, to, cover }], whole days in Houston, first and
+// last day included; cover = who takes their shifts ('' = nobody). → Map of contact id → entry, for one date.
+function awayOn(schedule, date) {
+  const out = new Map();
+  if (!date) return out;
+  for (const a of Array.isArray(schedule.away) ? schedule.away : []) if (a && a.who && a.from <= date && date <= a.to) out.set(a.who, a);
+  return out;
+}
+
+// The date a shift that's on now started: an overnight shift belongs to the day it starts, so someone off from
+// Saturday still works Friday's night shift into Saturday morning.
+function shiftDate(shift, { minutes, date }) {
+  const start = toMinutes(shift.start);
+  return start < toMinutes(shift.end) || minutes >= start ? date : addDays(date, -1);
 }
 
 // Is this shift on? A shift that runs past midnight (e.g. 22:00–06:00) belongs to the day it starts.
@@ -59,14 +82,31 @@ function shiftOn(shift, { day, minutes }) {
 //         order) that is on now, or the fallback contact if nobody is on shift
 //   also  everyone else working now
 //   off   everyone else: home, but still an emergency contact
+//   away  people on time off today (not shown to families, not in the group text)
 // Each entry is { contact, shift }; shift is null for anyone not working.
+// Time off (needs now.date): someone away doesn't work their shifts; whoever covers for them works those shifts
+// instead. If time off would leave nobody at all, it's ignored, so there is always someone to call.
 function arrange({ contacts, schedule }, now) {
+  const awayFor = date => {
+    const away = awayOn(schedule, date);
+    return contacts.some(c => !away.has(c.id)) ? away : new Map();
+  };
+  const today = awayFor(now.date);
   const working = [];
   const placed = new Set();
   for (const shift of schedule.shifts) {
     if (!shiftOn(shift, now)) continue;
+    // Who works it, in People-list order; whoever covers for someone away takes their place in that order.
+    const away = awayFor(now.date && shiftDate(shift, now));
+    const order = [];
     for (const contact of contacts) {
-      if (shift.people.includes(contact.id) && !placed.has(contact.id)) {
+      if (!shift.people.includes(contact.id)) continue;
+      const a = away.get(contact.id);
+      const who = !a ? contact : a.cover && !away.has(a.cover) ? contacts.find(c => c.id === a.cover) : null;
+      if (who && !order.includes(who)) order.push(who);
+    }
+    for (const contact of order) {
+      if (!placed.has(contact.id)) {
         placed.add(contact.id);
         working.push({ contact, shift });
       }
@@ -74,13 +114,18 @@ function arrange({ contacts, schedule }, now) {
   }
   let main = working.shift();
   if (!main) {
-    const contact = contacts.find(c => c.id === schedule.fallback) || contacts[0];
-    if (!contact) return { main: null, also: [], off: [] };
+    const free = c => !today.has(c.id);
+    const contact = contacts.find(c => c.id === schedule.fallback && free(c)) || contacts.find(free) || contacts[0];
+    if (!contact) return { main: null, also: [], off: [], away: [] };
     main = { contact, shift: null };
     placed.add(contact.id);
   }
-  const off = contacts.filter(c => !placed.has(c.id)).map(contact => ({ contact, shift: null }));
-  return { main, also: working, off };
+  const rest = contacts.filter(c => !placed.has(c.id));
+  return {
+    main, also: working,
+    off: rest.filter(c => !today.has(c.id)).map(contact => ({ contact, shift: null })),
+    away: rest.filter(c => today.has(c.id)).map(contact => ({ contact, shift: null, until: today.get(contact.id).to })),
+  };
 }
 
 // Data saved by the first version (before shifts existed) has no shifts or contact ids:

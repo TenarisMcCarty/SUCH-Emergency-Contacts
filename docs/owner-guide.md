@@ -6,7 +6,7 @@ The site owner looks after what supervisors never touch: who can sign in, owner 
 
 Bookmark it. On the owner link you sign in with **your own owner password**, not the supervisors' password. Once signed in you get:
 
-- an **Owner** badge in the header and an **Owner** tab: **People who can sign in** ([section 14](#14-people-who-can-sign-in)) across the top, then a box for each job: **Print files for all cards** ([section 17](#17-print-files-for-all-cards)), GitHub connection, shared password, taking away access, owner password, recovery code and your contact
+- an **Owner** badge in the header and an **Owner** tab: **Sign-ins** (people who can sign in, [section 14](#14-people-who-can-sign-in)) across the top, then a box for each job: **Print files for all cards** ([section 17](#17-print-files-for-all-cards)), GitHub connection, shared password, taking away access, owner password, recovery code and your contact
 - everything supervisors have (see the [supervisor guide](supervisor-guide.md))
 - on the sign-in screen, under **Forgot owner password?**: the recovery-code reset, reclaiming owner access, and **Start over**
 
@@ -45,7 +45,7 @@ The supervisors' password does **not** work on the owner link and can't open the
 | **GitHub token** | Stored encrypted in the data. Nobody needs to see it again. | Publishing | Make a new one ([section 4](#4-the-github-token)) | Delete it on GitHub, make a new one ([section 9](#9-taking-away-someones-access)) |
 | **GitHub account** (TenarisMcCarty) | You | The repository, and reclaiming owner access | Recover it through GitHub | Anyone with it can change the website. Keep two-factor authentication on. |
 
-Use the **suggested** passwords (two words, two digits and a symbol). Your own passwords need at least 8 characters, with a number and a symbol.
+Use the **suggested** passwords (five safety and yard words, two digits and a symbol, e.g. `harness-bayou-muster-flange-teamwork-47!`). Your own passwords need at least 10 characters, with a number and a symbol.
 
 ---
 
@@ -74,7 +74,7 @@ When there's no data yet, the dashboard starts setup automatically. Whoever comp
 2. **Set up · step 2 of 4: Connect to GitHub.** Paste a token ([section 4](#4-the-github-token)).
 3. **Set up · step 3 of 4: Choose your owner password.**
 4. **Set up · step 4 of 4: Save your recovery code**, plus your contact details for supervisors.
-5. Fill in **People** and **Shifts**, add cards, set the **Backup line** (Print & QR), then **Publish**.
+5. Fill in **Supervisors** and **Shifts**, add cards (**People**), set the **Backup line** (Print & QR), then **Publish**.
 
 ---
 
@@ -235,12 +235,12 @@ Contacts and cards carry over, and cards already written keep working. This repo
 
 Each supervisor can have their own sign-in: their email and their own password. History then shows their name automatically. Nobody needs anyone else's password, and you can take one person's access away without changing anything for the others.
 
-It's all on the owner link → **Owner** tab → **People who can sign in**. Each person shows a status: **Active**, **Not signed in yet** (still on the temporary password), or **Not published yet**.
+It's all on the owner link → **Owner** tab → **Sign-ins**. Each person shows a status: **Active**, **Not signed in yet** (still on the temporary password), or **Not published yet**.
 
 ### Adding someone
 
-1. Type their **Email** and their **Name**, the way History should show it (e.g. `Jane Doe`) → **Add person**.
-2. **Temporary password for Jane Doe:** copy it (two words, two digits and a symbol), tick **I've copied it or written it down**, then **Done**. It's shown only this once. **Cancel** adds nobody.
+1. Type their **Email** and their **Name**, the way History should show it (e.g. `Jane Doe`) → **Add sign-in**.
+2. **Temporary password for Jane Doe:** copy it (five words, two digits and a symbol; read it out word by word), tick **I've copied it or written it down**, then **Done**. It's shown only this once. **Cancel** adds nobody.
 3. **Publish.** The change list shows "Added a sign-in for Jane Doe (…)". Until you publish, the temporary password doesn't work.
 4. Give them the normal dashboard link, their email and the temporary password, in person or by phone. Never by email or chat.
 5. At their first sign-in they must choose their own password, then publish it. Until they publish, only the temporary password works.
@@ -271,7 +271,7 @@ What they saw before stays seen: older versions of the data in the repository hi
 
 Once everyone has their own sign-in, switch off the shared supervisors' password, so only personal sign-ins (and you, on the owner link) can get in.
 
-1. Check that every supervisor is listed under **People who can sign in** and shows **Active**.
+1. Check that every supervisor is listed under **Sign-ins** and shows **Active**.
 2. **Owner** tab → **Shared supervisors' password** → **Turn off the shared password** → confirm. This is only possible once at least one person has their own sign-in.
 3. The Owner tab reminds you to replace the GitHub token, because anyone who knew the shared password could have seen it. Do that ([section 4](#4-the-github-token)).
 4. **Publish.** The change list shows "Switched off the shared password". From then on, signing in with Email empty says *"The shared supervisors' password is switched off."*
@@ -308,7 +308,7 @@ The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ASA.zip`, holds:
 | `README.txt` | the batch at a glance: card size, tag, pause, and the order of work |
 
 - Files are made from what the dashboard shows now, including changes you haven't published. If some cards aren't published yet, it asks before downloading: their links (tag and QR code) only work after you publish.
-- A card whose driver name can't be printed (too long, or characters the card can't print) is left out, and the message and README name it. Fix it with **Cards → Rename** and download again.
+- A card whose driver name can't be printed (too long, or characters the card can't print) is left out, and the message and README name it. Fix it with **People → Rename** and download again.
 - Two cards with the same driver and holder get separate folders (`…-2`).
 - **Every card has its own link.** A tag in the wrong card opens the wrong driver's page. Write each tag from that card's own folder just before printing it, and test the finished card (it must show that driver's name) before locking the tag.
 

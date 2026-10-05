@@ -34,7 +34,7 @@ The same link is written to the card's **NFC tag** and encoded in its **QR code*
 
 ## 2. Making a new card: the whole process
 
-1. **Cards → Add card:** enter the driver name and ID (e.g. `Jane Doe (1234)`) and who will hold it (e.g. "Family").
+1. **People → Add card:** enter the driver name and ID (e.g. `Jane Doe (1234)`) and who will hold it (e.g. "Family").
 2. **Publish.** The card's link only works after publishing.
 3. **Print & QR →** choose the card → check the previews → choose the **Printer** and the **Filament** (ASA or ABS) → **Bambu Studio project (3MF)**.
 4. **Write the NFC tag** with the card link and test it ([section 3](#3-writing-the-nfc-tag)). Don't lock it yet.
@@ -111,7 +111,7 @@ The Print & QR tab shows both faces before you download: the front as you'll see
 - **Covers.** 0.6 mm (three layers) under the tag keeps the front flat and opaque. Above it, one solid light layer (the first layer after the pause, printed in one colour so no colour changes happen while it spans the tag) plus the 0.4 mm back: 0.6 mm in all. Equal covers above and below make the card shrink evenly, so it stays flat.
 - **2.2 mm thick.** That's the minimum for a 0.8 mm tag with those covers: about three bank cards, still easy in a wallet slot, and stiff and hard to snap in solid (100% infill) ASA or ABS.
 - **Light core.** Black plastic hides a white core completely, even at 0.6 mm. White plastic is translucent: over a black core it looks grey, and the QR code would lose contrast. With a white core the white lettering stays bright and the black front shows no trace of the core or the tag.
-- **Big, few words.** Small text doesn't print well. At 3.5 mm capitals, every stroke and gap of A–Z, 0–9 and common punctuation is at least 0.5 mm. A few characters have finer details and need bigger letters: Å and cedillas (Ç, Ş) 3.9 mm, the comma and # 3.7 mm. Curly quotes print as straight ones. If a name can't fit at its minimum size, even on two lines, the dashboard refuses it and asks you to shorten it (**Cards → Rename**).
+- **Big, few words.** Small text doesn't print well. At 3.5 mm capitals, every stroke and gap of A–Z, 0–9 and common punctuation is at least 0.5 mm. A few characters have finer details and need bigger letters: Å and cedillas (Ç, Ş) 3.9 mm, the comma and # 3.7 mm. Curly quotes print as straight ones. If a name can't fit at its minimum size, even on two lines, the dashboard refuses it and asks you to shorten it (**People → Rename**).
 
 ---
 
@@ -197,8 +197,8 @@ The tag is sealed inside the card, so a reprint is a new card with a new tag. Wr
 
 | Change | Reprint the card? | Tag |
 |---|---|---|
-| People, phone numbers, roles, shifts, text messages | No | No change |
-| Driver name (Cards → Rename) | Yes, for the printed name | New tag, same link |
+| Supervisors, phone numbers, roles, shifts, time off, text messages | No | No change |
+| Driver name (People → Rename) | Yes, for the printed name | New tag, same link |
 | Backup line | Yes, for the printed number | New tag, same link |
 | Card removed (lost card) | Make a new card | New tag, new link |
 | Start over | Every card | Every tag, new links |

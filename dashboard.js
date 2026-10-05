@@ -81,10 +81,21 @@ function houstonDate(date) {
 }
 const today = () => houstonDate(new Date());
 const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-const personName = c => c.name.trim() || 'a person with no name';
+const personName = c => c.name.trim() || 'a supervisor with no name';
 const daysSince = iso => Math.floor((Date.parse(today()) - Date.parse(iso)) / 864e5);
 const dateLabel = iso => (/^\d{4}-\d\d-\d\d$/.test(iso || '') ? new Date(iso + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : iso || '');
 const isDue = c => c.phone && daysSince(c.confirmed) >= CHECK_DAYS;
+const isDate = d => /^\d{4}-\d\d-\d\d$/.test(d || '');
+const shortDate = iso => (isDate(iso) ? new Date(iso + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }) : '');
+// "Oct 10 – Oct 14, 2026", "Oct 10, 2026"
+const rangeLabel = (from, to) => (!isDate(from) || !isDate(to) ? 'dates not set'
+  : from === to ? dateLabel(from)
+  : from.slice(0, 4) === to.slice(0, 4) ? `${shortDate(from)} – ${dateLabel(to)}` : `${dateLabel(from)} – ${dateLabel(to)}`);
+// Time off needs a schedule.js that knows it. (For a few minutes after an update, an older cached one may load.)
+const TIME_OFF = typeof awayOn === 'function' && typeof addDays === 'function';
+// Time off that hasn't ended, each entry with an id: [{ id, who, from, to, cover }].
+const currentAway = list => (list || []).filter(a => a && !(isDate(a.to) && a.to < today()))
+  .map(a => ({ id: a.id || newId(), who: a.who || '', from: a.from || '', to: a.to || '', cover: a.cover || '' }));
 const askOwner = () => (role === 'owner' ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
 
 async function copy(text, btn) {
@@ -131,9 +142,10 @@ const formatPhone = p => (p ? p.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2
 // A saved number the way people write it; anything else (half-typed) as typed.
 const showPhone = p => (/^\+1\d{10}$/.test(p || '') ? formatPhone(p) : p || '');
 
-// Passwords: at least 8 characters, with at least one number and one symbol.
-const PASSWORD_RULE = 'at least 8 characters, with a number and a symbol';
-const passwordOk = pw => pw.length >= 8 && /\d/.test(pw) && /[^\p{L}\p{N}\s]/u.test(pw);
+// Passwords people choose: at least 10 characters, with at least one number and one symbol (owner's choice;
+// 8 until 2026-10-05). Only checked when a password is chosen, so older, shorter ones keep working.
+const PASSWORD_RULE = 'at least 10 characters, with a number and a symbol';
+const passwordOk = pw => pw.length >= 10 && /\d/.test(pw) && /[^\p{L}\p{N}\s]/u.test(pw);
 
 // A random whole number below `max`. Rejection sampling keeps every value equally likely.
 function randomBelow(max) {
@@ -144,11 +156,14 @@ function randomBelow(max) {
   }
 }
 
-// A suggested or temporary password, easy to read out and type: two random words, two digits and a
-// symbol, e.g. "maple-river-47!" (about 36 bits).
+// A suggested or temporary password: five random HSE words (words.js), two digits and a symbol, e.g.
+// "harness-bayou-muster-flange-teamwork-47!" (about 55 bits): easy to read out, very slow to guess.
+// People may still choose a shorter password of their own (PASSWORD_RULE).
 function suggestPassword() {
-  const word = () => WORDS[randomBelow(WORDS.length)];
-  return `${word()}-${word()}-${randomBelow(10)}${randomBelow(10)}${'!#$%&*?@'[randomBelow(8)]}`;
+  const list = typeof HSE_WORDS !== 'undefined' ? HSE_WORDS : WORDS; // an older cached words.js has only WORDS
+  const words = new Set();
+  while (words.size < 5) words.add(list[randomBelow(list.length)]); // five different words
+  return `${[...words].join('-')}-${randomBelow(10)}${randomBelow(10)}${'!#$%&*?@'[randomBelow(8)]}`;
 }
 
 // A new sign-in for a password: a new key pair, its private half locked with the password → { pub, login }.
@@ -665,6 +680,8 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false, me: 
   tokenAdvice = '';
   state = { backup: '', messageEs: DEFAULT_MESSAGE_ES, whatsapp: false, ...opened.data, address: savedAddress(opened.data), cards: opened.cards };
   state.schedule.timeZone = YARD_TIME_ZONE;
+  const listed = new Set(state.contacts.map(c => c.id));
+  state.schedule.away = currentAway(state.schedule.away).filter(a => listed.has(a.who)).map(a => (a.cover && !listed.has(a.cover) ? { ...a, cover: '' } : a));
   // When each number was last checked (kept with the dashboard data, not on the cards).
   // Numbers from before this was tracked count as checked on the last publish.
   const checked = opened.confirmed || {};
@@ -784,6 +801,7 @@ function changes() {
     if (before.message !== state.message) out.push('Changed the text message');
     if (before.messageEs !== state.messageEs) out.push('Changed the Spanish text message');
     if (scheduleKey(before.schedule) !== scheduleKey(state.schedule)) out.push('Changed shifts');
+    out.push(...awayChanges(before.schedule.away || [], state.schedule.away || []));
     if ((before.backup || '') !== (state.backup || '')) out.push('Changed the backup line');
     if ((before.address || '') !== (state.address || '')) out.push('Changed the yard address');
     if (!!before.whatsapp !== !!state.whatsapp) out.push(state.whatsapp ? 'Switched the WhatsApp button on' : 'Switched the WhatsApp button off');
@@ -820,6 +838,20 @@ function scheduleKey(s) {
   });
 }
 
+// Time off added, changed or removed since the last publish.
+function awayChanges(before, now) {
+  const name = id => { const c = state.contacts.find(x => x.id === id) || published.state.contacts.find(x => x.id === id); return c ? personName(c) : 'someone'; };
+  const label = a => `${name(a.who)}, ${rangeLabel(a.from, a.to)}${a.cover ? `, covered by ${name(a.cover)}` : ''}`;
+  const out = [], old = new Map(before.map(a => [a.id, a]));
+  for (const a of now) {
+    const o = old.get(a.id);
+    if (!o) out.push('Time off: ' + label(a));
+    else if (o.who !== a.who || o.from !== a.from || o.to !== a.to || o.cover !== a.cover) out.push('Changed time off: ' + label(a));
+  }
+  for (const o of before) if (!now.some(a => a.id === o.id)) out.push('Removed time off: ' + label(o));
+  return out;
+}
+
 // Personal sign-ins added, reset, changed or removed since the last publish.
 function accountChanges() {
   const out = [];
@@ -839,7 +871,7 @@ function refresh() {
   const badge = $('pub-badge');
   let label, cls, text;
   if (busy) [label, cls, text] = ['Publishing', 'updating', 'Saving to GitHub…'];
-  else if (list.length && !published) [label, cls, text] = ['Not live yet', 'changes', 'Fill in People, Shifts and Cards, then Publish.'];
+  else if (list.length && !published) [label, cls, text] = ['Not live yet', 'changes', 'Fill in Supervisors, Shifts and People, then Publish.'];
   else if (list.length) [label, cls, text] = ['Not published', 'changes', `${list.length} change${list.length > 1 ? 's' : ''} waiting. Publish to update every card.`];
   else if (deployState === 'deploying') [label, cls, text] = ['Updating', 'updating', 'Published. Cards pick it up within about a minute.'];
   else if (deployState === 'slow') [label, cls, text] = ['Delayed', 'problem', 'Published, but the site is slow to update. It usually catches up within 10 minutes.'];
@@ -867,7 +899,7 @@ function refresh() {
   renderNow();
   const last = log[log.length - 1];
   $('facts').textContent = [
-    `${state.contacts.length} ${state.contacts.length === 1 ? 'person' : 'people'}`, `${state.cards.length} card${state.cards.length === 1 ? '' : 's'}`,
+    `${state.contacts.length} supervisor${state.contacts.length === 1 ? '' : 's'}`, `${state.cards.length} card${state.cards.length === 1 ? '' : 's'}`,
     last && `last published ${when(last.at)}${last.who ? ' by ' + last.who : ''}`,
   ].filter(Boolean).join(' · ');
 }
@@ -878,13 +910,17 @@ function renderNow() {
   $('now-time').textContent = `(Houston time ${DAYS[now.day]} ${timeLabel(`${Math.floor(now.minutes / 60)}:${now.minutes % 60}`)})`;
   const ready = state.contacts.filter(c => c.name.trim());
   if (!ready.length) {
-    $('now-main').textContent = 'Add people to see who the cards will call.';
+    $('now-main').textContent = 'Add supervisors to see who the cards will call.';
     $('now-also').textContent = '';
     return;
   }
-  const { main, also } = arrange({ contacts: ready, schedule: state.schedule }, now);
+  const { main, also, away = [] } = arrange({ contacts: ready, schedule: state.schedule }, now);
   $('now-main').textContent = `Primary call: ${main.contact.name}` + (main.shift ? ` (${main.shift.name}, until ${timeLabel(main.shift.end)})` : ' (fallback, nobody on shift)');
-  $('now-also').textContent = also.length ? 'Also working: ' + also.map(a => `${a.contact.name} (${a.shift.name})`).join(', ') : '';
+  const lines = [
+    also.length && 'Also working: ' + also.map(a => `${a.contact.name} (${a.shift.name})`).join(', '),
+    away.length && 'Away: ' + away.map(a => `${a.contact.name} (through ${shortDate(a.until)})`).join(', '),
+  ].filter(Boolean);
+  $('now-also').replaceChildren(...lines.flatMap((line, i) => (i ? [el('br'), line] : [line])));
 }
 setInterval(() => state && renderNow(), 30 * 1000);
 
@@ -894,7 +930,7 @@ setInterval(() => state && renderNow(), 30 * 1000);
 function renderPeople() {
   $('people-list').replaceChildren(...state.contacts.map(c => {
     const was = { phone: c.phone, confirmed: c.confirmed };
-    const remove = el('button', { type: 'button', class: 'icon-btn row-remove', textContent: '×', title: 'Remove person', 'aria-label': `Remove ${personName(c)}`, onclick: () => removePerson(c) });
+    const remove = el('button', { type: 'button', class: 'icon-btn row-remove', textContent: '×', title: 'Remove supervisor', 'aria-label': `Remove ${personName(c)}`, onclick: () => removePerson(c) });
     const input = (label, key, extra = {}) => el('label', {}, el('span', { class: 'lbl', textContent: label }), el('input', {
       value: key === 'phone' ? showPhone(c.phone) : c[key], autocomplete: 'off', ...extra,
       oninput: e => {
@@ -942,9 +978,10 @@ $('add-person').onclick = () => {
 };
 
 function removePerson(c) {
-  if (!confirm(`Remove ${personName(c)}? They'll also be taken off every shift.`)) return;
+  if (!confirm(`Remove ${personName(c)}? They'll also be taken off every shift and out of time off.`)) return;
   state.contacts = state.contacts.filter(x => x !== c);
   for (const s of state.schedule.shifts) s.people = s.people.filter(id => id !== c.id);
+  state.schedule.away = (state.schedule.away || []).filter(a => a.who !== c.id).map(a => (a.cover === c.id ? { ...a, cover: '' } : a));
   if (state.schedule.fallback === c.id) state.schedule.fallback = state.contacts[0] ? state.contacts[0].id : null;
   renderPeople();
   refresh();
@@ -963,8 +1000,9 @@ function renderShifts() {
   const s = state.schedule;
   $('shift-list').replaceChildren(...s.shifts.map(shiftBox));
   renderMatrix();
+  renderAway();
   $('fallback').replaceChildren(...state.contacts.map(c => el('option', { value: c.id, textContent: personName(c), selected: c.id === s.fallback })));
-  if (!$('preview-day').options.length) {
+  if ($('preview-day') && !$('preview-day').options.length) {
     const now = yardNow(YARD_TIME_ZONE);
     $('preview-day').replaceChildren(...DAYS.map((d, i) => el('option', { value: i, textContent: d, selected: i === now.day })));
   }
@@ -1029,15 +1067,21 @@ function renderMatrix() {
   if (!table) return;
   const shifts = state.schedule.shifts;
   if (!state.contacts.length || !shifts.length) {
-    return table.replaceChildren(el('tbody', {}, el('tr', {}, el('td', { class: 'muted small empty', textContent: state.contacts.length ? 'Add a shift first.' : 'Add people first.' }))));
+    return table.replaceChildren(el('tbody', {}, el('tr', {}, el('td', { class: 'muted small empty', textContent: state.contacts.length ? 'Add a shift first.' : 'Add supervisors first.' }))));
   }
-  const head = el('tr', {}, el('th', { scope: 'col', class: 'corner', textContent: 'Person' }),
+  const head = el('tr', {}, el('th', { scope: 'col', class: 'corner', textContent: 'Supervisor' }),
     ...shifts.map(s => el('th', { scope: 'col' },
       s.name || 'Shift',
       el('span', { textContent: `${timeLabel(s.start)} – ${timeLabel(s.end)}` }),
       el('span', { textContent: daysLabel(s.days) }))));
-  const rows = state.contacts.map(c => el('tr', {},
-    el('th', { scope: 'row' }, personName(c), c.role.trim() && el('span', { textContent: c.role.trim() })),
+  const away = TIME_OFF ? awayOn(state.schedule, today()) : new Map();
+  const nameOf = id => personName(state.contacts.find(x => x.id === id) || { name: '' });
+  const covering = new Map(); // cover id → the names they cover for
+  for (const a of away.values()) if (a.cover) covering.set(a.cover, [...(covering.get(a.cover) || []), nameOf(a.who)]);
+  const rows = state.contacts.map(c => el('tr', { class: away.has(c.id) ? 'is-away' : '' },
+    el('th', { scope: 'row' }, personName(c), c.role.trim() && el('span', { textContent: c.role.trim() }),
+      away.has(c.id) && el('em', { class: 'tag tag-away', textContent: `Away through ${shortDate(away.get(c.id).to)}` }),
+      covering.has(c.id) && el('em', { class: 'tag', textContent: `Covering for ${covering.get(c.id).join(', ')}` })),
     ...shifts.map(s => {
       const on = s.people.includes(c.id);
       const cell = el('td', { class: on ? 'on' : '' });
@@ -1050,6 +1094,62 @@ function renderMatrix() {
     })));
   table.replaceChildren(el('thead', {}, head), el('tbody', {}, ...rows));
 }
+
+// Time off: a row per entry (person, first and last day, who covers), soonest first as entered.
+function renderAway() {
+  if (!$('away-list') || !TIME_OFF) return;
+  showIf('away-box', true);
+  $('away-list').replaceChildren(...state.schedule.away.map(awayRow));
+  showIf('no-away', !state.schedule.away.length);
+  showIf('away-head', state.schedule.away.length > 0);
+}
+
+function awayRow(a) {
+  const opt = (c, chosen) => el('option', { value: c.id, textContent: personName(c), selected: c.id === chosen });
+  const status = el('div', { class: 'away-status' });
+  const showStatus = () => {
+    const t = today(), n = -daysSince(a.from);
+    status.replaceChildren(!isDate(a.from) || !isDate(a.to) ? ''
+      : a.from <= t && t <= a.to ? el('span', { class: 'badge small changes', textContent: 'Away now' })
+      : n > 0 ? el('span', { textContent: `Starts in ${n} day${n === 1 ? '' : 's'}` }) : '');
+  };
+  const update = () => { showStatus(); refresh(); renderPreview(); renderMatrix(); };
+  const cover = el('select', { onchange: e => { a.cover = e.target.value; update(); } });
+  const fillCover = () => cover.replaceChildren(el('option', { value: '', textContent: 'Nobody', selected: !a.cover }),
+    ...state.contacts.filter(c => c.id !== a.who).map(c => opt(c, a.cover)));
+  fillCover();
+  const who = el('select', { onchange: e => { a.who = e.target.value; if (a.cover === a.who) a.cover = ''; fillCover(); update(); } },
+    el('option', { value: '', textContent: 'Choose supervisor', disabled: true, selected: !a.who }), ...state.contacts.map(c => opt(c, a.who)));
+  const last = el('input', { type: 'date', value: a.to, min: a.from, onchange: e => { a.to = e.target.value; update(); } });
+  // A one-day entry (or one without a last day) moves with its first day. Otherwise the last day stays put: a date
+  // box reports each part as it's typed, and a half-typed first day mustn't push the last day out.
+  const first = el('input', { type: 'date', value: a.from, onchange: e => {
+    const was = a.from;
+    a.from = e.target.value;
+    if (isDate(a.from) && (!isDate(a.to) || a.to === was)) last.value = a.to = a.from;
+    last.min = a.from;
+    update();
+  } });
+  const label = (text, input) => el('label', {}, el('span', { class: 'lbl', textContent: text }), input);
+  const row = el('div', { class: 'away-row' },
+    label('Supervisor', who), label('First day', first), label('Last day', last), label('Covered by', cover), status,
+    el('button', { type: 'button', class: 'icon-btn row-remove', textContent: '×', title: 'Remove time off', 'aria-label': `Remove time off for ${a.who ? personName(state.contacts.find(c => c.id === a.who) || { name: '' }) : 'nobody chosen yet'}`, onclick: () => {
+      state.schedule.away = state.schedule.away.filter(x => x !== a);
+      renderAway();
+      update();
+      $('add-away').focus();
+    } }));
+  showStatus();
+  return row;
+}
+
+onClick('add-away', () => {
+  state.schedule.away.push({ id: newId(), who: '', from: today(), to: today(), cover: '' });
+  renderAway();
+  refresh();
+  renderMatrix();
+  $('away-list').lastElementChild.querySelector('select').focus();
+});
 
 function moveShift(shift, by) {
   const list = state.schedule.shifts, i = list.indexOf(shift), j = i + by;
@@ -1110,7 +1210,7 @@ function shiftBox(shift, index, all) {
     !$('shift-matrix') && (state.contacts.length
       ? el('div', { class: 'chips' }, ...state.contacts.map(c => el('label', { class: 'chip' },
           el('input', { type: 'checkbox', checked: shift.people.includes(c.id), onchange: e => { togglePerson(shift, c.id, e.target.checked); changed(); } }), personName(c))))
-      : el('p', { class: 'small muted', textContent: 'Add people first.' })));
+      : el('p', { class: 'small muted', textContent: 'Add supervisors first.' })));
 }
 
 $('add-shift').onclick = () => {
@@ -1121,18 +1221,28 @@ $('add-shift').onclick = () => {
   boxes[boxes.length - 1].querySelector('input:not([type=checkbox])').select();
 };
 $('fallback').onchange = e => { state.schedule.fallback = e.target.value; refresh(); renderPreview(); renderGaps(); };
-$('preview-day').onchange = $('preview-time').onchange = () => renderPreview();
+$('preview-time').onchange = () => renderPreview();
+if ($('preview-day')) $('preview-day').onchange = () => renderPreview();
+if ($('preview-date')) $('preview-date').onchange = () => renderPreview();
 
 // What a card would show at the chosen day and time.
 function renderPreview() {
   const [h, m] = ($('preview-time').value || '15:00').split(':').map(Number);
   const ready = state.contacts.filter(c => c.name.trim());
-  if (!ready.length) return $('preview').replaceChildren(el('li', { textContent: 'Add people first.' }));
-  const { main, also, off } = arrange({ contacts: ready, schedule: state.schedule }, { day: Number($('preview-day').value), minutes: h * 60 + m });
+  if (!ready.length) return $('preview').replaceChildren(el('li', { textContent: 'Add supervisors first.' }));
+  // A date (time off depends on it); an older cached dashboard.html only has a weekday.
+  let at = { day: $('preview-day') ? Number($('preview-day').value) : yardNow(YARD_TIME_ZONE).day, minutes: h * 60 + m };
+  if ($('preview-date')) {
+    if (!isDate($('preview-date').value)) $('preview-date').value = today();
+    const date = $('preview-date').value;
+    at = { day: (new Date(date + 'T12:00:00Z').getUTCDay() + 6) % 7, minutes: h * 60 + m, date };
+  }
+  const { main, also, off, away = [] } = arrange({ contacts: ready, schedule: state.schedule }, at);
   $('preview').replaceChildren(
     el('li', { class: 'preview-main' }, el('strong', { textContent: 'Primary call: ' + main.contact.name }), main.shift ? ` (${main.shift.name})` : ' (fallback, nobody on shift)'),
     ...also.map(a => el('li', { textContent: `Also working: ${a.contact.name} (${a.shift.name})` })),
-    ...off.map(o => el('li', { class: 'muted', textContent: `Not scheduled: ${o.contact.name}` })));
+    ...off.map(o => el('li', { class: 'muted', textContent: `Not scheduled: ${o.contact.name}` })),
+    ...away.map(o => el('li', { class: 'muted', textContent: `Away: ${o.contact.name}` })));
 }
 
 // ================= Cards =================
@@ -1480,7 +1590,7 @@ function renderAccounts() {
   showIf('no-accounts', !accounts.length);
   if ($('shared-status')) {
     $('shared-status').textContent = shared
-      ? 'On' + (accounts.length ? '' : ' · add a person above before turning it off')
+      ? 'On' + (accounts.length ? '' : ' · add a sign-in above before turning it off')
       : 'Off';
   }
   showIf('shared-off', !!shared);
@@ -1497,7 +1607,7 @@ async function addAccount() {
   if (!name) return say('account-msg', 'Enter their name.', true);
   if (accounts.some(a => a.email === email)) return say('account-msg', `${email} already has a sign-in. Use Reset password instead.`, true);
   say('account-msg', '');
-  await issuePassword('Add person', { email, name, addedAt: today(), addedBy: myName() || 'the owner' }, () => {
+  await issuePassword('Add sign-in', { email, name, addedAt: today(), addedBy: myName() || 'the owner' }, () => {
     $('new-email').value = $('new-name').value = '';
     say('account-msg', `Added ${name}. Publish to switch on their sign-in.`);
   });
@@ -1613,14 +1723,14 @@ $('revoke-access').onclick = () => {
 
 function problems() {
   const out = []; // [tab, message]
-  if (!state.contacts.length) out.push(['people', 'Add at least one person.']);
+  if (!state.contacts.length) out.push(['people', 'Add at least one supervisor.']);
   state.contacts.forEach((c, i) => {
-    const who = c.name.trim() || `Person ${i + 1}`;
-    if (!c.name.trim()) out.push(['people', `Person ${i + 1} needs a name.`]);
+    const who = c.name.trim() || `Supervisor ${i + 1}`;
+    if (!c.name.trim()) out.push(['people', `Supervisor ${i + 1} needs a name.`]);
     if (!normalizePhone(c.phone)) out.push(['people', `${who} needs a 10-digit US phone number.`]);
   });
   const phones = state.contacts.map(c => normalizePhone(c.phone)).filter(Boolean);
-  if (new Set(phones).size !== phones.length) out.push(['people', 'Two people have the same phone number.']);
+  if (new Set(phones).size !== phones.length) out.push(['people', 'Two supervisors have the same phone number.']);
   if (!state.message.trim()) out.push(['people', 'Write the text message.']);
   else if (!state.message.includes('{driver}')) out.push(['people', "Put {driver} in the text message, so the yard knows which driver it's about."]);
   if (!state.messageEs.trim()) out.push(['people', 'Write the Spanish text message.']);
@@ -1629,8 +1739,35 @@ function problems() {
     if (!s.name.trim()) out.push(['shifts', 'Every shift needs a name.']);
     if (!s.days.length) out.push(['shifts', `${s.name || 'A shift'} has no days ticked.`]);
   }
-  if (!shared && !accounts.length) out.push(['owner', "Nobody but you could sign in: add a person or set a shared password (Owner tab)."]);
+  if (TIME_OFF) out.push(...awayProblems().map(t => ['shifts', t]));
+  if (!shared && !accounts.length) out.push(['owner', "Nobody but you could sign in: add a sign-in or set a shared password (Owner tab)."]);
   return out;
+}
+
+// Time off: complete, in order, not longer than a year, the cover not away too, and never everyone away at once.
+function awayProblems() {
+  const out = [];
+  const byId = new Map(state.contacts.map(c => [c.id, c]));
+  const away = state.schedule.away;
+  const ok = a => byId.has(a.who) && isDate(a.from) && isDate(a.to) && a.from <= a.to && daysSince(a.from) - daysSince(a.to) <= 366;
+  const overlap = (a, b) => ok(b) && b.from <= a.to && a.from <= b.to;
+  for (const a of away) {
+    if (!byId.has(a.who)) { out.push('Time off: choose who is away.'); continue; }
+    const name = personName(byId.get(a.who));
+    if (!isDate(a.from) || !isDate(a.to)) out.push(`Time off for ${name}: enter the first and last day.`);
+    else if (a.to < a.from) out.push(`Time off for ${name}: the last day is before the first day.`);
+    else if (!ok(a)) out.push(`Time off for ${name} is longer than a year.`);
+    else if (a.to < today()) out.push(`Time off for ${name} has already ended. Check the dates.`);
+    else if (away.some(b => b !== a && b.who === a.who && overlap(a, b))) out.push(`${name} has two time off entries for the same days. Combine them.`);
+    else if (a.cover && byId.has(a.cover) && away.some(b => b.who === a.cover && overlap(a, b))) {
+      out.push(`${personName(byId.get(a.cover))} covers for ${name} but is away then too.`);
+    }
+  }
+  const days = new Set();
+  for (const a of away.filter(ok)) for (let d = a.from; d <= a.to; d = addDays(d, 1)) days.add(d);
+  const everyone = [...days].sort().find(d => { const off = awayOn(state.schedule, d); return state.contacts.every(c => off.has(c.id)); });
+  if (everyone) out.push(`Everyone is away on ${dateLabel(everyone)}. Keep at least one supervisor available.`);
+  return [...new Set(out)];
 }
 
 // Before sending: the new file must open with every card, and with every private key this tab knows
@@ -1685,7 +1822,11 @@ async function publish() {
       message: state.message.trim(),
       messageEs: state.messageEs.trim(),
       contacts: state.contacts.map(c => ({ id: c.id, name: c.name.trim(), role: c.role.trim(), roleEs: c.roleEs.trim(), phone: normalizePhone(c.phone) })),
-      schedule: { ...state.schedule, timeZone: YARD_TIME_ZONE, fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id },
+      schedule: {
+        ...state.schedule, timeZone: YARD_TIME_ZONE,
+        fallback: state.contacts.some(c => c.id === state.schedule.fallback) ? state.schedule.fallback : state.contacts[0].id,
+        ...(state.schedule.away ? { away: currentAway(state.schedule.away) } : {}),
+      },
       backup: state.backup || '',
       ...(state.address === undefined ? {} : { yardAddress: state.address.trim() }),
       whatsapp: !!state.whatsapp,

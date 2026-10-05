@@ -51,7 +51,7 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 ### Supervisors
 
 1. Open the supervisor link and sign in with your **email and password**. The site owner adds you and gives you a temporary password, which you change at your first sign-in. (Until the owner switches it off, the old shared password also works, with Email left empty.)
-2. Make your change: **People**, **Shifts** or **Cards**.
+2. Make your change: **Supervisors**, **Shifts** or **People** (the cards).
 3. Press **Publish**. The status at the top turns **Live** when every card has it.
 
 The dashboard's **Help** tab lists the common jobs. The [supervisor guide](docs/supervisor-guide.md) covers everything step by step.
@@ -62,7 +62,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 
 ### Making a new card
 
-**Cards** → **Add card** → **Publish** → **Print & QR** → download the files → write the link to the NFC tag → test with a phone → lock the tag. See [Cards and printing](docs/cards-and-printing.md).
+**People** → **Add card** → **Publish** → **Print & QR** → download the files → write the link to the NFC tag → test with a phone → lock the tag. See [Cards and printing](docs/cards-and-printing.md).
 
 ---
 
@@ -99,7 +99,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `logo.svg`, `logo.js` | The Tenaris signature: official full-colour artwork from tenaris.com, and the same outlines for the card maker |
 | `source-sans-3-*.woff2`, `source-sans-3-bold.ttf` | Source Sans 3 (free, in the style of Frutiger, the Tenaris typeface), for the pages and the printed cards |
 | `qrcode.js`, `opentype.js`, `earcut.js` | Third-party libraries: QR encoder, font reader, shape triangulation (unmodified npm releases) |
-| `words.js` | Word list for suggested passwords (EFF Large Wordlist, minus 4 hyphenated words) |
+| `words.js` | Word lists for suggested passwords (HSE words; the EFF Large Wordlist for older cached copies) |
 | `THIRD-PARTY-NOTICES.txt` | Licences and credits for everything above that came from elsewhere |
 | `.nojekyll` | Tells GitHub Pages to serve the files exactly as they are |
 | `docs/` | This documentation |

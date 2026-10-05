@@ -41,17 +41,25 @@ Phone numbers aren't written on the page; the buttons dial or text them. The pag
 
 The order follows the **Shifts** tab in the dashboard, always in **Houston time** (Central):
 
-1. Go down the shift list from the top. The **first shift that is on right now** wins.
-2. On that shift, the first person ticked (in People-list order) is the **primary call**.
+1. Go through the shifts in their order (left to right in the dashboard's **Who works each shift**). The **first shift that is on right now** wins.
+2. On that shift, the first person ticked (in Supervisors-list order) is the **primary call**.
 3. Anyone else on a shift that's on right now goes under **Also working now**. A person on two shifts appears only once, under the earlier shift.
-4. Everyone else goes under **Not scheduled · still emergency contacts**, in People-list order.
-5. If no shift is on, the primary call is the **fallback person** (Shifts → "If nobody is on shift, the primary call is").
+4. Everyone else goes under **Not scheduled · still emergency contacts**, in Supervisors-list order.
+5. If no shift is on, the primary call is the **fallback person** (Shifts → "If nobody is on shift, the primary call is"). If the fallback person is on time off, it's the first person on the Supervisors list who isn't.
+
+**Time off** (Shifts → Time off in the dashboard):
+
+- Someone on time off **isn't shown on the page at all** and **isn't in the group text**, from their first day to their last day (Houston dates).
+- Their shifts go to the person **covering** for them, if one was chosen; that person then shows as the primary call or under Also working, with the shift. With nobody covering, the shift simply has one person fewer, and the next shift on (or the fallback person) takes over.
+- A night shift belongs to the day it **starts**: someone off from Saturday still works Friday's 22:00–06:00 shift until 06:00 on Saturday, and someone whose last day off is Friday doesn't work Friday's night shift.
+- If time off would leave nobody at all, it's ignored, so the page always has someone to call. (The dashboard won't publish that anyway.)
+- Nothing needs undoing afterwards: the person comes back on the day after their last day.
 
 **Shift timing rules:**
 
 - A shift is on from its start time up to, but not including, its end time. A 06:00–14:00 shift is on at 13:59 and off at 14:00.
 - A shift ending earlier than it starts runs past midnight and belongs to the day it **starts**. A 22:00–06:00 shift ticked for Friday covers Friday 22:00 to Saturday 06:00.
-- A shift with the same start and end time runs all day on its ticked days.
+- A shift with the same start and end time runs 24 hours from its start: 06:00–06:00 on Monday covers Monday 06:00 to Tuesday 06:00.
 
 With the default shifts, a weekday at 09:00 gives: primary call = 1st-shift lead; also working = the Day (8–5) staff; not scheduled = everyone else.
 
@@ -59,8 +67,8 @@ With the default shifts, a weekday at 09:00 gives: primary call = 1st-shift lead
 
 ## 3. The group text
 
-- It goes to **every** person on the People list. The text is sent by the family's phone, so it comes from their number and the yard can call or text them back.
-- The message comes from the dashboard (**People → Text message**, or **In Spanish** when the page is in Spanish), with `{driver}` replaced by the driver's name.
+- It goes to **every** person on the Supervisors list except anyone on time off today (someone still finishing last night's shift on their first day off is included until it ends). The text is sent by the family's phone, so it comes from their number and the yard can call or text them back.
+- The message comes from the dashboard (**Supervisors → Text message**, or **In Spanish** when the page is in Spanish), with `{driver}` replaced by the driver's name.
 - The family sees the message in Messages and must tap **Send** themselves. Nothing is sent automatically.
 - How the link is built:
 
@@ -148,13 +156,13 @@ The family never sees a technical error message. The backup number is printed on
 
 ## 8. WhatsApp, yard address, Save to Contacts, home screen
 
-**WhatsApp** (off unless supervisors switch it on in **People → WhatsApp**)
+**WhatsApp** (off unless supervisors switch it on in **Supervisors → WhatsApp**)
 
 - A **WhatsApp [name]** button under the primary Call button. It opens a WhatsApp chat with the primary call, with the emergency text already written; the family taps Send.
 - Only the primary call gets one: WhatsApp links can't message a group or several people at once.
 - Spanish page: **WhatsApp a [name]**, with the Spanish message.
 
-**Yard address** (**People → Yard address**; starts as 302 McCarty St, Houston, TX 77029; hidden if emptied)
+**Yard address** (**Supervisors → Yard address**; starts as 302 McCarty St, Houston, TX 77029; hidden if emptied)
 
 - Shown under the contacts with a **Directions** button (**Cómo llegar** in Spanish). It opens Apple Maps on iPhone and Google Maps everywhere else.
 

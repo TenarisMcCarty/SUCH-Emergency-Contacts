@@ -158,7 +158,10 @@ const textFor = () => {
 function renderTextButtons() {
   const t = T();
   $('driver').textContent = card.driver;
-  const numbers = card.contacts.map(c => clean(c.phone));
+  // Everyone who can be reached today, in the dashboard's order: people on time off are left out (arrange, schedule.js).
+  const { main, also, off } = arrange(card, yardNow(yardZone()));
+  const reach = new Set([main, ...also, ...off].filter(Boolean).map(e => e.contact.id));
+  const numbers = card.contacts.filter(c => reach.has(c.id)).map(c => clean(c.phone));
   const body = encodeURIComponent(textFor());
 
   // Group text to everyone. iPhone and Android need different link formats.
@@ -283,7 +286,7 @@ addEventListener('beforeinstallprompt', e => e.preventDefault());
 
 $('retry').onclick = load;
 addEventListener('hashchange', load);
-setInterval(() => card && renderOrder(), 60 * 1000); // keep the order right across shift changes
+setInterval(() => { if (card) { renderTextButtons(); renderOrder(); } }, 60 * 1000); // keep the order and the group text right across shift changes and days
 
 // Save a copy on the phone so the page still opens with weak or no data (see sw.js).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
