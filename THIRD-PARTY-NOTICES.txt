@@ -45,7 +45,7 @@ OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
 TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 
-source-sans-3-regular.woff2, source-sans-3-bold.woff2, source-sans-3-bold.ttf — Source Sans 3 by Adobe,
+source-sans-3-regular.woff2, source-sans-3-bold.woff2, source-sans-3-bold.ttf, source-sans-3-semibold.ttf — Source Sans 3 by Adobe,
 unmodified release files (https://github.com/adobe-fonts/source-sans, release branch). Licence:
 
 Copyright 2010-2024 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.

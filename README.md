@@ -38,7 +38,7 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 |---|---|---|
 | [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in with your email, your first sign-in, Forgot password?, people, shifts, cards, printing, publishing, history, changing your password, fixing common problems |
 | [Owner guide](docs/owner-guide.md) | Site owner | Owner password, recovery code, the GitHub token, people who can sign in (add, reset, remove), switching off the shared password, taking away access, starting over |
-| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card (specs, Bambu Studio project, printing in ASA/ABS), testing |
+| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card and keychain (specs, Bambu Studio project, printing in ABS or PETG), testing |
 | [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the call order is chosen, English/Spanish, offline behaviour, error messages |
 | [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
 | [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
@@ -74,7 +74,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
-- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (2.2 mm, NFC tag sealed inside), as a ready-to-print **Bambu Studio project (3MF)** for the chosen enclosed Bambu Lab printer (single- or two-nozzle) with the tag pause already set, or as **STL files** with print notes.
+- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (1.7 mm, NFC tag sealed inside) and a matching keychain (same link, the driver's initials), as ready-to-print **Bambu Studio projects (3MF)** for the chosen enclosed Bambu Lab printer (single- or two-nozzle) with the tag pause already set (card, keychain, or both on one plate), or as **STL files** with print notes.
 - **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
 - **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
 - **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or a sign-in, the data file is unreadable.
@@ -89,7 +89,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `index.html`, `app.js` | The emergency page families see |
 | `dashboard.html`, `dashboard.js` | The dashboard for supervisors and the owner |
 | `cardmaker.js` | Makes the 3D card (two STL parts, previews, print notes, ZIP) in the browser |
-| `bambu3mf.js`, `bambu-template.json` | Turns the two STL parts into a ready-to-print Bambu Studio project (3MF) |
+| `bambu3mf.js`, `bambu-template.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF), one piece or several on one plate |
 | `crypto.js` | Encryption, shared by both pages |
 | `schedule.js` | Works out who is on shift; Spanish shift names and times |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
@@ -97,7 +97,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `style.css` | Styling for both pages (Tenaris colours) |
 | `contacts.enc.json` | The encrypted data. **Written only by the dashboard's Publish button; never edit it by hand.** |
 | `logo.svg`, `logo.js` | The Tenaris signature: official full-colour artwork from tenaris.com, and the same outlines for the card maker |
-| `source-sans-3-*.woff2`, `source-sans-3-bold.ttf` | Source Sans 3 (free, in the style of Frutiger, the Tenaris typeface), for the pages and the printed cards |
+| `source-sans-3-*.woff2`, `source-sans-3-semibold.ttf` | Source Sans 3 (free, in the style of Frutiger, the Tenaris typeface), for the pages and the printed cards (`source-sans-3-bold.ttf` stays for older cached copies of the card maker) |
 | `qrcode.js`, `opentype.js`, `earcut.js` | Third-party libraries: QR encoder, font reader, shape triangulation (unmodified npm releases) |
 | `words.js` | Word lists for suggested passwords (HSE words; the EFF Large Wordlist for older cached copies) |
 | `THIRD-PARTY-NOTICES.txt` | Licences and credits for everything above that came from elsewhere |
@@ -113,7 +113,7 @@ Hosting is **GitHub Pages**, from the `main` branch, repository root. There is n
 - **Not yet tested on real phones or a real printer:**
   - the group-text links (iPhone and Samsung)
   - Save to Contacts and the WhatsApp button
-  - NFC reading through the 3D-printed card
+  - NFC reading through the 3D-printed card and keychain
   - a physical print of the 3D card
 
   Run the trial checklist in [Cards and printing](docs/cards-and-printing.md#trial-checklist) before making a batch.

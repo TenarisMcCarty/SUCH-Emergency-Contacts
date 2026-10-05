@@ -212,21 +212,23 @@ Each card (family or school) has its own secret link, written to its NFC tag and
 
 ## 6. Print & QR
 
-Everything needed to make the 3D-printed card, generated from the card's data.
+Everything needed to make the 3D-printed card and its keychain, generated from the card's data.
 
 1. Choose the **Card** at the top. A yellow note warns you if the card isn't published yet; its files only work after you publish.
-2. Check the two previews: the front (printed face down) and the back (printed on top).
-3. Download what you need:
+2. Check the four previews: the card's front and back, and the keychain's front and back, each as seen from its side. The keychain shows the driver's initials; to change them, type 1–3 letters in **Keychain initials**.
+3. Choose the **Printer** and **ABS** or **PETG** under **Filament**, then download what you need:
 
 | Button | Gives you |
 |---|---|
-| **Bambu Studio project (3MF)** | The card ready for the chosen Bambu Lab printer: both colours, settings and the pause for the NFC tag already set. Choose the **Printer** and **ASA** or **ABS** under **Filament** first. |
-| **STL files and print notes (ZIP)** | The dark and light parts as STL files, plus print notes with the settings and the pause height, for setting up the print yourself |
+| **Card (3MF)** | The card ready for the chosen Bambu Lab printer: both colours, settings and the pause for the NFC tag already set |
+| **Keychain (3MF)** | The keychain, the same way |
+| **Card + keychain, one plate (3MF)** | Both on one plate, with one pause for both tags |
+| **STL files and print notes (ZIP)** | The dark and light parts of the card and the keychain as STL files, plus print notes with the settings and the pause height, for setting up the print yourself |
 
-- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 PVC coin tag, 25.4 mm (1 in) across, 0.8 mm thick).
+- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 PVC coin tag, 25.4 mm (1 in) across, 0.8 mm thick). The keychain's tag gets the same link.
 - **Backup line:** a phone number printed on every card. If the page ever can't load, it tells families to call the backup number on their card, so set this before printing cards. Publish after changing it.
 
-If a driver's name can't print cleanly (too long, or characters the card can't print), both download buttons are disabled with a message. Shorten or fix the name with **People → Rename**.
+If a driver's name can't print cleanly (too long, or characters the card can't print), the card's download buttons are disabled with a message. Shorten or fix the name with **People → Rename**. If the keychain can't be made (no letters for initials), only its buttons are disabled.
 
 Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
@@ -297,8 +299,8 @@ Every publish adds an entry with the date and time, who published, and what chan
 
 **A new family or school needs a card**
 1. **People** → **Add card** → **Publish.**
-2. **Print & QR** → choose the card → **Bambu Studio project (3MF)**.
-3. Write the link to the NFC tag and print the card. See [Cards and printing](cards-and-printing.md).
+2. **Print & QR** → choose the card → **Card (3MF)** (or **Card + keychain, one plate (3MF)**).
+3. Write the link to the NFC tag (one per piece) and print. See [Cards and printing](cards-and-printing.md).
 4. Test it with a phone before handing it over.
 
 **A card was lost**

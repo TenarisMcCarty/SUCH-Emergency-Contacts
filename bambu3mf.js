@@ -2,7 +2,7 @@
  *
  *   <script src="bambu3mf.js" defer></script>      (the bambu-printers/ folder must sit next to it)
  *
- *   const bytes = await Bambu3MF.make({ black, white, name, pauseZ, layerHeight: 0.2, printer: 'H2D' });
+ *   const bytes = await Bambu3MF.make({ black, white, name, pauseZ, layerHeight: 0.1, printer: 'H2D', material: 'ABS' });
  *   // bytes: Uint8Array of a .3mf; save it as `${name}.3mf`
  *
  * black / white  binary STL (Uint8Array or ArrayBuffer) of the dark and the light part, same coordinate system:
@@ -14,19 +14,24 @@
  *                first layer that reaches above pauseZ, i.e. after the layer whose top is pauseZ.
  * layerHeight    0.2 (default). First layer is always 0.2 mm.
  * Optional:
+ * pieces         [{ black, white, name }, …] instead of black / white / name: several two-part objects on one plate
+ *                (a card and its keychain), side by side with 6 mm between them and centred as a group (clear of
+ *                the prime tower, which sits behind the middle of the plate).
+ *                They share the plate's one pause, so their pockets must have the same roof height (pauseZ).
  * printer        one of Bambu3MF.PRINTERS' ids (default 'P2S'): the enclosed Bambu Lab printers with a 0.4 mm
  *                nozzle, single- and two-nozzle. On the H2D, H2D Pro and X2D each colour gets its own nozzle
  *                (filament grouping "Manual": LIGHT = left nozzle, DARK = right), so the colours never share a
  *                nozzle: no purging, no tint of dark in the light lettering, and a faster print. (Bambu Studio's
  *                default, "Auto For Flush", put both colours on one nozzle in its command-line slicer.) The H2C
  *                keeps the automatic grouping.
- * material       'ASA' (default) or 'ABS' (Bambu ASA / Bambu ABS system filament presets for that printer)
+ * material       'ABS' (default) or 'PETG' (Bambu ABS / Bambu PETG HF system filament presets for that printer)
  * ironing        false (default). true = iron the topmost surface ("topmost"). Off by default: each colour is
  *                ironed by its own filament and the hot nozzle face can drag black onto neighbouring white
  *                QR modules, lowering scan contrast.
  *
  * Settings: the printer's "0.20mm Standard" process with overrides (100 % infill, 3 walls, Arachne, no brim,
- * no supports, prime tower on), plate: Textured PEI, bed at most 90 °C. They come from bambu-printers/<id>.json,
+ * no supports, prime tower on), plate: Textured PEI, bed at most 90 °C, and the wall and first-layer speeds of
+ * Bambu's "High Quality" presets for sharp lettering (DETAIL). They come from bambu-printers/<id>.json,
  * made by Bambu Studio itself from its system presets (tools/build_templates.py). bambu-template.json (P2S)
  * stays for older cached copies of this script.
  *
@@ -40,10 +45,14 @@ const Bambu3MF = (() => {
 
   const FIRST_LAYER = 0.2;
   const BED_MAX = 90; // °C, for the PVC NFC tag (see projectSettings)
+  // Slower walls for sharp lettering: the values of Bambu's own "0.12mm High Quality" process presets (outer walls
+  // 60 mm/s at 2000 mm/s², inner walls and top surface 150 mm/s), and a slower first layer for the face on the plate.
+  // Per extruder variant, never faster than the printer's preset.
+  const DETAIL = { outer_wall_speed: 60, outer_wall_acceleration: 2000, inner_wall_speed: 150, top_surface_speed: 150, initial_layer_speed: 30, initial_layer_infill_speed: 60 };
   const script = typeof document !== 'undefined' ? document.currentScript : null;
   const BASE_URL = script && script.src ? new URL('./', script.src).href : '';
   const enc = new TextEncoder();
-  // Enclosed Bambu Lab printers (ASA and ABS need an enclosure), 0.4 mm nozzle.
+  // Enclosed Bambu Lab printers (ABS needs an enclosure), 0.4 mm nozzle.
   const PRINTERS = [
     { id: 'H2D', label: 'H2D (two nozzles)', nozzles: 2 },
     { id: 'H2DP', label: 'H2D Pro (two nozzles)', nozzles: 2 },
@@ -263,9 +272,14 @@ const Bambu3MF = (() => {
     };
     setProcess('layer_height', String(round4(layerHeight)));
     setProcess('ironing_type', ironing ? 'topmost' : 'no ironing');
+    for (const [key, max] of Object.entries(DETAIL)) {
+      if (!Array.isArray(s[key])) continue;
+      const v = s[key].map(x => String(Math.min(Number(x), max)));
+      if (v.some((x, i) => x !== s[key][i])) { s[key] = v; diff.add(key); }
+    }
     s.different_settings_to_system[0] = [...diff].sort().join(';');
     // Bed at most 90 C: the PVC NFC tag sits in the card from the pause on, and PVC tags made for embedding are
-    // rated for beds up to 90 C. Bambu's own P2S presets use 90 C for ABS and Generic ASA (Bambu ASA: 100 C).
+    // rated for beds up to 90 C. Bambu's ABS presets use 90 C on the textured plate, PETG HF 70 C.
     // Filament keys changed from the system preset are listed per filament (entries 1…n), like process keys.
     const nf = s.filament_colour.length;
     for (const key of ['textured_plate_temp', 'textured_plate_temp_initial_layer', 'hot_plate_temp', 'hot_plate_temp_initial_layer', 'eng_plate_temp', 'eng_plate_temp_initial_layer']) {
@@ -283,8 +297,9 @@ const Bambu3MF = (() => {
   }
 
   // ---------- main ----------
-  async function make({ black, white, name = 'card', pauseZ, layerHeight = 0.2, printer = 'P2S', material = 'ASA', ironing = false, template } = {}) {
-    if (!black || !white) throw new Error('make(): black and white STL data are required');
+  async function make({ black, white, name = 'card', pieces, pauseZ, layerHeight = 0.2, printer = 'P2S', material = 'ABS', ironing = false, template } = {}) {
+    const list = pieces || [{ black, white, name }];
+    if (!list.length || list.some(p => !p.black || !p.white)) throw new Error('make(): black and white STL data are required');
     if (typeof pauseZ !== 'number' || !isFinite(pauseZ)) throw new Error('make(): pauseZ (mm) is required');
     if (!(layerHeight >= 0.04 && layerHeight <= 0.32)) throw new Error('make(): layerHeight out of range');
     const tpl = template || await loadTemplate(printer);
@@ -300,38 +315,46 @@ const Bambu3MF = (() => {
       settings.filament_nozzle_map = ['0', '1'];
     }
 
-    const pw = stlMesh(white, 'white'), pb = stlMesh(black, 'black');
-    const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
-    for (const { pos: p } of [pw, pb]) for (let i = 0; i < p.length; i += 3) for (let c = 0; c < 3; c++) {
-      if (p[i + c] < lo[c]) lo[c] = p[i + c];
-      if (p[i + c] > hi[c]) hi[c] = p[i + c];
-    }
-    // Object origin: centre of the combined footprint, bottom of the card. Both parts share it, so their
-    // relative position is exactly the STL position.
-    const off = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]];
-    const height = hi[2] - lo[2];
+    // Each piece: one object with a LIGHT part (filament 1) and a DARK part (filament 2). Its origin is the centre
+    // of its footprint at the bottom, so both parts keep exactly their STL positions relative to each other.
     const pause = pauseLayer(pauseZ, layerHeight);
-    if (pause.topZ > height + 1e-3) throw new Error(`pauseZ ${pauseZ} is above the top of the card (${round4(height)} mm)`);
+    const objs = list.map((pc, i) => {
+      const pw = stlMesh(pc.white, 'white'), pb = stlMesh(pc.black, 'black');
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (const { pos: p } of [pw, pb]) for (let k = 0; k < p.length; k += 3) for (let c = 0; c < 3; c++) {
+        if (p[k + c] < lo[c]) lo[c] = p[k + c];
+        if (p[k + c] > hi[c]) hi[c] = p[k + c];
+      }
+      if (pause.topZ > hi[2] - lo[2] + 1e-3) throw new Error(`pauseZ ${pauseZ} is above the top of the piece (${round4(hi[2] - lo[2])} mm)`);
+      const n = list.length;
+      return { pw, pb, name: pc.name || name, off: [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2]], width: hi[0] - lo[0],
+        id: 2 * n + 1 + i, file: `3D/Objects/object_${i + 1}.model`,
+        parts: [{ id: 2 * i + 1, label: 'LIGHT', p: pw, filament: 1 }, { id: 2 * i + 2, label: 'DARK', p: pb, filament: 2 }] };
+    });
 
     const area = settings.printable_area.map(s => s.split('x').map(Number));
     const bedX = (Math.min(...area.map(a => a[0])) + Math.max(...area.map(a => a[0]))) / 2;
     const bedY = (Math.min(...area.map(a => a[1])) + Math.max(...area.map(a => a[1]))) / 2;
-    const place = `1 0 0 0 1 0 0 0 1 ${num(bedX)} ${num(bedY)} 0`;
+    // Left to right (the first piece on the left), 6 mm apart, centred as a group. Side by side keeps them low on
+    // the plate, clear of the prime tower behind (stacked front to back, a card and a keychain reach it on the H2S).
+    const GAP = 6, total = objs.reduce((t, o) => t + o.width, 0) + GAP * (objs.length - 1);
+    let x = bedX - total / 2;
+    for (const o of objs) { o.place = `1 0 0 0 1 0 0 0 1 ${num(x + o.width / 2)} ${num(bedY)} 0`; x += o.width + GAP; }
 
-    const OBJ = 3, parts = [{ id: 1, label: 'LIGHT', p: pw, filament: 1 }, { id: 2, label: 'DARK', p: pb, filament: 2 }];
-    const objectLines = [];
-    for (const part of parts) {
-      const m = meshObject(part.p, part.id, `${hex8((OBJ << 16) | (part.id - 1))}-81cb-4c03-9d28-80fed5dfa1dc`, off);
-      if (!m.faces) throw new Error(`${part.label} STL has no triangles`);
-      part.faces = m.faces;
-      objectLines.push(...m.xml);
-    }
+    const objectModels = objs.map(o => {
+      const lines = [];
+      for (const part of o.parts) {
+        const m = meshObject(part.p, part.id, `${hex8((o.id << 16) | (part.id - 1))}-81cb-4c03-9d28-80fed5dfa1dc`, o.off);
+        if (!m.faces) throw new Error(`${part.label} STL has no triangles`);
+        part.faces = m.faces;
+        for (const l of m.xml) lines.push(l); // one at a time: a spread of 100 000+ lines exceeds the browser's argument limit
+      }
+      return ['<?xml version="1.0" encoding="UTF-8"?>', `<model ${NS}>`,
+        ' <metadata name="BambuStudio:3mfVersion">1</metadata>', ' <resources>', ...lines, ' </resources>',
+        '</model>', ''].join('\n');
+    });
     const day = new Date().toISOString().slice(0, 10);
     const title = esc(name);
-
-    const objectModel = ['<?xml version="1.0" encoding="UTF-8"?>', `<model ${NS}>`,
-      ' <metadata name="BambuStudio:3mfVersion">1</metadata>', ' <resources>', ...objectLines, ' </resources>',
-      '</model>', ''].join('\n');
 
     const meta = [['Application', tpl.app], ['BambuStudio:3mfVersion', '1'], ['Copyright', ''], ['CreationDate', day],
       ['Description', ''], ['Designer', ''], ['DesignerCover', ''], ['DesignerUserId', ''], ['License', ''],
@@ -339,31 +362,36 @@ const Bambu3MF = (() => {
       ['Title', title]];
     const rootModel = ['<?xml version="1.0" encoding="UTF-8"?>', `<model ${NS}>`,
       ...meta.map(([k, v]) => ` <metadata name="${k}">${v}</metadata>`),
-      ' <resources>', `  <object id="${OBJ}" p:UUID="${hex8(OBJ)}-61cb-4c03-9d28-80fed5dfa1dc" type="model">`, '   <components>',
-      ...parts.map((pt, i) => `    <component p:path="/3D/Objects/object_1.model" objectid="${pt.id}" p:UUID="${hex8((OBJ << 16) | i)}-b206-40ff-9872-83e8017abed1" transform="${IDENT}"/>`),
-      '   </components>', '  </object>', ' </resources>',
+      ' <resources>',
+      ...objs.flatMap(o => [`  <object id="${o.id}" p:UUID="${hex8(o.id)}-61cb-4c03-9d28-80fed5dfa1dc" type="model">`, '   <components>',
+        ...o.parts.map((pt, i) => `    <component p:path="/${o.file}" objectid="${pt.id}" p:UUID="${hex8((o.id << 16) | i)}-b206-40ff-9872-83e8017abed1" transform="${IDENT}"/>`),
+        '   </components>', '  </object>']),
+      ' </resources>',
       ' <build p:UUID="2c7c17d8-22b5-4d84-8835-1976022ea369">',
-      `  <item objectid="${OBJ}" p:UUID="${hex8(OBJ)}-b1ec-4553-aec9-835e5b724bb4" transform="${place}" printable="1"/>`,
+      ...objs.map(o => `  <item objectid="${o.id}" p:UUID="${hex8(o.id)}-b1ec-4553-aec9-835e5b724bb4" transform="${o.place}" printable="1"/>`),
       ' </build>', '</model>', ''].join('\n');
 
     const nf = settings.filament_colour.length;
-    const modelSettings = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>', `  <object id="${OBJ}">`,
-      `    <metadata key="name" value="${title}"/>`, '    <metadata key="extruder" value="1"/>',
-      `    <metadata face_count="${parts[0].faces + parts[1].faces}"/>`,
-      ...parts.flatMap(pt => [
-        `    <part id="${pt.id}" subtype="normal_part">`,
-        `      <metadata key="name" value="${title} ${pt.label}"/>`,
-        '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>',
-        `      <metadata key="extruder" value="${pt.filament}"/>`,
-        `      <mesh_stat face_count="${pt.faces}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/>`,
-        '    </part>']),
-      '  </object>', '  <plate>', '    <metadata key="plater_id" value="1"/>', '    <metadata key="plater_name" value=""/>',
+    const modelSettings = ['<?xml version="1.0" encoding="UTF-8"?>', '<config>',
+      ...objs.flatMap(o => [`  <object id="${o.id}">`,
+        `    <metadata key="name" value="${esc(o.name)}"/>`, '    <metadata key="extruder" value="1"/>',
+        `    <metadata face_count="${o.parts[0].faces + o.parts[1].faces}"/>`,
+        ...o.parts.flatMap(pt => [
+          `    <part id="${pt.id}" subtype="normal_part">`,
+          `      <metadata key="name" value="${esc(o.name)} ${pt.label}"/>`,
+          '      <metadata key="matrix" value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>',
+          `      <metadata key="extruder" value="${pt.filament}"/>`,
+          `      <mesh_stat face_count="${pt.faces}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/>`,
+          '    </part>']),
+        '  </object>']),
+      '  <plate>', '    <metadata key="plater_id" value="1"/>', '    <metadata key="plater_name" value=""/>',
       '    <metadata key="locked" value="false"/>', `    <metadata key="filament_map_mode" value="${esc(settings.filament_map_mode)}"/>`,
       `    <metadata key="filament_maps" value="${settings.filament_map.join(' ')}"/>`,
       `    <metadata key="filament_volume_maps" value="${Array(nf).fill(0).join(' ')}"/>`,
-      '    <model_instance>', `      <metadata key="object_id" value="${OBJ}"/>`, '      <metadata key="instance_id" value="0"/>',
-      '      <metadata key="identify_id" value="100"/>', '    </model_instance>', '  </plate>', '  <assemble>',
-      `   <assemble_item object_id="${OBJ}" instance_id="0" transform="${place}" offset="0 0 0" />`, '  </assemble>',
+      ...objs.flatMap((o, i) => ['    <model_instance>', `      <metadata key="object_id" value="${o.id}"/>`, '      <metadata key="instance_id" value="0"/>',
+        `      <metadata key="identify_id" value="${100 + i}"/>`, '    </model_instance>']),
+      '  </plate>', '  <assemble>',
+      ...objs.map(o => `   <assemble_item object_id="${o.id}" instance_id="0" transform="${o.place}" offset="0 0 0" />`), '  </assemble>',
       '</config>', ''].join('\n');
 
     // Same element the GUI writes for layer slider -> right click -> "Add Pause" (type 1 = PausePrint).
@@ -385,9 +413,9 @@ const Bambu3MF = (() => {
       ['3D/3dmodel.model', rootModel],
       ['3D/_rels/3dmodel.model.rels', ['<?xml version="1.0" encoding="UTF-8"?>',
         '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
-        ' <Relationship Target="/3D/Objects/object_1.model" Id="rel-1" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>',
+        ...objs.map((o, i) => ` <Relationship Target="/${o.file}" Id="rel-${i + 1}" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/>`),
         '</Relationships>', ''].join('\n')],
-      ['3D/Objects/object_1.model', objectModel],
+      ...objs.map((o, i) => [o.file, objectModels[i]]),
       ['Metadata/project_settings.config', JSON.stringify(settings, null, 4) + '\n'],
       ['Metadata/model_settings.config', modelSettings],
       ['Metadata/custom_gcode_per_layer.xml', customGcode],
@@ -399,5 +427,5 @@ const Bambu3MF = (() => {
     return zip(files.map(([n, text]) => ({ name: n, data: enc.encode(text) })));
   }
 
-  return { make, pauseLayer, loadTemplate, zipWriter, PRINTERS, FIRST_LAYER };
+  return { make, pauseLayer, loadTemplate, zipWriter, PRINTERS, FIRST_LAYER, PIECES: true };
 })();

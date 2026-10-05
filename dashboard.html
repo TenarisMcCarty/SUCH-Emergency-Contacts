@@ -292,25 +292,33 @@
           <p id="print-msg" class="msg bad" hidden></p>
 
           <div class="card-previews">
-            <figure><div id="preview-front" class="card-preview"></div><figcaption>Front</figcaption></figure>
-            <figure><div id="preview-back" class="card-preview"></div><figcaption>Back</figcaption></figure>
+            <figure><div id="preview-front" class="card-preview"></div><figcaption>Card front</figcaption></figure>
+            <figure><div id="preview-back" class="card-preview"></div><figcaption>Card back</figcaption></figure>
+          </div>
+          <div id="key-previews" class="card-previews key-previews" hidden>
+            <figure><div id="preview-key-front" class="card-preview"></div><figcaption>Keychain front</figcaption></figure>
+            <figure><div id="preview-key-back" class="card-preview"></div><figcaption>Keychain back</figcaption></figure>
           </div>
 
           <div class="pair">
             <div>
-              <h2 class="section">3D-printed card</h2>
-              <p class="small muted">Enclosed Bambu Lab printer · AMS · 0.4 mm nozzle · one dark + one light filament · NTAG215 PVC coin tag, 25.4 × 0.8 mm</p>
+              <h2 class="section">3D print</h2>
+              <p class="small muted">Enclosed Bambu Lab printer · AMS · 0.4 mm nozzle · one dark + one light filament · NTAG215 PVC coin tag, 25.4 × 0.8 mm, one per piece</p>
               <div class="field-row">
                 <div><label for="print-printer">Printer</label>
                 <select id="print-printer"></select></div>
                 <div><label for="print-material">Filament</label>
                 <select id="print-material">
-                  <option value="ASA" selected>ASA</option>
-                  <option value="ABS">ABS</option>
+                  <option value="ABS" selected>ABS</option>
+                  <option value="PETG">PETG</option>
                 </select></div>
+                <div id="key-initials-field" hidden><label for="key-initials">Keychain initials</label>
+                <input id="key-initials" class="initials" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
               </div>
               <div class="btn-row">
-                <button id="dl-3mf" class="btn btn-primary" type="button">Bambu Studio project (3MF)</button>
+                <button id="dl-3mf" class="btn btn-primary" type="button">Card (3MF)</button>
+                <button id="dl-key-3mf" class="btn btn-light" type="button" disabled>Keychain (3MF)</button>
+                <button id="dl-set-3mf" class="btn btn-light" type="button" disabled>Card + keychain, one plate (3MF)</button>
                 <button id="dl-stl" class="btn btn-light" type="button">STL files and print notes (ZIP)</button>
               </div>
             </div>
@@ -421,8 +429,8 @@
               <select id="all-printer"></select></div>
               <div><label for="all-material">Filament</label>
               <select id="all-material">
-                <option value="ASA" selected>ASA</option>
-                <option value="ABS">ABS</option>
+                <option value="ABS" selected>ABS</option>
+                <option value="PETG">PETG</option>
               </select></div>
             </div>
             <div class="btn-row">

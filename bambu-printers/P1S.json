@@ -1,5 +1,5 @@
 {
- "about": "Bambu Studio project settings for bambu3mf.js: printer \"Bambu Lab P1S 0.4 nozzle\", process \"0.20mm Standard @BBL X1C\" (+ the card's overrides, listed in different_settings_to_system[0]), filaments \"Bambu ASA @BBL X1C 0.4 nozzle\" / \"Bambu ABS @BBL P1S 0.4 nozzle\". Made by Bambu Studio 02.08.02.61 itself (CLI re-target of a two-part card project to these system presets). Regenerate when Bambu Studio updates its presets.",
+ "about": "Bambu Studio project settings for bambu3mf.js: printer \"Bambu Lab P1S 0.4 nozzle\", process \"0.20mm Standard @BBL X1C\" (+ the card's overrides, listed in different_settings_to_system[0]), filaments \"Bambu ABS @BBL P1S 0.4 nozzle\" (ABS, the base) / \"Bambu PETG HF @BBL P1S 0.4 nozzle\" (PETG, as a patch). Made by Bambu Studio 02.08.02.61 itself (CLI re-target of a two-part card project to these system presets). Regenerate when Bambu Studio updates its presets.",
  "app": "BambuStudio-02.08.02.61",
  "printer": {
   "id": "P1S",
@@ -16,121 +16,189 @@
   "layer_height": "0.2"
  },
  "materials": {
-  "ASA": {},
-  "ABS": {
-   "chamber_temperatures": [
+  "ABS": {},
+  "PETG": {
+   "activate_air_filtration": [
     "0",
     "0"
    ],
    "eng_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "eng_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "fan_cooling_layer_time": [
-    "30",
-    "30"
+    "20",
+    "20"
    ],
    "fan_max_speed": [
-    "60",
-    "60"
+    "40",
+    "40"
    ],
-   "filament_cost": [
-    "19.99",
-    "19.99"
+   "fan_min_speed": [
+    "20",
+    "20"
+   ],
+   "filament_adhesiveness_category": [
+    "300",
+    "300"
+   ],
+   "filament_change_length": [
+    "12",
+    "12"
    ],
    "filament_density": [
-    "1.04",
-    "1.04"
+    "1.28",
+    "1.28"
    ],
    "filament_deretraction_speed": [
     "nil",
-    "40",
     "nil",
-    "40"
+    "nil",
+    "nil"
    ],
    "filament_dev_ams_drying_heat_distortion_temperature": [
-    "90",
-    "90"
-   ],
-   "filament_dev_drying_cooling_temperature": [
     "75",
     "75"
    ],
-   "filament_dev_drying_softening_temperature": [
+   "filament_dev_chamber_drying_bed_temperature": [
     "80",
     "80"
    ],
+   "filament_dev_drying_cooling_temperature": [
+    "55",
+    "55"
+   ],
+   "filament_dev_drying_softening_temperature": [
+    "60",
+    "60"
+   ],
+   "filament_flow_ratio": [
+    "0.95",
+    "0.952",
+    "0.95",
+    "0.952"
+   ],
    "filament_ids": [
-    "GFB00",
-    "GFB00"
+    "GFG02",
+    "GFG02"
    ],
    "filament_long_retractions_when_cut": [
     "1",
-    "nil",
     "1",
-    "nil"
+    "1",
+    "1"
    ],
    "filament_max_volumetric_speed": [
-    "16",
-    "25",
-    "16",
-    "25"
+    "21",
+    "29",
+    "21",
+    "29"
+   ],
+   "filament_metal_stickiness": [
+    "High",
+    "High"
+   ],
+   "filament_prime_volume": [
+    "30",
+    "30"
    ],
    "filament_retraction_distances_when_cut": [
     "18",
-    "nil",
     "18",
-    "nil"
+    "18",
+    "18"
    ],
    "filament_retraction_length": [
+    "nil",
     "0.4",
-    "0.4",
-    "0.4",
+    "nil",
     "0.4"
    ],
    "filament_retraction_speed": [
     "nil",
-    "40",
     "nil",
-    "40"
+    "nil",
+    "nil"
    ],
    "filament_settings_id": [
-    "Bambu ABS @BBL P1S 0.4 nozzle",
-    "Bambu ABS @BBL P1S 0.4 nozzle"
+    "Bambu PETG HF @BBL P1S 0.4 nozzle",
+    "Bambu PETG HF @BBL P1S 0.4 nozzle"
+   ],
+   "filament_start_gcode": [
+    "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}",
+    "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
    ],
    "filament_type": [
-    "ABS",
-    "ABS"
+    "PETG",
+    "PETG"
    ],
    "hot_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "hot_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "impact_strength_z": [
-    "7.4",
-    "7.4"
+    "10.6",
+    "10.6"
+   ],
+   "nozzle_temperature": [
+    "245",
+    "245",
+    "245",
+    "245"
    ],
    "nozzle_temperature_initial_layer": [
-    "260",
-    "260",
-    "260",
-    "260"
+    "230",
+    "230",
+    "230",
+    "230"
+   ],
+   "nozzle_temperature_range_high": [
+    "270",
+    "270"
+   ],
+   "nozzle_temperature_range_low": [
+    "230",
+    "230"
+   ],
+   "overhang_fan_speed": [
+    "100",
+    "100"
+   ],
+   "overhang_fan_threshold": [
+    "10%",
+    "10%"
+   ],
+   "slow_down_layer_time": [
+    "10",
+    "10"
+   ],
+   "supertack_plate_temp": [
+    "70",
+    "70"
+   ],
+   "supertack_plate_temp_initial_layer": [
+    "70",
+    "70"
+   ],
+   "temperature_vitrification": [
+    "70",
+    "70"
    ],
    "textured_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "textured_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ]
   }
  },
@@ -187,8 +255,8 @@
   "brim_type": "no_brim",
   "brim_width": "5",
   "chamber_temperatures": [
-   "60",
-   "60"
+   "0",
+   "0"
   ],
   "change_filament_gcode": ";=P1S 20251031=\nM620 S[next_extruder]A\nM204 S9000\nG1 Z{max_layer_z + 3.0} F1200\n\nG1 X70 F21000\nG1 Y245\nG1 Y265 F3000\nM400\nM106 P1 S0\nM106 P2 S0\n{if old_filament_temp > 142 && next_extruder < 255}\nM104 S[old_filament_temp]\n{endif}\n{if long_retractions_when_cut[previous_extruder]}\nM620.11 S1 I[previous_extruder] E-{retraction_distances_when_cut[previous_extruder]} F{flush_volumetric_speeds[previous_extruder]/2.4053*60}\n{else}\nM620.11 S0\n{endif}\nM400\nG1 X90 F3000\nG1 Y255 F4000\nG1 X100 F5000\nG1 X120 F15000\nG1 X20 Y50 F21000\nG1 Y-3\n{if toolchange_count == 2}\n; get travel path for change filament\nM620.1 X[travel_point_1_x] Y[travel_point_1_y] F21000 P0\nM620.1 X[travel_point_2_x] Y[travel_point_2_y] F21000 P1\nM620.1 X[travel_point_3_x] Y[travel_point_3_y] F21000 P2\n{endif}\nM620.1 E F{flush_volumetric_speeds[previous_extruder]/2.4053*60} T{flush_temperatures[previous_extruder]}\nT[next_extruder]\nM620.1 E F{flush_volumetric_speeds[next_extruder]/2.4053*60} T{flush_temperatures[next_extruder]}\n\n{if next_extruder < 255}\n{if long_retractions_when_cut[previous_extruder]}\nM620.11 S1 I[previous_extruder] E{retraction_distances_when_cut[previous_extruder]} F{flush_volumetric_speeds[previous_extruder]/2.4053*60}\nM628 S1\nG92 E0\nG1 E{retraction_distances_when_cut[previous_extruder]} F{flush_volumetric_speeds[previous_extruder]/2.4053*60}\nM400\nM629 S1\n{else}\nM620.11 S0\n{endif}\nG92 E0\n{if flush_length_1 > 1}\nM83\n; FLUSH_START\n; always use highest temperature to flush\nM400\n{if filament_type[next_extruder] == \"PETG\"}\nM109 S260\n{elsif filament_type[next_extruder] == \"PVA\"}\nM109 S210\n{else}\nM109 S{flush_temperatures[next_extruder]}\n{endif}\n{if flush_length_1 > 23.7}\nG1 E23.7 F{flush_volumetric_speeds[previous_extruder]/2.4053*60} ; do not need pulsatile flushing for start part\nG1 E{(flush_length_1 - 23.7) * 0.02} F50\nG1 E{(flush_length_1 - 23.7) * 0.23} F{flush_volumetric_speeds[previous_extruder]/2.4053*60}\nG1 E{(flush_length_1 - 23.7) * 0.02} F50\nG1 E{(flush_length_1 - 23.7) * 0.23} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{(flush_length_1 - 23.7) * 0.02} F50\nG1 E{(flush_length_1 - 23.7) * 0.23} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{(flush_length_1 - 23.7) * 0.02} F50\nG1 E{(flush_length_1 - 23.7) * 0.23} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\n{else}\nG1 E{flush_length_1} F{flush_volumetric_speeds[previous_extruder]/2.4053*60}\n{endif}\n; FLUSH_END\nG1 E-[old_retract_length_toolchange] F1800\nG1 E[old_retract_length_toolchange] F300\n{endif}\n\n{if flush_length_2 > 1}\n\nG91\nG1 X3 F12000; move aside to extrude\nG90\nM83\n\n; FLUSH_START\nG1 E{flush_length_2 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_2 * 0.02} F50\nG1 E{flush_length_2 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_2 * 0.02} F50\nG1 E{flush_length_2 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_2 * 0.02} F50\nG1 E{flush_length_2 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_2 * 0.02} F50\nG1 E{flush_length_2 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_2 * 0.02} F50\n; FLUSH_END\nG1 E-[new_retract_length_toolchange] F1800\nG1 E[new_retract_length_toolchange] F300\n{endif}\n\n{if flush_length_3 > 1}\n\nG91\nG1 X3 F12000; move aside to extrude\nG90\nM83\n\n; FLUSH_START\nG1 E{flush_length_3 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_3 * 0.02} F50\nG1 E{flush_length_3 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_3 * 0.02} F50\nG1 E{flush_length_3 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_3 * 0.02} F50\nG1 E{flush_length_3 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_3 * 0.02} F50\nG1 E{flush_length_3 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_3 * 0.02} F50\n; FLUSH_END\nG1 E-[new_retract_length_toolchange] F1800\nG1 E[new_retract_length_toolchange] F300\n{endif}\n\n{if flush_length_4 > 1}\n\nG91\nG1 X3 F12000; move aside to extrude\nG90\nM83\n\n; FLUSH_START\nG1 E{flush_length_4 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_4 * 0.02} F50\nG1 E{flush_length_4 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_4 * 0.02} F50\nG1 E{flush_length_4 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_4 * 0.02} F50\nG1 E{flush_length_4 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_4 * 0.02} F50\nG1 E{flush_length_4 * 0.18} F{flush_volumetric_speeds[next_extruder]/2.4053*60}\nG1 E{flush_length_4 * 0.02} F50\n; FLUSH_END\n{endif}\n; FLUSH_START\nM400\nM109 S[new_filament_temp]\nG1 E2 F{flush_volumetric_speeds[next_extruder]/2.4053*60} ;Compensate for filament spillage during waiting temperature\n; FLUSH_END\nM400\nG92 E0\nG1 E-[new_retract_length_toolchange] F1800\nM106 P1 S255\nM400 S3\n\nG1 X70 F5000\nG1 X90 F3000\nG1 Y255 F4000\nG1 X105 F5000\nG1 Y265 F5000\nG1 X70 F10000\nG1 X100 F5000\nG1 X70 F10000\nG1 X100 F5000\n\nG1 X70 F10000\nG1 X80 F15000\nG1 X60\nG1 X80\nG1 X60\nG1 X80 ; shake to put down garbage\nG1 X100 F5000\nG1 X165 F15000; wipe and shake\nG1 Y256 ; move Y to aside, prevent collision\nM400\nG1 Z{max_layer_z + 3.0} F3000\n{if layer_z <= (initial_layer_print_height + 0.001)}\nM204 S[initial_layer_acceleration]\n{else}\nM204 S[default_acceleration]\n{endif}\n{else}\nG1 X[x_after_toolchange] Y[y_after_toolchange] Z[z_after_toolchange] F12000\n{endif}\nM621 S[next_extruder]A\n",
   "circle_compensation_manual_offset": "0",
@@ -319,12 +387,12 @@
   "enable_wrapping_detection": "0",
   "enforce_support_layers": "0",
   "eng_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "eng_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "ensure_vertical_shell_thickness": "enabled",
   "exclude_object": "1",
@@ -360,13 +428,13 @@
    "Direct Drive Standard,Direct Drive High Flow"
   ],
   "fan_cooling_layer_time": [
-   "35",
-   "35"
+   "30",
+   "30"
   ],
   "fan_direction": "left",
   "fan_max_speed": [
-   "35",
-   "35"
+   "60",
+   "60"
   ],
   "fan_min_speed": [
    "10",
@@ -412,26 +480,26 @@
    "0"
   ],
   "filament_cost": [
-   "26.99",
-   "26.99"
+   "19.99",
+   "19.99"
   ],
   "filament_density": [
-   "1.05",
-   "1.05"
+   "1.04",
+   "1.04"
   ],
   "filament_deretraction_speed": [
    "nil",
+   "40",
    "nil",
-   "nil",
-   "nil"
+   "40"
   ],
   "filament_dev_ams_drying_ams_limitations": [
    "1",
    "1"
   ],
   "filament_dev_ams_drying_heat_distortion_temperature": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "filament_dev_ams_drying_temperature": [
    "65",
@@ -462,12 +530,12 @@
    "12"
   ],
   "filament_dev_drying_cooling_temperature": [
-   "85",
-   "85"
+   "75",
+   "75"
   ],
   "filament_dev_drying_softening_temperature": [
-   "85",
-   "85"
+   "80",
+   "80"
   ],
   "filament_diameter": [
    "1.75",
@@ -518,8 +586,8 @@
    "0"
   ],
   "filament_ids": [
-   "GFB01",
-   "GFB01"
+   "GFB00",
+   "GFB00"
   ],
   "filament_is_mixed": [
    "0"
@@ -530,9 +598,9 @@
   ],
   "filament_long_retractions_when_cut": [
    "1",
+   "nil",
    "1",
-   "1",
-   "1"
+   "nil"
   ],
   "filament_map": [
    "1",
@@ -540,9 +608,9 @@
   ],
   "filament_map_mode": "Auto For Flush",
   "filament_max_volumetric_speed": [
-   "18",
+   "16",
    "25",
-   "18",
+   "16",
    "25"
   ],
   "filament_metal_stickiness": [
@@ -690,14 +758,14 @@
   ],
   "filament_retraction_distances_when_cut": [
    "18",
+   "nil",
    "18",
-   "18",
-   "18"
+   "nil"
   ],
   "filament_retraction_length": [
-   "nil",
    "0.4",
-   "nil",
+   "0.4",
+   "0.4",
    "0.4"
   ],
   "filament_retraction_minimum_travel": [
@@ -708,9 +776,9 @@
   ],
   "filament_retraction_speed": [
    "nil",
+   "40",
    "nil",
-   "nil",
-   "nil"
+   "40"
   ],
   "filament_scarf_gap": [
    "0%",
@@ -735,8 +803,8 @@
    "2"
   ],
   "filament_settings_id": [
-   "Bambu ASA @BBL X1C 0.4 nozzle",
-   "Bambu ASA @BBL X1C 0.4 nozzle"
+   "Bambu ABS @BBL P1S 0.4 nozzle",
+   "Bambu ABS @BBL P1S 0.4 nozzle"
   ],
   "filament_shrink": [
    "100%",
@@ -771,8 +839,8 @@
    "4"
   ],
   "filament_type": [
-   "ASA",
-   "ASA"
+   "ABS",
+   "ABS"
   ],
   "filament_velocity_adaptation_factor": [
    "1",
@@ -894,12 +962,12 @@
   ],
   "host_type": "octoprint",
   "hot_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "hot_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "hotend_cooling_rate": [
    "2",
@@ -910,8 +978,8 @@
    "2"
   ],
   "impact_strength_z": [
-   "4.9",
-   "4.9"
+   "7.4",
+   "7.4"
   ],
   "independent_support_layer_height": "1",
   "infill_combination": "0",
@@ -1135,10 +1203,10 @@
    "270"
   ],
   "nozzle_temperature_initial_layer": [
-   "270",
-   "270",
-   "270",
-   "270"
+   "260",
+   "260",
+   "260",
+   "260"
   ],
   "nozzle_temperature_range_high": [
    "280",
@@ -1509,12 +1577,12 @@
   ],
   "template_custom_gcode": "",
   "textured_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "textured_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "thick_bridges": "0",
   "thumbnail_size": [

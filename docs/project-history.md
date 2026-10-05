@@ -99,9 +99,9 @@ Every choice the owner made, with the reason. When in doubt later, these are the
 |---|---|
 | **Only the 3D card**; paper card, 4×6 label and plain QR downloads removed | Keep things simple. The Print & QR tab offers the **Bambu Studio project (3MF)** or **STL files with print notes (ZIP)**. |
 | One NFC tag: **NTAG215 round sticker, 25 mm, 0.8 mm thick** (white coin stickers, bought in 50s) | Uniform cards; the sticker-thickness choice was removed. |
-| Printer: **Bambu Lab P2S, 0.4 mm nozzle, AMS**; material **ASA or ABS** | Longevity in a wallet. |
+| Printer: **Bambu Lab P2S, 0.4 mm nozzle, AMS**; material **ASA or ABS** (from 2026-10-05: **ABS or PETG**, ASA dropped by the owner; any enclosed Bambu printer) | Longevity in a wallet. |
 | **Two colours** (black + white) on the 3D card | Owner's printer setup; the brand guide allows the one-colour (white on black) signature. |
-| **Logo side printed face down**, tag sealed inside, card 2.2 mm | The front gets the plate's flat finish and can never show the pocket; sturdy but still fits a wallet. |
+| **Logo side printed face down**, tag sealed inside, card 2.2 mm (until 2026-10-05; now **face up, 1.7 mm**) | The front gets the plate's flat finish and can never show the pocket; sturdy but still fits a wallet. Changed after the first trial print: on the plate the letters came out grainy; on top they're traced by walls. |
 | **Minimal, larger text**: front = logo, EMERGENCY CONTACT, driver name; back = QR, SCAN OR TAP, small tap symbol, backup number, LIFE-THREATENING? CALL 911 | Small text doesn't 3D-print cleanly; the old three-line instruction band and the big "TAP PHONE HERE" ring were removed. Smallest capitals 3.5 mm. |
 
 ### Process
@@ -153,9 +153,10 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
    - small lettering (2.3 mm minimum)
    - a matching paper card and label
 2. **Intermediate (staging only):** "EMERGENCY CONTACT" made the big text and the name small. The owner liked the hierarchy, but small text doesn't suit 3D printing.
-3. **Final (live since `3c5c9d8`):** the wallet card below.
+3. **Wallet card, face down (live from `3c5c9d8` until the 2026-10-05 redesign):** the spec below, kept for the record.
+4. **Current: face up, 1.7 mm, with a keychain** (2026-10-05, after the first trial print): see the [2026-10-05 entry](#2026-10-05-thinner-card-with-sharper-lettering-911-line-removed-keychain) and [cards-and-printing.md](cards-and-printing.md) for the current spec.
 
-**Final spec** (details in [cards-and-printing.md](cards-and-printing.md) and [technical.md section 6](technical.md#6-the-card-maker)):
+**Wallet card spec, version 3** (superseded; the current spec is in [cards-and-printing.md](cards-and-printing.md) and [technical.md section 6](technical.md#6-the-card-maker)):
 
 | Item | Value |
 |---|---|
@@ -227,6 +228,21 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
 - **Tab names:** People → **Supervisors**, Cards → **People** (owner's wording); buttons and messages follow (Add supervisor, Open Supervisors).
 - **Passwords:** suggested and temporary passwords are five words from a 601-word HSE list (`HSE_WORDS` in `words.js`), two digits and a symbol, about 56 bits (was two words, about 36 bits). The list was pruned after review for reading out by phone: no soundalikes, plurals, spelling variants, often-misspelled words or near-duplicates. People can still choose their own shorter password; the minimum went from 8 to 10 characters (still with a number and a symbol).
 - **Older cached files:** time off lives inside `schedule`, which every dashboard version copies as a whole, so an older dashboard publishing in the 10-minute window keeps it. An older `schedule.js` ignores it (the dashboard then hides the section); an older `app.js` with the new `schedule.js` already leaves away people out of the list.
+
+### 2026-10-05: thinner card with sharper lettering, 911 line removed, keychain
+
+- **The first trial print** (owner's photo, beside an older blue card made from a MakerWorld two-part template with a thin sticker tag, printed on a P2S with a 0.4 mm nozzle): the green card was printed on an **H2S with a 0.6 mm nozzle**. Its letters were grainy and soft, and the tag showed through as a pale disc. Causes: the 0.6 mm nozzle (too wide for 3.5 mm letters; the files are made for 0.4 mm); the lettering was the face printed on the textured plate (first-layer squash, the plate's grain); the filaments were swapped (light front, dark core), so the white tag showed through the light face and the back's light lettering looked grey; and Bold capitals were heavy at these sizes.
+- **Front face up:** the logo side is now the top surface, where the slicer traces every letter with its own walls, as on the blue card. The back (QR side) goes on the plate, mirrored.
+- **0.1 mm layers** (first layer 0.2 mm) and the wall speeds of Bambu's own "High Quality" presets in the .3mf: outer walls 60 mm/s at 2000 mm/s², inner walls and top surface 150 mm/s, first layer 30 mm/s (`DETAIL` in `bambu3mf.js`).
+- **Source Sans 3 Semibold** instead of Bold: about 20% thinner strokes, wider openings; still at least 0.35 mm at 3.5 mm capitals.
+- **Thinner: 1.7 mm** (was 2.2): back 0.3 · core 1.0 with the pocket · roof 0.1 · front 0.3. Same 1-inch PVC coin tag (the owner prefers it to the thinner black sticker in the blue card). Pause after Z 1.3 mm, before layer 13 of 16.
+- **911 line and band removed** from the back (owner's request). The back is now dark with the QR on a light square at the right, centred; the tap symbol with SCAN / OR TAP beside it over the tag, BACKUP and the number at the bottom.
+- **Colours:** both faces dark with light lettering (owner's choice, like the blue card). The print notes and the guide say how to spot swapped filaments in Bambu Studio's preview before printing.
+- **Materials: ABS or PETG** (owner: "we're doing ABS only", plus a PETG option); ASA removed. The nine printer settings files were rebuilt by Bambu Studio's command line with Bambu ABS as the base (identical to the earlier ABS settings, key for key) and Bambu PETG HF as a patch (bed 70 °C, no chamber heating).
+- **Keychain:** a 41 mm coin with a ring tab (owner's pick of three researched shapes: popular MakerWorld/Printables NFC tags and commercial fobs), 3.0 mm thick, 5 mm hole, edges rounded layer by layer (0.6 mm chamfer at the plate, 1.2 mm round on top), the same tag and link as the card. Front: the logo (31 mm, the brand minimum, which is why it can't be smaller than about 40 mm) with EMERGENCY and CONTACT on arcs; back: the tap symbol and the driver's initials (from the name, changeable in Print & QR for the session). An earlier 50 × 32 rounded rectangle was dropped. Its pocket top is at the same 1.3 mm as the card's, so **Card + keychain, one plate (3MF)** prints both side by side with one pause. The Owner tab's all-cards ZIP has the card, keychain and one-plate projects for every card.
+- **Whole piece one colour:** a 1.2 mm dark rim round the light core, from the plate to the top, so the edges match the faces (owner: "whole card can be blue or green and text white"). Costs a filament swap per layer on one-nozzle printers (card about 1 h 20 min instead of 1 h); the H2D's two nozzles don't mind.
+- **Fixes on review:** the browser could exceed its argument limit building a large .3mf (`push(...lines)`); a two-line name could put the top of EMERGENCY's G into the logo's clear space with Semibold's rounder letters (now fitted on the real ink); old cached scripts now ask for a reload instead of silently leaving out keychains or the detail speeds.
+- **Checked:** watertight parts and exact volumes (including the stepped edges); layouts for awkward names; the card, keychain and one-plate files sliced for all nine printers in ABS and PETG with one pause before layer 13, the pocket open on layers 3–12 and sealed in the light filament; the top and first layers drawn from the G-code (every letter and all 7 logo bars traced; the QR read back from the drawn first layer); the dashboard's Print & QR and Owner downloads in a browser test.
 
 ## 6. Individual sign-ins: design notes
 
@@ -403,7 +419,7 @@ The automated tests ran on the owner's Mac. They lived in a temporary working fo
   - No AI is involved; it's a plain scripted check.
 - **Bulk card creation from a spreadsheet** ("later"): import ~50 drivers at once, then generate their files.
 - **Finish the sign-in migration:** the shared password is already off; replace the GitHub token and delete the old one on GitHub, if not done yet.
-- **First real print:** run the [trial checklist](cards-and-printing.md#trial-checklist), measure a batch of stickers (over about 0.95 mm with adhesive could catch the nozzle), check the 7 logo bars in the sliced preview, try Mouse-ear brim if corners lift.
+- **Second trial print** (face-up, 1.7 mm card and keychain): run the [trial checklist](cards-and-printing.md#trial-checklist), check filament 1 is the light one, check the 7 logo bars (40 mm on the card, 31 mm on the keychain) in the sliced preview, try Mouse-ear brim if corners lift.
 - **Real-phone checks** listed in [section 9](#9-how-everything-was-tested).
 - **Possible refinements:** remember the ASA/ABS choice between visits; optionally commit the test suites under `tests/`.
 

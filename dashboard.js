@@ -1347,8 +1347,12 @@ function openPrint(card) {
 }
 
 const printCard = () => state.cards.find(c => c.key === printKey);
-const printInfo = card => ({ link: SITE + '#' + card.key, driver: card.driver, backup: formatPhone(state.backup) });
-const PRINT_DOWNLOADS = ['dl-3mf', 'dl-stl'];
+// Keychain initials: from the driver name unless changed here (kept for this session, per card).
+const keyInitials = new Map();
+const hasKeychain = () => typeof CardMaker.keychainModel === 'function'; // an older cached cardmaker.js has no keychain
+const initialsOf = card => (keyInitials.has(card.key) ? keyInitials.get(card.key) : hasKeychain() ? CardMaker.initials(card.driver) : '');
+const printInfo = card => ({ link: SITE + '#' + card.key, driver: card.driver, backup: formatPhone(state.backup), initials: initialsOf(card) });
+const PRINT_DOWNLOADS = ['dl-3mf', 'dl-stl'], KEY_DOWNLOADS = ['dl-key-3mf', 'dl-set-3mf'];
 
 function renderPrint() {
   const has = state.cards.length > 0;
@@ -1369,17 +1373,33 @@ async function renderPrintCard() {
   $('print-status').hidden = isLive(card);
   $('print-status').textContent = 'Not published yet. The link and files work after you publish.';
   $('print-msg').hidden = true;
+  const disable = (ids, off) => { for (const id of ids) if ($(id)) $(id).disabled = off; };
   try {
     await CardMaker.load();
     if (run !== printRun) return;
     const info = printInfo(card);
-    const { problems } = CardMaker.layout(info);
+    const problems = CardMaker.layout(info).problems.slice(), cardOk = !problems.length;
     $('preview-front').replaceChildren(CardMaker.preview(info, 'front'));
     $('preview-back').replaceChildren(CardMaker.preview(info, 'back'));
+    disable(['dl-3mf'], problems.length > 0);
+    if ($('key-previews')) $('key-previews').hidden = !hasKeychain();
+    if ($('key-initials-field')) $('key-initials-field').hidden = !hasKeychain();
+    if ($('key-initials')) $('key-initials').value = hasKeychain() ? info.initials : '';
+    let kp = ['The dashboard was just updated. Reload the page.'];
+    if (hasKeychain() && $('preview-key-front')) {
+      kp = CardMaker.keychainLayout(info).problems;
+      // To scale with the card preview.
+      const scaled = c => { if (CardMaker.KEYCHAIN && CardMaker.CARD) c.style.width = (100 * CardMaker.KEYCHAIN.W / CardMaker.CARD.W).toFixed(1) + '%'; return c; };
+      $('preview-key-front').replaceChildren(scaled(CardMaker.keychainPreview(info, 'front')));
+      $('preview-key-back').replaceChildren(scaled(CardMaker.keychainPreview(info, 'back')));
+      disable(['dl-key-3mf'], kp.length > 0);
+      disable(['dl-set-3mf'], kp.length > 0 || problems.length > 0);
+      problems.push(...kp.map(t => 'Keychain: ' + t));
+    } else disable(KEY_DOWNLOADS, true);
+    disable(['dl-stl'], !cardOk && kp.length > 0); // the STL ZIP holds whichever pieces can be made
     if (problems.length) printProblem(problems.join(' '));
-    for (const id of PRINT_DOWNLOADS) if ($(id)) $(id).disabled = problems.length > 0;
   } catch (e) {
-    for (const id of PRINT_DOWNLOADS) if ($(id)) $(id).disabled = true;
+    disable([...PRINT_DOWNLOADS, ...KEY_DOWNLOADS], true);
     printProblem(e.message);
   }
 }
@@ -1399,6 +1419,12 @@ $('backup').onchange = e => {
   renderPrintCard();
 };
 $('copy-card-link').onclick = e => copy($('card-link').value, e.currentTarget);
+if ($('key-initials')) $('key-initials').onchange = e => {
+  const card = printCard();
+  const v = e.target.value.trim().toUpperCase();
+  if (v && hasKeychain() && v !== CardMaker.initials(card.driver)) keyInitials.set(card.key, v); else keyInitials.delete(card.key);
+  renderPrintCard();
+};
 
 // The Bambu printer the .3mf files are made for: one choice for both tabs, remembered on this device. Nothing is
 // preselected the first time, so a project is never made for a printer nobody chose.
@@ -1427,24 +1453,40 @@ function chosenPrinter(selectId) {
   return p ? { printer: p } : { problem: 'Choose the printer first.' };
 }
 
-// Make the chosen card's print files and hand them to the browser:
-// '3mf' = Bambu Studio project (bambu3mf.js), 'stl' = ZIP with both STL parts and the print notes.
+// Make the chosen card's print files and hand them to the browser: '3mf' = the card's Bambu Studio project
+// (bambu3mf.js), 'key' = the keychain's, 'set' = card and keychain on one plate (one pause for both tags),
+// 'stl' = ZIP with the STL parts and print notes of the card (and the keychain).
 async function download(what) {
   const card = printCard();
   const info = printInfo(card);
-  const base = 'card-' + CardMaker.slug(card.driver + (card.note ? ' ' + card.note : ''));
+  const name = CardMaker.slug(card.driver + (card.note ? ' ' + card.note : ''));
+  const base = 'card-' + name, keyBase = 'keychain-' + name;
   $('print-msg').hidden = true;
   try {
     await CardMaker.load();
-    if (what === 'stl') return saveFile(base + '-STL.zip', CardMaker.zip(await CardMaker.files(info)));
+    if (what === 'stl') {
+      const files = [], left = [];
+      const cp = CardMaker.layout(info).problems, kp = hasKeychain() ? CardMaker.keychainLayout(info).problems : ['The dashboard was just updated. Reload the page.'];
+      if (cp.length) left.push(`the card (${cp.join(' ')})`); else files.push(...await CardMaker.files(info));
+      if (kp.length) left.push(`the keychain (${kp.join(' ')})`); else files.push(...await CardMaker.keychainFiles(info));
+      if (!files.length) return printProblem(`Nothing can be printed yet: ${left.join('; ')}`);
+      saveFile(base + '-STL.zip', CardMaker.zip(files));
+      if (left.length) printProblem(`The ZIP leaves out ${left.join(' and ')}.`);
+      return;
+    }
     if (typeof Bambu3MF === 'undefined') {
       return printProblem("The Bambu Studio project maker (bambu3mf.js) didn't load. Reload the page, or use the STL files.");
     }
+    if (!Bambu3MF.PIECES || (what !== '3mf' && !hasKeychain())) return printProblem('The dashboard was just updated. Reload the page.'); // older cached scripts
     const { printer, problem } = chosenPrinter('print-printer');
     if (problem) return printProblem(problem);
-    const m = CardMaker.model(info);
-    const bytes = await Bambu3MF.make({ black: m.black, white: m.white, name: base, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material: $('print-material') ? $('print-material').value : 'ASA' });
-    saveFile(`${base}-${printer.id}.3mf`, new Blob([bytes], { type: 'model/3mf' }));
+    const material = $('print-material') ? $('print-material').value : 'ABS';
+    const m = what === 'key' ? null : CardMaker.model(info), k = what === '3mf' ? null : CardMaker.keychainModel(info);
+    const pieces = [m && { black: m.black, white: m.white, name: base }, k && { black: k.black, white: k.white, name: keyBase }].filter(Boolean);
+    const bytes = await Bambu3MF.make({ ...pieces[0], pieces: pieces.length > 1 ? pieces : undefined, name: what === 'set' ? base + '-with-keychain' : pieces[0].name,
+      pauseZ: (m || k).pauseZ, layerHeight: (m || k).layerHeight, printer: printer.id, material });
+    const file = what === 'set' ? `${base}-with-keychain` : what === 'key' ? keyBase : base;
+    saveFile(`${file}-${printer.id}.3mf`, new Blob([bytes], { type: 'model/3mf' }));
   } catch (e) {
     printProblem(e.message);
   }
@@ -1452,17 +1494,19 @@ async function download(what) {
 
 // Optional: for a few minutes after an update, GitHub's cache can pair this script with an older dashboard.html.
 onClick('dl-3mf', () => download('3mf'));
+onClick('dl-key-3mf', () => download('key'));
+onClick('dl-set-3mf', () => download('set'));
 onClick('dl-stl', () => download('stl'));
 
-// Owner tab: every card's print files in one ZIP. A folder per card (Bambu Studio project, STL parts, print
-// notes), NFC-links.csv (each card's link, for writing the tags) and README.txt. Cards whose name can't be
+// Owner tab: every card's print files in one ZIP. A folder per card (Bambu Studio projects for the card, the keychain
+// and both on one plate, STL parts, print notes), NFC-links.csv (each card's link, for writing the tags) and README.txt. Cards whose name can't be
 // printed are left out and listed. Files are compressed one at a time, so 50+ cards fit in memory.
 let allCardsBusy = false;
 onClick('dl-all-cards', async () => {
   if (allCardsBusy) return;
   const cards = state.cards.slice();
   if (!cards.length) return say('all-cards-msg', 'No cards yet.', true);
-  if (typeof Bambu3MF === 'undefined' || typeof Bambu3MF.zipWriter !== 'function' || typeof CardMaker.batchNotes !== 'function') {
+  if (typeof Bambu3MF === 'undefined' || typeof Bambu3MF.zipWriter !== 'function' || !Bambu3MF.PIECES || typeof CardMaker.batchNotes !== 'function') {
     return say('all-cards-msg', 'The card maker is out of date in this browser. Reload the page and try again.', true);
   }
   const { printer, problem } = chosenPrinter('all-printer');
@@ -1471,7 +1515,7 @@ onClick('dl-all-cards', async () => {
   if (waiting && !confirm(`${waiting} of ${cards.length} cards aren't published yet. Their links (tag and QR code) only work after you publish.\n\nDownload anyway?`)) return;
   allCardsBusy = true;
   $('dl-all-cards').disabled = true;
-  const material = $('all-material') ? $('all-material').value : 'ASA';
+  const material = $('all-material') ? $('all-material').value : 'ABS';
   const root = `Tenaris-cards-${today()}-${printer.id}-${material}/`, zip = Bambu3MF.zipWriter(), enc = new TextEncoder();
   const made = [], skipped = [], used = new Set();
   try {
@@ -1485,11 +1529,23 @@ onClick('dl-all-cards', async () => {
       used.add(name.toLowerCase());
       let m;
       try { m = CardMaker.model(info); } catch (e) { skipped.push(`${cardLabel(card)}: ${e.message}`); continue; }
-      const dir = root + name + '/';
-      await zip.add(`${dir}${name}-${printer.id}.3mf`, await Bambu3MF.make({ black: m.black, white: m.white, name, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material }));
+      const dir = root + name + '/', make = (pieces, title) => Bambu3MF.make({ ...pieces[0], pieces: pieces.length > 1 ? pieces : undefined, name: title || pieces[0].name, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material });
+      const cardPiece = { black: m.black, white: m.white, name };
+      await zip.add(`${dir}${name}-${printer.id}.3mf`, await make([cardPiece]));
       await zip.add(dir + name + '-DARK.stl', m.black);
       await zip.add(dir + name + '-LIGHT.stl', m.white);
-      await zip.add(dir + name + '-print-notes.txt', enc.encode(CardMaker.printNotes(info, m, { printer })));
+      await zip.add(dir + name + '-print-notes.txt', enc.encode(CardMaker.printNotes(info, m, { printer, material })));
+      // The keychain: same link, initials from the name (or as changed in Print & QR).
+      let k = null;
+      if (hasKeychain()) try { k = CardMaker.keychainModel(info); } catch (e) { skipped.push(`${cardLabel(card)} (keychain only): ${e.message}`); }
+      if (k) {
+        const kname = name.replace(/^card-/, 'keychain-'), keyPiece = { black: k.black, white: k.white, name: kname };
+        await zip.add(`${dir}${kname}-${printer.id}.3mf`, await make([keyPiece]));
+        await zip.add(`${dir}${name}-with-keychain-${printer.id}.3mf`, await make([cardPiece, keyPiece], `${name}-with-keychain`));
+        await zip.add(dir + kname + '-DARK.stl', k.black);
+        await zip.add(dir + kname + '-LIGHT.stl', k.white);
+        await zip.add(dir + kname + '-print-notes.txt', enc.encode(CardMaker.keychainNotes(info, k, { printer, material })));
+      }
       made.push({ driver: card.driver, holder: card.note || '', link: info.link, folder: name, live: isLive(card) });
     }
     if (!made.length) throw new Error(`None of the cards can be printed: ${skipped.join(' ')}`);

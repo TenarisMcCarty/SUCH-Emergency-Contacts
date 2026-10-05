@@ -1,5 +1,5 @@
 {
- "about": "Bambu Studio project settings for bambu3mf.js: printer \"Bambu Lab X1E 0.4 nozzle\", process \"0.20mm Standard @BBL X1C\" (+ the card's overrides, listed in different_settings_to_system[0]), filaments \"Bambu ASA @BBL X1E 0.4 nozzle\" / \"Bambu ABS @BBL X1E\". Made by Bambu Studio 02.08.02.61 itself (CLI re-target of a two-part card project to these system presets). Regenerate when Bambu Studio updates its presets.",
+ "about": "Bambu Studio project settings for bambu3mf.js: printer \"Bambu Lab X1E 0.4 nozzle\", process \"0.20mm Standard @BBL X1C\" (+ the card's overrides, listed in different_settings_to_system[0]), filaments \"Bambu ABS @BBL X1E\" (ABS, the base) / \"Bambu PETG HF @BBL X1C\" (PETG, as a patch). Made by Bambu Studio 02.08.02.61 itself (CLI re-target of a two-part card project to these system presets). Regenerate when Bambu Studio updates its presets.",
  "app": "BambuStudio-02.08.02.61",
  "printer": {
   "id": "X1E",
@@ -16,93 +16,171 @@
   "layer_height": "0.2"
  },
  "materials": {
-  "ASA": {},
-  "ABS": {
+  "ABS": {},
+  "PETG": {
+   "activate_air_filtration": [
+    "0",
+    "0"
+   ],
    "eng_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "eng_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "fan_cooling_layer_time": [
-    "30",
-    "30"
+    "20",
+    "20"
    ],
    "fan_max_speed": [
-    "60",
-    "60"
+    "40",
+    "40"
    ],
-   "filament_cost": [
-    "19.99",
-    "19.99"
+   "fan_min_speed": [
+    "20",
+    "20"
+   ],
+   "filament_adhesiveness_category": [
+    "300",
+    "300"
+   ],
+   "filament_change_length": [
+    "12",
+    "12"
    ],
    "filament_density": [
-    "1.04",
-    "1.04"
+    "1.28",
+    "1.28"
    ],
    "filament_dev_ams_drying_heat_distortion_temperature": [
-    "90",
-    "90"
-   ],
-   "filament_dev_drying_cooling_temperature": [
     "75",
     "75"
    ],
-   "filament_dev_drying_softening_temperature": [
+   "filament_dev_chamber_drying_bed_temperature": [
     "80",
     "80"
    ],
+   "filament_dev_drying_cooling_temperature": [
+    "55",
+    "55"
+   ],
+   "filament_dev_drying_softening_temperature": [
+    "60",
+    "60"
+   ],
+   "filament_flow_ratio": [
+    "0.95",
+    "0.952",
+    "0.95",
+    "0.952"
+   ],
    "filament_ids": [
-    "GFB00",
-    "GFB00"
+    "GFG02",
+    "GFG02"
    ],
    "filament_max_volumetric_speed": [
-    "16",
-    "16",
-    "16",
-    "16"
+    "21",
+    "29",
+    "21",
+    "29"
+   ],
+   "filament_metal_stickiness": [
+    "High",
+    "High"
+   ],
+   "filament_prime_volume": [
+    "30",
+    "30"
    ],
    "filament_retraction_length": [
-    "0.4",
     "nil",
     "0.4",
-    "nil"
+    "nil",
+    "0.4"
    ],
    "filament_settings_id": [
-    "Bambu ABS @BBL X1E",
-    "Bambu ABS @BBL X1E"
+    "Bambu PETG HF @BBL X1C",
+    "Bambu PETG HF @BBL X1C"
+   ],
+   "filament_start_gcode": [
+    "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}",
+    "; filament start gcode\n{if (bed_temperature[current_extruder] >80)||(bed_temperature_initial_layer[current_extruder] >80)}M106 P3 S255\n{elsif (bed_temperature[current_extruder] >60)||(bed_temperature_initial_layer[current_extruder] >60)}M106 P3 S180\n{endif}\n\n{if activate_air_filtration[current_extruder] && support_air_filtration}\nM106 P3 S{during_print_exhaust_fan_speed_num[current_extruder]} \n{endif}"
    ],
    "filament_type": [
-    "ABS",
-    "ABS"
+    "PETG",
+    "PETG"
+   ],
+   "filament_z_hop": [
+    "nil",
+    "0.6",
+    "nil",
+    "0.6"
    ],
    "hot_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "hot_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "impact_strength_z": [
-    "7.4",
-    "7.4"
+    "10.6",
+    "10.6"
+   ],
+   "nozzle_temperature": [
+    "245",
+    "245",
+    "245",
+    "245"
    ],
    "nozzle_temperature_initial_layer": [
-    "260",
-    "260",
-    "260",
-    "260"
+    "230",
+    "230",
+    "230",
+    "230"
+   ],
+   "nozzle_temperature_range_high": [
+    "270",
+    "270"
+   ],
+   "nozzle_temperature_range_low": [
+    "230",
+    "230"
+   ],
+   "overhang_fan_speed": [
+    "100",
+    "100"
+   ],
+   "overhang_fan_threshold": [
+    "10%",
+    "10%"
+   ],
+   "slow_down_layer_time": [
+    "10",
+    "10"
+   ],
+   "supertack_plate_temp": [
+    "70",
+    "70"
+   ],
+   "supertack_plate_temp_initial_layer": [
+    "70",
+    "70"
+   ],
+   "temperature_vitrification": [
+    "70",
+    "70"
    ],
    "textured_plate_temp": [
-    "90",
-    "90"
+    "70",
+    "70"
    ],
    "textured_plate_temp_initial_layer": [
-    "90",
-    "90"
+    "70",
+    "70"
    ]
   }
  },
@@ -291,12 +369,12 @@
   "enable_wrapping_detection": "0",
   "enforce_support_layers": "0",
   "eng_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "eng_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "ensure_vertical_shell_thickness": "enabled",
   "exclude_object": "1",
@@ -332,13 +410,13 @@
    "Direct Drive Standard,Direct Drive High Flow"
   ],
   "fan_cooling_layer_time": [
-   "35",
-   "35"
+   "30",
+   "30"
   ],
   "fan_direction": "left",
   "fan_max_speed": [
-   "35",
-   "35"
+   "60",
+   "60"
   ],
   "fan_min_speed": [
    "10",
@@ -384,12 +462,12 @@
    "0"
   ],
   "filament_cost": [
-   "26.99",
-   "26.99"
+   "19.99",
+   "19.99"
   ],
   "filament_density": [
-   "1.05",
-   "1.05"
+   "1.04",
+   "1.04"
   ],
   "filament_deretraction_speed": [
    "nil",
@@ -402,8 +480,8 @@
    "1"
   ],
   "filament_dev_ams_drying_heat_distortion_temperature": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "filament_dev_ams_drying_temperature": [
    "65",
@@ -434,12 +512,12 @@
    "12"
   ],
   "filament_dev_drying_cooling_temperature": [
-   "85",
-   "85"
+   "75",
+   "75"
   ],
   "filament_dev_drying_softening_temperature": [
-   "85",
-   "85"
+   "80",
+   "80"
   ],
   "filament_diameter": [
    "1.75",
@@ -490,8 +568,8 @@
    "0"
   ],
   "filament_ids": [
-   "GFB01",
-   "GFB01"
+   "GFB00",
+   "GFB00"
   ],
   "filament_is_mixed": [
    "0"
@@ -512,10 +590,10 @@
   ],
   "filament_map_mode": "Auto For Flush",
   "filament_max_volumetric_speed": [
-   "18",
-   "18",
-   "18",
-   "18"
+   "16",
+   "16",
+   "16",
+   "16"
   ],
   "filament_metal_stickiness": [
    "None",
@@ -667,9 +745,9 @@
    "18"
   ],
   "filament_retraction_length": [
+   "0.4",
    "nil",
-   "nil",
-   "nil",
+   "0.4",
    "nil"
   ],
   "filament_retraction_minimum_travel": [
@@ -707,8 +785,8 @@
    "2"
   ],
   "filament_settings_id": [
-   "Bambu ASA @BBL X1E 0.4 nozzle",
-   "Bambu ASA @BBL X1E 0.4 nozzle"
+   "Bambu ABS @BBL X1E",
+   "Bambu ABS @BBL X1E"
   ],
   "filament_shrink": [
    "100%",
@@ -743,8 +821,8 @@
    "4"
   ],
   "filament_type": [
-   "ASA",
-   "ASA"
+   "ABS",
+   "ABS"
   ],
   "filament_velocity_adaptation_factor": [
    "1",
@@ -866,12 +944,12 @@
   ],
   "host_type": "octoprint",
   "hot_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "hot_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "hotend_cooling_rate": [
    "2",
@@ -882,8 +960,8 @@
    "2"
   ],
   "impact_strength_z": [
-   "4.9",
-   "4.9"
+   "7.4",
+   "7.4"
   ],
   "independent_support_layer_height": "1",
   "infill_combination": "0",
@@ -1107,10 +1185,10 @@
    "270"
   ],
   "nozzle_temperature_initial_layer": [
-   "270",
-   "270",
-   "270",
-   "270"
+   "260",
+   "260",
+   "260",
+   "260"
   ],
   "nozzle_temperature_range_high": [
    "280",
@@ -1481,12 +1559,12 @@
   ],
   "template_custom_gcode": "",
   "textured_plate_temp": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "textured_plate_temp_initial_layer": [
-   "100",
-   "100"
+   "90",
+   "90"
   ],
   "thick_bridges": "0",
   "thumbnail_size": [

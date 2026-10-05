@@ -297,20 +297,21 @@ Right after an update, a browser may briefly still run the old dashboard. If it 
 
 ## 17. Print files for all cards
 
-**Owner** tab → **Print files for all cards** → choose the **Printer** (the same choice as in Print & QR) and the **Filament** (ASA or ABS) → **Download all cards (ZIP)**. It makes every card's files at once (a few seconds per card; the message under the button counts them), so you don't have to go through **Print & QR** card by card.
+**Owner** tab → **Print files for all cards** → choose the **Printer** (the same choice as in Print & QR) and the **Filament** (ABS or PETG) → **Download all cards (ZIP)**. It makes every card's files at once (a few seconds per card; the message under the button counts them), so you don't have to go through **Print & QR** card by card.
 
-The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ASA.zip`, holds:
+The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ABS.zip`, holds:
 
 | | |
 |---|---|
-| a folder per card, e.g. `card-Jane-Doe-1234-Family/` | `…-H2D.3mf` (Bambu Studio project for the chosen printer, ready to print), `…-DARK.stl` and `…-LIGHT.stl` (the same card as STL parts) and `…-print-notes.txt` (the card's link, settings, the pause, inserting the tag, testing and locking) |
+| a folder per card, e.g. `card-Jane-Doe-1234-Family/` | `card-…-H2D.3mf`, `keychain-…-H2D.3mf` and `card-…-with-keychain-H2D.3mf` (Bambu Studio projects for the chosen printer, ready to print: the card, the keychain, and both on one plate with one pause), `…-DARK.stl` and `…-LIGHT.stl` (the same pieces as STL parts) and `…-print-notes.txt` (the link, settings, the pause, inserting the tag, testing and locking) |
 | `NFC-links.csv` | every card's driver, holder, link and folder, and whether it's published: the list for writing the tags |
 | `README.txt` | the batch at a glance: card size, tag, pause, and the order of work |
 
 - Files are made from what the dashboard shows now, including changes you haven't published. If some cards aren't published yet, it asks before downloading: their links (tag and QR code) only work after you publish.
 - A card whose driver name can't be printed (too long, or characters the card can't print) is left out, and the message and README name it. Fix it with **People → Rename** and download again.
 - Two cards with the same driver and holder get separate folders (`…-2`).
-- **Every card has its own link.** A tag in the wrong card opens the wrong driver's page. Write each tag from that card's own folder just before printing it, and test the finished card (it must show that driver's name) before locking the tag.
+- **Every card has its own link**, shared by its keychain. A tag in the wrong piece opens the wrong driver's page. Write each tag from that card's own folder just before printing it, and test the finished pieces (they must show that driver's name) before locking the tags.
+- Keychain initials come from the driver names, or from **Keychain initials** in Print & QR if you changed them since opening the page. A card whose keychain can't be made (no letters for initials) keeps its card files; the message names it.
 
-How to print each card: [Cards and printing](cards-and-printing.md#5-printing-it).
+How to print each card and keychain: [Cards and printing](cards-and-printing.md#5-printing-it).
 
