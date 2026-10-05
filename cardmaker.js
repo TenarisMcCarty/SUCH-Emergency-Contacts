@@ -1,5 +1,6 @@
 // cardmaker.js — the 3D-printed NFC emergency card, made in the browser from the card's link:
-//   • two STL files (black and white filament) for a two-colour print with a sealed pocket for the NFC tag
+//   • two STL files (a dark and a light filament) for a two-colour print with a sealed pocket for the NFC tag.
+//     In the code "black" means the dark filament and "white" the light one (files: *-DARK.stl, *-LIGHT.stl).
 //   • print notes, and the STL files and notes in one ZIP
 //   • previews of the front and back
 // model() also gives the pause height, so bambu3mf.js can turn the same two STL files into a Bambu Studio project.
@@ -27,10 +28,15 @@ const CardMaker = (() => {
   const FRONT = 0.6, CORE = 1.0, ROOF = 0.2, BACK = 0.4;
   const PAUSE_Z = FRONT + CORE;                  // the Z where the roof starts: pause after this layer
   const T = FRONT + CORE + ROOF + BACK;          // 2.2 mm
-  const TAG = { x: 67, y: 39, d: 25, thick: 0.8 }; // NTAG215 round sticker, centred here on the front
-  // Pocket: 26 mm (0.5 mm all round, for ASA/ABS shrinkage of ~0.5–0.8% and holes printing slightly small,
-  // so the sticker still drops in by hand) and 1.0 mm deep.
-  const POCKET = { d: 26, depth: CORE };
+  // NTAG215 PVC coin tag, 1 in (25.4 mm) across and 0.8 mm thick, centred here on the front. 38 mm up leaves
+  // 2.8 mm of solid card between the pocket and the top edge.
+  const TAG = { x: 67, y: 38, d: 25.4, thick: 0.8 };
+  // Pocket: 26.4 mm across and 1.0 mm deep: the tag + 1.0 mm across and + 0.2 mm (one layer) deep, the same
+  // allowance tag sellers give for embedding 25 mm tags (a 26 × 1 mm slot). Printed holes come out 0.1–0.4 mm
+  // small and coin tags are cut to about ±0.2 mm, so at the pause the tag still drops in by hand; after cooling
+  // (ASA shrinks 0.4–0.7%, ABS about 0.8%) the pocket still doesn't squeeze it. Bambu Studio slices the pocket
+  // at exactly this size (checked in its G-code).
+  const POCKET = { d: 26.4, depth: CORE };
   const TAG_BACK_X = W - TAG.x;                  // the same spot seen from the back
   const MARGIN = 6.4;                            // front left margin (≥ the logo's clear space from the edge)
   const EDGE = 5;                                // other text margins
@@ -46,6 +52,7 @@ const CardMaker = (() => {
   const minCapFor = ch => (/[\u030A\u0327]/.test(ch.normalize('NFD')) ? 3.9 : ch === ',' || ch === '#' ? 3.7 : MIN_CAP);
   const NAME_CHARS = /^[\p{L}\p{N} .,'"()&#\/-]$/u;
   const GAP = 0.6;                               // smallest gap between letters and between lines
+  const BAND = 10;                               // height of the dark band along the bottom of the back
 
   // The signature at `width` mm with its bottom-left corner at (x, y), in one colour.
   const LOGO_LINE = 0.8; // clear space = 80% of the Multibar height
@@ -68,8 +75,80 @@ const CardMaker = (() => {
 
   async function load() {
     if (font) return;
-    font = opentype.parse(await (await fetch('source-sans-3-bold.ttf')).arrayBuffer());
+    const bytes = await (await fetch('source-sans-3-bold.ttf')).arrayBuffer();
+    font = opentype.parse(bytes);
     capRatio = font.charToGlyph('H').getBoundingBox().y2 / font.unitsPerEm;
+    try { kernPair = gposKerning(new DataView(bytes)); } catch (e) { kernPair = () => 0; } // spacing without kerning
+  }
+
+  // The font's own kerning (GPOS 'kern' feature: pair adjustments, also inside extension lookups, which
+  // opentype.js can't read). Returns (leftGlyphIndex, rightGlyphIndex) => horizontal adjustment in font units.
+  // Subtables are tried in order and the first that covers the left glyph decides, as in HarfBuzz.
+  let kernPair = () => 0;
+  function gposKerning(dv) {
+    const u16 = o => dv.getUint16(o), s16 = o => dv.getInt16(o), u32 = o => dv.getUint32(o);
+    let gpos = -1;
+    for (let i = 0, n = u16(4); i < n; i++) {
+      const r = 12 + 16 * i;
+      if (String.fromCharCode(dv.getUint8(r), dv.getUint8(r + 1), dv.getUint8(r + 2), dv.getUint8(r + 3)) === 'GPOS') gpos = u32(r + 8);
+    }
+    if (gpos < 0) return () => 0;
+    const features = gpos + u16(gpos + 6), lookupList = gpos + u16(gpos + 8);
+    const lookups = new Set();
+    for (let i = 0, n = u16(features); i < n; i++) {
+      const r = features + 2 + 6 * i;
+      if (String.fromCharCode(dv.getUint8(r), dv.getUint8(r + 1), dv.getUint8(r + 2), dv.getUint8(r + 3)) !== 'kern') continue;
+      const f = features + u16(r + 4);
+      for (let k = 0, m = u16(f + 2); k < m; k++) lookups.add(u16(f + 4 + 2 * k));
+    }
+    const coverage = (o, g) => {
+      if (u16(o) === 1) {
+        for (let lo = 0, hi = u16(o + 2) - 1; lo <= hi;) {
+          const mid = (lo + hi) >> 1, v = u16(o + 4 + 2 * mid);
+          if (v === g) return mid; if (v < g) lo = mid + 1; else hi = mid - 1;
+        }
+        return -1;
+      }
+      for (let i = 0, n = u16(o + 2); i < n; i++) {
+        const r = o + 4 + 6 * i;
+        if (g >= u16(r) && g <= u16(r + 2)) return u16(r + 4) + g - u16(r);
+      }
+      return -1;
+    };
+    const classOf = (o, g) => {
+      if (u16(o) === 1) { const start = u16(o + 2), n = u16(o + 4); return g >= start && g < start + n ? u16(o + 6 + 2 * (g - start)) : 0; }
+      for (let i = 0, n = u16(o + 2); i < n; i++) { const r = o + 4 + 6 * i; if (g >= u16(r) && g <= u16(r + 2)) return u16(r + 4); }
+      return 0;
+    };
+    const bits = v => { let c = 0; for (; v; v >>= 1) c += v & 1; return c; };
+    const xAdvance = (o, fmt) => (fmt & 4 ? s16(o + 2 * bits(fmt & 3)) : 0);
+    const pairPos = [];
+    for (const li of [...lookups].sort((a, b) => a - b)) {
+      const L = lookupList + u16(lookupList + 2 + 2 * li), type = u16(L);
+      for (let i = 0, n = u16(L + 4); i < n; i++) {
+        let st = L + u16(L + 6 + 2 * i);
+        if (type === 9) { if (u16(st + 2) !== 2) continue; st += u32(st + 4); } else if (type !== 2) continue;
+        pairPos.push(st);
+      }
+    }
+    return (a, b) => {
+      for (const st of pairPos) {
+        const ci = coverage(st + u16(st + 2), a);
+        if (ci < 0) continue;
+        const f1 = u16(st + 4), f2 = u16(st + 6), size = 2 * (bits(f1) + bits(f2));
+        if (u16(st) === 1) {
+          const set = st + u16(st + 10 + 2 * ci);
+          for (let lo = 0, hi = u16(set) - 1; lo <= hi;) {
+            const mid = (lo + hi) >> 1, r = set + 2 + mid * (2 + size), g = u16(r);
+            if (g === b) return xAdvance(r + 2, f1); if (g < b) lo = mid + 1; else hi = mid - 1;
+          }
+          continue; // pair not listed: the next subtable may have it
+        }
+        const c1 = classOf(st + u16(st + 8), a), c2 = classOf(st + u16(st + 10), b), n2 = u16(st + 14);
+        return xAdvance(st + 16 + (c1 * n2 + c2) * size, f1);
+      }
+      return 0;
+    };
   }
 
   // A pasted name can carry accents as separate marks (e + ◌́), which would draw on top of the letter. Curly quotes
@@ -78,15 +157,18 @@ const CardMaker = (() => {
     .replace(/[‘’ʼ`´]/g, "'").replace(/[“”„]/g, '"').replace(/\s+/g, ' ').trim();
 
   // One line of text at a capital height: glyph outlines relative to the pen (baseline at y = 0) and the
-  // line's width. No kerning; letters get at least GAP mm between them (some pairs, like AA or KA, touch in
-  // the font itself). Cached, because fitting the layout asks for the same lines many times.
+  // line's width. Spaced as the font intends (its kerning), plus `track` (em) between letters, and never closer
+  // than GAP mm (some pairs, like AA or KA, touch in the font itself, and kerning can bring others too close).
+  // Cached, because fitting the layout asks for the same lines many times.
   const shaped = new Map();
   function shape(str, cap, track = 0) {
     const key = `${str}|${cap}|${track}`;
     if (shaped.has(key)) return shaped.get(key);
     const em = cap / capRatio, glyphs = [];
-    let pen = 0, prev = null, width = 0;
+    let pen = 0, prev = null, width = 0, last = null;
     for (const g of font.stringToGlyphs(str)) {
+      if (last) pen += (kernPair(last.index, g.index) / font.unitsPerEm) * em;
+      last = g;
       const contours = raiseMarks(unionContours(flatten(g.getPath(0, 0, em).commands, 0, 0.15)), cap);
       const glyph = { contours, x: pen, box: bounds(contours) };
       if (contours.length && prev) {
@@ -101,7 +183,9 @@ const CardMaker = (() => {
       width = glyph.x + (g.advanceWidth / font.unitsPerEm) * em;
       pen = width + track * em;
     }
-    const out = { glyphs, width };
+    const inked = glyphs.filter(g => g.contours.length);
+    const ink = inked.length ? [Math.min(...inked.map(g => g.x + g.box[0])), Math.max(...inked.map(g => g.x + g.box[2]))] : [0, width];
+    const out = { glyphs, width, ink };
     shaped.set(key, out);
     return out;
   }
@@ -121,10 +205,11 @@ const CardMaker = (() => {
     return [...base, ...move(marks, 0, M.y)];
   }
 
-  // Outlines of a line of text. x is the left edge (or the centre, with align 'center'); y is the baseline.
+  // Outlines of a line of text. x is where the ink starts (or its centre, with align 'center'), so lines and the
+  // logo share one visible left edge whatever letter they start with; y is the baseline.
   function text(str, cap, x, y, { align = 'left', track = 0 } = {}) {
     const s = shape(str, cap, track);
-    const x0 = align === 'center' ? x - s.width / 2 : x;
+    const x0 = align === 'center' ? x - (s.ink[0] + s.ink[1]) / 2 : x - s.ink[0];
     return s.glyphs.flatMap(g => move(g.contours, x0 + g.x, y));
   }
 
@@ -316,6 +401,20 @@ const CardMaker = (() => {
     return clean(pts);
   }
 
+  // The card outline cut by the line y = cut (above R, so it crosses the straight sides): [above, below].
+  function splitOutline(cut) {
+    const pts = outline(), up = [], down = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      (a[1] >= cut ? up : down).push(a);
+      if ((a[1] - cut) * (b[1] - cut) < 0) {
+        const p = [a[0] + ((cut - a[1]) * (b[0] - a[0])) / (b[1] - a[1]), cut];
+        up.push(p); down.push(p);
+      }
+    }
+    return [clean(up), clean(down)];
+  }
+
   // ================= QR =================
   function qrMatrix(link) {
     const qr = qrcode(0, 'M'); // M: the code still reads with ~15% damage
@@ -384,29 +483,35 @@ const CardMaker = (() => {
     const missing = [...new Set([...name].filter(ch => !NAME_CHARS.test(ch) || font.charToGlyphIndex(ch) === 0))];
     if (missing.length) problems.push(`The driver name has characters the card can't print (${missing.join(' ')}). Rename the card (Cards → Rename).`);
     const nameMin = Math.max(MIN_CAP, ...[...name].map(minCapFor));
-    const nameW = W - EDGE - MARGIN, nameTrack = 0.02;
-    let lines = [name];
-    let cap = fit(lines, 4.0, [nameW], nameTrack);
+    const nameW = W - EDGE - MARGIN;
     const max2 = Math.max(3.8, nameMin); // two lines: a little smaller, so EMERGENCY CONTACT stays the big text
-    if (cap < max2) {
-      const split = splitName(name);
-      const cap2 = split.length > 1 ? fit(split, max2, [nameW, nameW], nameTrack) : 0;
-      if (cap2 > cap + 0.1 || (cap < nameMin && cap2 > cap)) { lines = split; cap = cap2; }
+    // Capitals read best a little spaced out (0.04 em); a name that only fits tighter gets 0.02 em.
+    let lines, cap, nameTrack;
+    for (nameTrack of [0.04, 0.02]) {
+      lines = [name];
+      cap = fit(lines, 4.0, [nameW], nameTrack);
+      if (cap < max2) {
+        const split = splitName(name);
+        const cap2 = split.length > 1 ? fit(split, max2, [nameW, nameW], nameTrack) : 0;
+        if (cap2 > cap + 0.1 || (cap < nameMin && cap2 > cap)) { lines = split; cap = cap2; }
+      }
+      if (cap >= nameMin) break;
     }
     if (cap < nameMin) problems.push('The driver name is too long to print. Shorten it (Cards → Rename).');
     cap = Math.max(cap, nameMin);
     // Two lines: far enough apart that accents on the lower line clear brackets or a cedilla on the upper one.
     const ink = lines.map(l => bounds(text(l, cap, 0, 0, { track: nameTrack })));
     const lineStep = lines.length > 1 ? Math.max(cap * 1.5, ink[1][3] - ink[0][1] + GAP + 0.2) : 0;
-    const NAME_BASE = 5.5;
+    const NAME_BASE = Math.round(cs * 100) / 100; // bottom margin = the logo's top margin
     lines.forEach((l, i) => front.push(textItem(l, cap, MARGIN, NAME_BASE + (lines.length - 1 - i) * lineStep, 'name', { track: nameTrack })));
     const nameTop = NAME_BASE + (lines.length - 1) * lineStep + Math.max(cap, ink[0][3] - 0.6);
 
     // EMERGENCY / CONTACT: the big text, as big as fits between the name, the logo's clear space and the pocket.
+    // A clear step above the name (0.75 of its capital height), lines 1.32 capital heights apart.
     const head = ['EMERGENCY', 'CONTACT'], headTrack = 0.03;
     let headCap = MIN_CAP, b1 = 0, b2 = 0;
     for (let c = 7.5; c >= MIN_CAP; c = Math.round((c - 0.05) * 100) / 100) {
-      const y2 = nameTop + 0.6 * c, y1 = y2 + 1.3 * c;
+      const y2 = nameTop + 0.75 * c, y1 = y2 + 1.32 * c;
       if (y1 + c > textTop) continue;
       if ([y1, y2].every((y, i) => MARGIN + textWidth(head[i], c, headTrack) <= pocketLimit(y, y + c))) { headCap = c; b1 = y1; b2 = y2; break; }
     }
@@ -414,33 +519,42 @@ const CardMaker = (() => {
     front.push(textItem(head[0], headCap, MARGIN, b1, 'headline', { track: headTrack }));
     front.push(textItem(head[1], headCap, MARGIN, b2, 'headline', { track: headTrack }));
 
-    // ---- Back (as seen from the back): QR code, SCAN OR TAP, tap symbol over the tag, backup line, 911 ----
-    const back = [];
+    // ---- Back (as seen from the back) ----
+    // A left column level with the QR code's dark squares: SCAN OR TAP at the top, the tap symbol under it (over the
+    // hidden tag), BACKUP and the number at the bottom. Along the bottom edge, a dark band with the 911 line.
+    const back = [], band = [];
+    const qrPitch = QRBOX.size / (m.n + 8), qrTop = QRBOX.y + QRBOX.size - 4 * qrPitch, qrBottom = QRBOX.y + 4 * qrPitch;
     const colW = QRBOX.x - 1.2 - EDGE;
-    const scanCap = fit(['SCAN OR TAP'], 3.8, [colW], 0.04);
-    back.push(textItem('SCAN OR TAP', scanCap, EDGE, H - 5.2 - scanCap, 'scan', { track: 0.04 }));
-    // A small contactless symbol (a dot and three waves) centred on the hidden tag.
-    const wx = TAG_BACK_X - 2.6, wy = TAG.y;
+    const scanCap = fit(['SCAN OR TAP'], 3.8, [colW], 0.06);
+    back.push(textItem('SCAN OR TAP', scanCap, EDGE, qrTop - scanCap, 'scan', { track: 0.06 }));
+    // The contactless symbol (a dot and three waves), lined up with the column's left edge, over the tag.
+    const wx = EDGE + 0.9, wy = TAG.y;
     back.push({ contours: [circle(wx, wy, 0.9, 32)], kind: 'tap' });
     for (const [r0, r1] of [[2.1, 2.9], [3.7, 4.5], [5.3, 6.1]]) back.push({ contours: [arcBand(wx, wy, r0, r1, -45, 45)], kind: 'tap' });
     if (backup) {
-      const numCap = fit([backup], 3.6, [colW], 0.02);
+      const numCap = fit([backup], 4.0, [colW], 0.03);
       if (numCap < MIN_CAP) problems.push('The backup number is too long to print.');
-      const numBase = QRBOX.y + 4 * (QRBOX.size / (m.n + 8)); // level with the QR code's bottom row
-      back.push(textItem(backup, Math.max(numCap, MIN_CAP), EDGE, numBase, 'backup', { track: 0.02 }));
-      back.push(textItem('BACKUP', MIN_CAP, EDGE, numBase + numCap + 1.8, 'backup', { track: 0.08 }));
+      back.push(textItem(backup, Math.max(numCap, MIN_CAP), EDGE, qrBottom, 'backup', { track: 0.03 }));
+      back.push(textItem('BACKUP', MIN_CAP, EDGE, qrBottom + Math.max(numCap, MIN_CAP) + 1.6, 'backup', { track: 0.12 }));
     }
     const sos = 'LIFE-THREATENING? CALL 911';
-    const sosCap = fit([sos], 3.6, [W - 2 * EDGE], 0.02);
-    back.push(textItem(sos, sosCap, EDGE, 4.6, '911', { track: 0.02 }));
+    const sosCap = fit([sos], 3.6, [W - 8], 0.02);
+    if (sosCap < MIN_CAP) problems.push("The 911 line doesn't fit on the card.");
+    band.push(textItem(sos, Math.max(sosCap, MIN_CAP), W / 2, (BAND - Math.max(sosCap, MIN_CAP)) / 2, '911', { align: 'center', track: 0.02 }));
 
+    const [above, below] = splitOutline(BAND);
     const L = {
       front: { zones: [{ contour: outline(), color: 'black', items: front }] },
-      back: { zones: [{ contour: outline(), color: 'white', items: back, windows: [rect(QRBOX.x, QRBOX.y, QRBOX.size, QRBOX.size)] }], qr: { m, box: QRBOX } },
+      back: {
+        zones: [{ contour: above, color: 'white', items: back, windows: [rect(QRBOX.x, QRBOX.y, QRBOX.size, QRBOX.size)] },
+          { contour: below, color: 'black', items: band }],
+        qr: { m, box: QRBOX },
+      },
       problems, qrModules: m.n, modulePitch: QRBOX.size / (m.n + 8), qrBox: QRBOX,
       logo: { ...logoBox, multibar: logo().multibar * LOGO_W, clear: cs },
-      text: [...front, ...back].filter(i => i.text).map(i => ({ text: i.text, cap: i.cap, kind: i.kind, baseline: i.baseline, box: i.box, face: front.includes(i) ? 'front' : 'back' })),
-      minCap: Math.min(...[...front, ...back].filter(i => i.text).map(i => i.cap)),
+      band: BAND,
+      text: [...front, ...back, ...band].filter(i => i.text).map(i => ({ text: i.text, cap: i.cap, kind: i.kind, baseline: i.baseline, box: i.box, face: front.includes(i) ? 'front' : 'back' })),
+      minCap: Math.min(...[...front, ...back, ...band].filter(i => i.text).map(i => i.cap)),
     };
     if (!problems.length) checkClearances(L, problems); // (a name that's too long would only repeat itself here)
     return L;
@@ -452,9 +566,12 @@ const CardMaker = (() => {
   // the edge, in the QR code's area, or closer than GAP to other art.
   function checkClearances(L, problems) {
     const say = msg => { if (!problems.includes(msg)) problems.push(msg); };
-    const front = L.front.zones[0].items, back = L.back.zones[0].items, lg = L.logo;
+    const front = L.front.zones[0].items, back = L.back.zones[0].items, band = L.back.zones[1].items, lg = L.logo;
     const inCard = ([x, y]) => x >= 2 && x <= W - 2 && y >= 2 && y <= H - 2;
-    for (const item of [...front, ...back]) if (!item.contours.every(c => c.every(inCard))) say(`The ${item.kind} text doesn't fit on the card.`);
+    for (const item of [...front, ...back, ...band]) if (!item.contours.every(c => c.every(inCard))) say(`The ${item.kind} text doesn't fit on the card.`);
+    // Nothing within 1 mm of the band's edge, on either side.
+    for (const item of back) if (item.contours.some(c => c.some(([, y]) => y < L.band + 1))) say(`The ${item.kind} text runs into the bottom band.`);
+    for (const item of band) if (item.contours.some(c => c.some(([, y]) => y > L.band - 1))) say(`The ${item.kind} text doesn't fit in the bottom band.`);
     for (const item of front) {
       if (item.kind === 'logo') continue;
       if (item.contours.some(c => c.some(([x, y]) => Math.hypot(x - TAG.x, y - TAG.y) < POCKET.d / 2 + 0.8))) say(`The ${item.kind} text would sit over the NFC tag.`);
@@ -463,7 +580,7 @@ const CardMaker = (() => {
     const q = L.qrBox;
     for (const item of back)
       if (item.contours.some(c => c.some(([x, y]) => x > q.x - 0.5 && y > q.y - 0.5))) say(`The ${item.kind} text runs into the QR code's margin.`);
-    for (const items of [front, back]) {
+    for (const items of [front, back, band]) {
       const art = items.map(i => ({ contours: i.contours, box: i.box || bounds(i.contours), kind: i.kind }));
       for (let i = 0; i < art.length; i++) for (let j = i + 1; j < art.length; j++)
         if ((art[i].kind !== 'tap' || art[j].kind !== 'tap') && minDistance(art[i], art[j], 1) < GAP) say(`The ${art[i].kind} and ${art[j].kind} text are too close together.`);
@@ -559,7 +676,7 @@ const CardMaker = (() => {
     prism({ outer: outline(), holes: [] }, PAUSE_Z, PAUSE_Z + ROOF, tris.white);                    // roof, after the pause
     for (const r of faceRegions(L.back, false)) prism(r, PAUSE_Z + ROOF, T, tris[r.color]);         // back, on top
     return {
-      black: stl(tris.black, 'Tenaris card BLACK'), white: stl(tris.white, 'Tenaris card WHITE'),
+      black: stl(tris.black, 'Tenaris card DARK'), white: stl(tris.white, 'Tenaris card LIGHT'),
       thickness: T, pauseZ: PAUSE_Z, pauseLayer: Math.round(PAUSE_Z / LAYER) + 1, layerHeight: LAYER,
       layers: { front: [0, FRONT], core: [FRONT, PAUSE_Z], roof: [PAUSE_Z, PAUSE_Z + ROOF], back: [PAUSE_Z + ROOF, T] },
       pocket: { x: TAG_BACK_X, y: TAG.y, d: POCKET.d, depth: POCKET.depth, z0: FRONT, z1: PAUSE_Z },
@@ -664,9 +781,23 @@ const CardMaker = (() => {
   }
 
   // ================= Print notes =================
-  function printNotes(card, m) {
+  // opts.printer: { id, label, nozzles } of the Bambu printer the .3mf next to these notes was made for (bambu3mf.js
+  // PRINTERS); without it the notes are for the STL files, any Bambu printer.
+  const SPLIT_NOZZLES = ['H2D', 'H2DP', 'X2D']; // two fixed nozzles: LIGHT left, DARK right (bambu3mf.js)
+  function printNotes(card, m, opts = {}) {
     const z = v => v.toFixed(1);
     const roofLayer = m.pauseLayer, lastLayer = Math.round(m.thickness / LAYER);
+    const pr = opts.printer;
+    const printerLines = pr
+      ? [`PRINTER  Bambu Lab ${pr.label}, 0.4 mm nozzle, AMS. The .3mf is made for this printer only (its name is in`,
+        '  the file name); for another Bambu printer, download it again in the dashboard with that printer chosen.',
+        ...(SPLIT_NOZZLES.includes(pr.id)
+          ? ['  Two nozzles: the LIGHT filament prints from the LEFT nozzle and the DARK one from the RIGHT nozzle, so',
+            '  the colours never share a nozzle (no purging, clean light lettering). Load each filament where that',
+            '  nozzle can use it (its AMS or spool). To swap sides, change Filament grouping in Bambu Studio.']
+          : pr.nozzles > 1 ? ['  Two nozzles: Bambu Studio chooses which nozzle prints each colour (its filament grouping).'] : [])]
+      : ['PRINTER  Any enclosed Bambu Lab printer with AMS and a 0.4 mm nozzle (ASA and ABS need the enclosure):',
+        '  X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C or X2D. Not the open A1 / A1 mini / A2L / P1P.'];
     return [
       `TENARIS EMERGENCY CARD — ${card.driver.trim()}`,
       '',
@@ -674,21 +805,27 @@ const CardMaker = (() => {
       card.link,
       '',
       'NFC TAG',
-      `  NTAG215 round sticker, ${TAG.d} mm across, ${TAG.thick} mm thick. Before printing, write the link to it`,
+      `  NTAG215 PVC coin tag, ${TAG.d} mm (1 in) across, ${TAG.thick} mm thick. Before printing, write the link to it`,
       '  (NFC Tools: Write > Add a record > URL > paste > Write) and test it with a phone. Do NOT lock it yet.',
+      `  Measure one tag from each new batch: at most ${(POCKET.d - 0.6).toFixed(1)} mm across and ${z(POCKET.depth)} mm thick, or it won't fit the pocket.`,
+      '',
+      'COLOURS  Two filaments of the same type: one DARK and one LIGHT, e.g. black (or dark Tenaris blue) and white.',
+      '  DARK: the front, the QR code and the back lettering. LIGHT: the core, the logo and front lettering, the back.',
+      '  The QR code needs strong contrast, so keep the dark one dark and the light one white or nearly white.',
       '',
       'FILES',
-      '  Bambu Studio project (.3mf, from the dashboard): colours, settings and the pause are already set.',
-      '  Open it, check the two filaments, slice, print.',
-      '  STL files (this ZIP): *-BLACK.stl and *-WHITE.stl. Import BOTH into Bambu Studio at once and answer',
-      '  "Yes" to loading them as ONE object with multiple parts. Keep their positions. Black part = black',
-      '  filament, white part = white filament. Then add the settings and the pause below yourself.',
+      '  Bambu Studio project (.3mf, from the dashboard): parts, settings and the pause are already set.',
+      '  Filament 1 = LIGHT (shown white), filament 2 = DARK (shown black). Open it, set the two filaments to',
+      '  your AMS slots, slice, print.',
+      '  STL files: *-DARK.stl and *-LIGHT.stl. Import BOTH into Bambu Studio at once and answer "Yes" to',
+      '  loading them as ONE object with multiple parts. Keep their positions. Give the DARK part the dark',
+      '  filament and the LIGHT part the light one. Then add the settings and the pause below yourself.',
       '',
-      `CARD  ${W} x ${H} x ${z(m.thickness)} mm, ${lastLayer} layers of ${LAYER} mm. From the build plate up:`,
+      `CARD  ${W} x ${H} x ${z(m.thickness)} mm (credit-card outline), ${lastLayer} layers of ${LAYER} mm. From the build plate up:`,
       `  ${z(m.layers.front[0])}-${z(m.layers.front[1])} mm  front (logo side), FACE DOWN on the plate`,
-      `  ${z(m.layers.core[0])}-${z(m.layers.core[1])} mm  white core with the NFC pocket, ${POCKET.d} mm across, ${z(POCKET.depth)} mm deep`,
+      `  ${z(m.layers.core[0])}-${z(m.layers.core[1])} mm  LIGHT core with the NFC pocket, ${POCKET.d} mm across, ${z(POCKET.depth)} mm deep`,
       '  -------------- PAUSE: insert the tag --------------',
-      `  ${z(m.layers.roof[0])}-${z(m.layers.roof[1])} mm  white layer that seals the tag in`,
+      `  ${z(m.layers.roof[0])}-${z(m.layers.roof[1])} mm  LIGHT layer that seals the tag in`,
       `  ${z(m.layers.back[0])}-${z(m.layers.back[1])} mm  back (QR code side), on top`,
       '',
       'ORIENTATION',
@@ -696,33 +833,74 @@ const CardMaker = (() => {
       '  Do not flip, rotate onto an edge or mirror anything. The front reads correctly when you turn the',
       '  finished card over.',
       '',
-      'PRINTER AND MATERIAL  Bambu Lab P2S, 0.4 mm nozzle, AMS: black + white ASA (or ABS; same type for both)',
-      '  Start from the Bambu ASA (or ABS) filament profiles and the 0.20 mm Standard process, then check:',
+      ...printerLines,
+      '',
+      'MATERIAL AND SETTINGS  Both filaments ASA, or both ABS (never mixed).',
+      `  ${pr ? 'Already set in the .3mf; with the STL files, set them yourself' : 'Set them yourself'}, starting from the Bambu ASA (or ABS) profile`,
+      '  for your printer and its 0.20 mm Standard process:',
       `  - Layer height ${LAYER} mm, first layer ${LAYER} mm (the pause height depends on it).`,
       '  - Sparse infill density 100%: a solid, stiff card.',
+      '  - Bed 90 C for ASA and ABS, textured PEI plate. The .3mf sets it; with the STL files set it yourself',
+      '    (the Bambu ASA profile says 100 C). PVC tags made for embedding are rated for beds up to 90 C.',
       '  - Enclosure door and top CLOSED for the whole print (except at the pause); ASA/ABS warp in drafts.',
       '  - Part cooling fan off or low (the ASA/ABS profiles already keep it low).',
-      '  - Supports OFF. Prime tower ON (needed for the colour changes).',
+      '  - Supports OFF. Prime tower ON (needed for the colour changes, and it purges the nozzle after the pause).',
       '  - Brim off; add a 3-5 mm brim (or mouse ears) only if corners lift on a test card; trim it after.',
       '  - Wall generator Arachne (the default), so the thinnest Tenaris logo bars (about 0.22 mm) print.',
       '  - The front takes the plate\'s finish: textured PEI gives a matte, textured front; a smooth plate a',
       '    glossy one. Clean the plate (no fingerprints) and use glue if Bambu\'s guide says so for the plate.',
       '',
       'INSERT THE NFC TAG',
-      `  The print must pause after the layer that ends at Z = ${z(m.pauseZ)} mm, before layer ${roofLayer} of ${lastLayer}`,
-      `  (layer ${roofLayer} shows as Z ${z(m.pauseZ + LAYER)} mm in Bambu Studio's layer slider).`,
-      '  - Bambu Studio project (.3mf): the pause is already in it. Check it in the sliced preview.',
+      `  The print pauses after layer ${roofLayer - 1} (top at Z = ${z(m.pauseZ)} mm), before layer ${roofLayer} of ${lastLayer}`,
+      `  (layer ${roofLayer} shows as ${z(m.pauseZ + LAYER)} mm in Bambu Studio's layer slider).`,
+      '  - Bambu Studio project (.3mf): the pause is already in it. After slicing, the layer slider shows it',
+      `    on layer ${roofLayer} (${z(m.pauseZ + LAYER)} mm), and layer ${roofLayer - 1} (${z(m.pauseZ)} mm) shows the pocket still open.`,
       `  - STL files: slice, drag the layer slider to layer ${roofLayer} (${z(m.pauseZ + LAYER)} mm), right-click its handle >`,
       `    Add Pause. Check that layer ${roofLayer - 1} (${z(m.pauseZ)} mm) still shows the pocket open.`,
-      '  At the pause: wait for the head to park. Press the written and tested tag into the pocket, flat,',
-      '  sticky side down, fully below the rim (nothing may stick up). Don\'t touch the nozzle or the print\'s',
-      '  edges. Close the door and resume. The next layers seal the tag in.',
+      '  At the pause:',
+      '  1. Wait until the head has moved away from the card and stopped (it parks over the waste chute).',
+      '  2. Open the door. Drop the written and tested tag into the pocket and press it flat. If it has an',
+      '     adhesive back, that side goes down. It must sit fully below the rim: nothing may stick up.',
+      '     Don\'t touch the nozzle, the card\'s edges or the prime tower.',
+      '  3. Close the door and press Resume straight away. PVC softens at about 80 C and the card is near',
+      '     90 C: sealing the tag quickly keeps it flat.',
+      '  The printer then prints the prime tower (purging the nozzle) and seals the tag with one LIGHT layer.',
       '',
       'AFTER PRINTING',
       '  Let the plate cool before taking the card off (ASA/ABS can warp if pulled off hot).',
       '  Test: scan the QR code and tap the card with an iPhone and an Android phone. Both must open the page',
       '  with the right driver name.',
       '  Only then lock the tag, through the card: NFC Tools > Other > Lock tag. Locking is permanent.',
+      '',
+    ].join('\n');
+  }
+
+  // README for the owner's "all cards" ZIP. cards: [{ driver, holder, link, folder, live }].
+  function batchNotes(cards, material, skipped = [], printer = null) {
+    const day = new Date().toISOString().slice(0, 10);
+    return [
+      `TENARIS EMERGENCY CARDS — print files for ${cards.length} card${cards.length === 1 ? '' : 's'} (${printer ? 'Bambu Lab ' + printer.label + ', ' : ''}${material}, made ${day})`,
+      '',
+      'Each folder is one card:',
+      `  <card>-${printer ? printer.id : '<printer>'}.3mf          Bambu Studio project${printer ? ' for the Bambu Lab ' + printer.label : ''}: parts, settings and the tag pause already set`,
+      '  <card>-DARK.stl / -LIGHT.stl   the same card as two STL parts',
+      '  <card>-print-notes.txt   the card\'s link, settings, the pause, inserting the tag, testing, locking',
+      'NFC-links.csv lists every card\'s link, for writing the tags.',
+      '',
+      `CARD  ${W} x ${H} x ${T.toFixed(1)} mm, two colours: one DARK and one LIGHT ${material} filament.`,
+      `NFC TAG  NTAG215 PVC coin, ${TAG.d} mm (1 in) x ${TAG.thick} mm. Pocket ${POCKET.d} mm x ${POCKET.depth.toFixed(1)} mm.`,
+      `PAUSE  After layer ${Math.round(PAUSE_Z / LAYER)} (Z ${PAUSE_Z.toFixed(1)} mm), before layer ${Math.round(PAUSE_Z / LAYER) + 1} of ${Math.round(T / LAYER)} (${(PAUSE_Z + LAYER).toFixed(1)} mm in the layer slider).`,
+      '',
+      'EVERY CARD HAS ITS OWN LINK. A tag in the wrong card opens the wrong driver\'s page. For each card:',
+      '  1. Write THIS card\'s link (from its print notes or NFC-links.csv) to a tag and test it with a phone.',
+      '  2. Print THIS card\'s .3mf. At the pause, put that tag in.',
+      '  3. Tap and scan the finished card: it must show this driver\'s name. Then lock the tag.',
+      'Print and test one card before the rest.',
+      ...(cards.some(c => !c.live) ? ['', 'NOT PUBLISHED YET (links work only after publishing): ' + cards.filter(c => !c.live).map(c => c.driver).join(', ')] : []),
+      ...(skipped.length ? ['', 'LEFT OUT (fix in Cards > Rename, then download again):', ...skipped.map(t => '  ' + t)] : []),
+      '',
+      'CARDS',
+      ...cards.map(c => `  ${c.folder}  ${c.driver}${c.holder ? ' (' + c.holder + ')' : ''}`),
       '',
     ].join('\n');
   }
@@ -739,14 +917,14 @@ const CardMaker = (() => {
     const base = 'card-' + slug(card.driver);
     const m = model(card);
     return [
-      { name: `${base}-BLACK.stl`, data: m.black },
-      { name: `${base}-WHITE.stl`, data: m.white },
+      { name: `${base}-DARK.stl`, data: m.black },
+      { name: `${base}-LIGHT.stl`, data: m.white },
       { name: `${base}-print-notes.txt`, data: new TextEncoder().encode(printNotes(card, m)) },
     ];
   }
 
   return {
-    load, layout, model, preview, printNotes, files, zip, slug,
+    load, layout, model, preview, printNotes, batchNotes, files, zip, slug,
     LAYER, CARD: { W, H, R, T, FRONT, CORE, ROOF, BACK, PAUSE_Z, TAG, POCKET, MIN_CAP, MIN_MODULE, GAP },
   };
 })();

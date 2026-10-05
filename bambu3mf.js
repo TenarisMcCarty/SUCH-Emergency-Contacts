@@ -1,47 +1,71 @@
 /* Bambu Studio project (.3mf) exporter for the two-colour emergency card.
  *
- *   <script src="bambu3mf.js" defer></script>      (bambu-template.json must sit next to it)
+ *   <script src="bambu3mf.js" defer></script>      (the bambu-printers/ folder must sit next to it)
  *
- *   const bytes = await Bambu3MF.make({ black, white, name, pauseZ, layerHeight: 0.2 });
+ *   const bytes = await Bambu3MF.make({ black, white, name, pauseZ, layerHeight: 0.2, printer: 'H2D' });
  *   // bytes: Uint8Array of a .3mf; save it as `${name}.3mf`
  *
- * black / white  binary STL (Uint8Array or ArrayBuffer), same coordinate system: they are kept exactly
- *                where they are relative to each other and become ONE object with TWO parts
- *                (white = filament 1, black = filament 2). The object is centred on the plate.
+ * black / white  binary STL (Uint8Array or ArrayBuffer) of the dark and the light part, same coordinate system:
+ *                they are kept exactly where they are relative to each other and become ONE object with TWO
+ *                parts (LIGHT = filament 1, shown white; DARK = filament 2, shown black). The object is centred
+ *                on the plate.
  * name           object / project name
  * pauseZ         Z (mm) of the pocket roof. The print pauses (Bambu "Add Pause", M400 U1) before the
  *                first layer that reaches above pauseZ, i.e. after the layer whose top is pauseZ.
  * layerHeight    0.2 (default). First layer is always 0.2 mm.
  * Optional:
- * material       'ASA' (default) or 'ABS' (Bambu ASA / Bambu ABS system filament presets)
+ * printer        one of Bambu3MF.PRINTERS' ids (default 'P2S'): the enclosed Bambu Lab printers with a 0.4 mm
+ *                nozzle, single- and two-nozzle. On the H2D, H2D Pro and X2D each colour gets its own nozzle
+ *                (filament grouping "Manual": LIGHT = left nozzle, DARK = right), so the colours never share a
+ *                nozzle: no purging, no tint of dark in the light lettering, and a faster print. (Bambu Studio's
+ *                default, "Auto For Flush", put both colours on one nozzle in its command-line slicer.) The H2C
+ *                keeps the automatic grouping.
+ * material       'ASA' (default) or 'ABS' (Bambu ASA / Bambu ABS system filament presets for that printer)
  * ironing        false (default). true = iron the topmost surface ("topmost"). Off by default: each colour is
  *                ironed by its own filament and the hot nozzle face can drag black onto neighbouring white
  *                QR modules, lowering scan contrast.
  *
- * Printer: Bambu Lab P2S 0.4 nozzle, process "0.20mm Standard @BBL P2S" with overrides
- * (100 % infill, 3 walls, Arachne, no brim, no supports, prime tower on), plate: Textured PEI.
- * Settings come from bambu-template.json (generated from Bambu Studio's own system presets).
+ * Settings: the printer's "0.20mm Standard" process with overrides (100 % infill, 3 walls, Arachne, no brim,
+ * no supports, prime tower on), plate: Textured PEI, bed at most 90 °C. They come from bambu-printers/<id>.json,
+ * made by Bambu Studio itself from its system presets (tools/build_templates.py). bambu-template.json (P2S)
+ * stays for older cached copies of this script.
  *
  * Bambu3MF.pauseLayer(pauseZ, layerHeight) -> { layer, topZ, afterZ } (1-based layer that the pause
  * precedes, its top Z, and the Z printed before the pause).
+ * Bambu3MF.zipWriter() -> { add(name, bytes), finish() }: a deflated ZIP built one file at a time (the
+ * dashboard's "all cards" download).
  */
 const Bambu3MF = (() => {
   'use strict';
 
   const FIRST_LAYER = 0.2;
+  const BED_MAX = 90; // °C, for the PVC NFC tag (see projectSettings)
   const script = typeof document !== 'undefined' ? document.currentScript : null;
-  const TEMPLATE_URL = script && script.src ? new URL('bambu-template.json', script.src).href : 'bambu-template.json';
+  const BASE_URL = script && script.src ? new URL('./', script.src).href : '';
   const enc = new TextEncoder();
-  let templatePromise = null;
+  // Enclosed Bambu Lab printers (ASA and ABS need an enclosure), 0.4 mm nozzle.
+  const PRINTERS = [
+    { id: 'H2D', label: 'H2D (two nozzles)', nozzles: 2 },
+    { id: 'H2DP', label: 'H2D Pro (two nozzles)', nozzles: 2 },
+    { id: 'H2C', label: 'H2C (two nozzles)', nozzles: 2 },
+    { id: 'X2D', label: 'X2D (two nozzles)', nozzles: 2 },
+    { id: 'H2S', label: 'H2S', nozzles: 1 },
+    { id: 'X1C', label: 'X1 Carbon', nozzles: 1 },
+    { id: 'X1E', label: 'X1E', nozzles: 1 },
+    { id: 'P2S', label: 'P2S', nozzles: 1 },
+    { id: 'P1S', label: 'P1S', nozzles: 1 },
+  ];
+  const templates = new Map();
 
-  function loadTemplate() {
-    if (!templatePromise) {
-      templatePromise = fetch(TEMPLATE_URL).then(r => {
-        if (!r.ok) throw new Error(`bambu-template.json: HTTP ${r.status}`);
+  function loadTemplate(printer = 'P2S') {
+    if (!PRINTERS.some(p => p.id === printer)) return Promise.reject(new Error(`Unknown printer "${printer}"`));
+    if (!templates.has(printer)) {
+      templates.set(printer, fetch(`${BASE_URL}bambu-printers/${printer}.json`).then(r => {
+        if (!r.ok) throw new Error(`bambu-printers/${printer}.json: HTTP ${r.status}`);
         return r.json();
-      }).catch(e => { templatePromise = null; throw e; });
+      }).catch(e => { templates.delete(printer); throw e; }));
     }
-    return templatePromise;
+    return templates.get(printer);
   }
 
   // ---------- layers / pause ----------
@@ -175,35 +199,49 @@ const Bambu3MF = (() => {
     } catch (e) { return null; }
   }
 
-  async function zip(files) {
+  // A ZIP built one file at a time, so a big batch keeps only the compressed bytes:
+  //   const z = zipWriter(); await z.add(name, bytes); …; new Blob(z.finish(), { type: 'application/zip' })
+  function zipWriter() {
     const parts = [], central = [];
-    let offset = 0;
+    let offset = 0, count = 0;
     const now = new Date();
     const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
     const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
     const put = (dv, list) => list.forEach(([o, v, n]) => (n === 4 ? dv.setUint32(o, v, true) : dv.setUint16(o, v, true)));
-    for (const f of files) {
-      const name = enc.encode(f.name), crc = crc32(f.data);
-      let body = f.data, method = 0;
-      if (f.data.length > 256) {
-        const z = await deflateRaw(f.data);
-        if (z && z.length < f.data.length) { body = z; method = 8; }
-      }
-      const head = new DataView(new ArrayBuffer(30));
-      put(head, [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, method, 2], [10, time, 2], [12, date, 2], [14, crc, 4],
-        [18, body.length, 4], [22, f.data.length, 4], [26, name.length, 2], [28, 0, 2]]);
-      const cen = new DataView(new ArrayBuffer(46));
-      put(cen, [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, method, 2], [12, time, 2], [14, date, 2],
-        [16, crc, 4], [20, body.length, 4], [24, f.data.length, 4], [28, name.length, 2], [30, 0, 2], [32, 0, 2],
-        [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, offset, 4]]);
-      parts.push(new Uint8Array(head.buffer), name, body);
-      central.push(new Uint8Array(cen.buffer), name);
-      offset += 30 + name.length + body.length;
-    }
-    const cenSize = central.reduce((n, b) => n + b.length, 0);
-    const end = new DataView(new ArrayBuffer(22));
-    put(end, [[0, 0x06054b50, 4], [8, files.length, 2], [10, files.length, 2], [12, cenSize, 4], [16, offset, 4]]);
-    const all = [...parts, ...central, new Uint8Array(end.buffer)];
+    return {
+      async add(fileName, data) {
+        const name = enc.encode(fileName), crc = crc32(data);
+        let body = data, method = 0;
+        if (data.length > 256) {
+          const z = await deflateRaw(data);
+          if (z && z.length < data.length) { body = z; method = 8; }
+        }
+        const head = new DataView(new ArrayBuffer(30));
+        put(head, [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, method, 2], [10, time, 2], [12, date, 2], [14, crc, 4],
+          [18, body.length, 4], [22, data.length, 4], [26, name.length, 2], [28, 0, 2]]);
+        const cen = new DataView(new ArrayBuffer(46));
+        put(cen, [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, method, 2], [12, time, 2], [14, date, 2],
+          [16, crc, 4], [20, body.length, 4], [24, data.length, 4], [28, name.length, 2], [30, 0, 2], [32, 0, 2],
+          [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, offset, 4]]);
+        parts.push(new Uint8Array(head.buffer), name, body);
+        central.push(new Uint8Array(cen.buffer), name);
+        offset += 30 + name.length + body.length;
+        count++;
+      },
+      // All the ZIP's pieces, in order.
+      finish() {
+        const cenSize = central.reduce((n, b) => n + b.length, 0);
+        const end = new DataView(new ArrayBuffer(22));
+        put(end, [[0, 0x06054b50, 4], [8, count, 2], [10, count, 2], [12, cenSize, 4], [16, offset, 4]]);
+        return [...parts, ...central, new Uint8Array(end.buffer)];
+      },
+    };
+  }
+
+  async function zip(files) {
+    const z = zipWriter();
+    for (const f of files) await z.add(f.name, f.data);
+    const all = z.finish();
     const out = new Uint8Array(all.reduce((n, b) => n + b.length, 0));
     let at = 0;
     for (const b of all) { out.set(b, at); at += b.length; }
@@ -226,16 +264,41 @@ const Bambu3MF = (() => {
     setProcess('layer_height', String(round4(layerHeight)));
     setProcess('ironing_type', ironing ? 'topmost' : 'no ironing');
     s.different_settings_to_system[0] = [...diff].sort().join(';');
+    // Bed at most 90 C: the PVC NFC tag sits in the card from the pause on, and PVC tags made for embedding are
+    // rated for beds up to 90 C. Bambu's own P2S presets use 90 C for ABS and Generic ASA (Bambu ASA: 100 C).
+    // Filament keys changed from the system preset are listed per filament (entries 1…n), like process keys.
+    const nf = s.filament_colour.length;
+    for (const key of ['textured_plate_temp', 'textured_plate_temp_initial_layer', 'hot_plate_temp', 'hot_plate_temp_initial_layer', 'eng_plate_temp', 'eng_plate_temp_initial_layer']) {
+      if (!Array.isArray(s[key])) continue;
+      const before = s[key];
+      s[key] = before.map(v => String(Math.min(Number(v), BED_MAX)));
+      s[key].forEach((v, i) => {
+        if (v === before[i] || i >= nf) return;
+        const list = new Set((s.different_settings_to_system[i + 1] || '').split(';').filter(Boolean));
+        list.add(key);
+        s.different_settings_to_system[i + 1] = [...list].sort().join(';');
+      });
+    }
     return s;
   }
 
   // ---------- main ----------
-  async function make({ black, white, name = 'card', pauseZ, layerHeight = 0.2, material = 'ASA', ironing = false, template } = {}) {
+  async function make({ black, white, name = 'card', pauseZ, layerHeight = 0.2, printer = 'P2S', material = 'ASA', ironing = false, template } = {}) {
     if (!black || !white) throw new Error('make(): black and white STL data are required');
     if (typeof pauseZ !== 'number' || !isFinite(pauseZ)) throw new Error('make(): pauseZ (mm) is required');
     if (!(layerHeight >= 0.04 && layerHeight <= 0.32)) throw new Error('make(): layerHeight out of range');
-    const tpl = template || await loadTemplate();
+    const tpl = template || await loadTemplate(printer);
     const settings = projectSettings(tpl, { material, layerHeight, ironing });
+    // Two fixed nozzles (H2D, H2D Pro, X2D): filament 1 (LIGHT) on the left nozzle, filament 2 (DARK) on the right.
+    // These are project options (Bambu Studio keeps them from the file), repeated in the plate's metadata below.
+    // The H2C's right side is a nozzle changer: a fixed grouping needs the printer's own nozzle list, so it keeps
+    // Bambu Studio's automatic grouping (a fixed one fails to slice: "Group error in manual mode").
+    const twoNozzles = settings.nozzle_diameter.length > 1 && (settings.extruder_max_nozzle_count || []).every(n => n === '1');
+    if (twoNozzles) {
+      settings.filament_map_mode = 'Manual';
+      settings.filament_map = ['1', '2'];
+      settings.filament_nozzle_map = ['0', '1'];
+    }
 
     const pw = stlMesh(white, 'white'), pb = stlMesh(black, 'black');
     const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
@@ -255,7 +318,7 @@ const Bambu3MF = (() => {
     const bedY = (Math.min(...area.map(a => a[1])) + Math.max(...area.map(a => a[1]))) / 2;
     const place = `1 0 0 0 1 0 0 0 1 ${num(bedX)} ${num(bedY)} 0`;
 
-    const OBJ = 3, parts = [{ id: 1, label: 'WHITE', p: pw, filament: 1 }, { id: 2, label: 'BLACK', p: pb, filament: 2 }];
+    const OBJ = 3, parts = [{ id: 1, label: 'LIGHT', p: pw, filament: 1 }, { id: 2, label: 'DARK', p: pb, filament: 2 }];
     const objectLines = [];
     for (const part of parts) {
       const m = meshObject(part.p, part.id, `${hex8((OBJ << 16) | (part.id - 1))}-81cb-4c03-9d28-80fed5dfa1dc`, off);
@@ -295,8 +358,8 @@ const Bambu3MF = (() => {
         `      <mesh_stat face_count="${pt.faces}" edges_fixed="0" degenerate_facets="0" facets_removed="0" facets_reversed="0" backwards_edges="0"/>`,
         '    </part>']),
       '  </object>', '  <plate>', '    <metadata key="plater_id" value="1"/>', '    <metadata key="plater_name" value=""/>',
-      '    <metadata key="locked" value="false"/>', '    <metadata key="filament_map_mode" value="Auto For Flush"/>',
-      `    <metadata key="filament_maps" value="${Array(nf).fill(1).join(' ')}"/>`,
+      '    <metadata key="locked" value="false"/>', `    <metadata key="filament_map_mode" value="${esc(settings.filament_map_mode)}"/>`,
+      `    <metadata key="filament_maps" value="${settings.filament_map.join(' ')}"/>`,
       `    <metadata key="filament_volume_maps" value="${Array(nf).fill(0).join(' ')}"/>`,
       '    <model_instance>', `      <metadata key="object_id" value="${OBJ}"/>`, '      <metadata key="instance_id" value="0"/>',
       '      <metadata key="identify_id" value="100"/>', '    </model_instance>', '  </plate>', '  <assemble>',
@@ -336,5 +399,5 @@ const Bambu3MF = (() => {
     return zip(files.map(([n, text]) => ({ name: n, data: enc.encode(text) })));
   }
 
-  return { make, pauseLayer, loadTemplate, FIRST_LAYER };
+  return { make, pauseLayer, loadTemplate, zipWriter, PRINTERS, FIRST_LAYER };
 })();

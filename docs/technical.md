@@ -42,14 +42,15 @@ supervisor ──(email + password)──► dashboard.html ──GitHub API PUT
 | `manifest.json`, `icon-*.png`, `apple-touch-icon.png` | Home-screen app | Name "Emergency", Tenaris mark on charcoal. `start_url` is `./` (no card key), so `app.js` falls back to the last card key saved in `localStorage` when the link has no `#`. |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
 | `dashboard.html` | Dashboard markup | Sign-in (Email, password, Forgot password?), setup steps (including the one-time temporary password), tabs, Owner tab |
-| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing (with a self-check), deploy watching, Print & QR, Owner tab (people who can sign in, shared password, token, owner password, recovery code). Elements added for personal sign-ins are optional, for cache mixes with an older `dashboard.html`. |
-| `cardmaker.js` | Print files | Card layout, 3D model and STL writer, previews, ZIP writer, print notes ([section 6](#6-the-card-maker)) |
-| `bambu3mf.js`, `bambu-template.json` | Bambu Studio project | Builds a .3mf for a Bambu Lab P2S (0.4 mm nozzle, ASA or ABS, white + black parts on their own filaments, 100% infill, the NFC pause already set). The template holds the project settings taken from Bambu Studio's system presets. |
+| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing (with a self-check), deploy watching, Print & QR, Owner tab (print files for all cards, people who can sign in, shared password, token, owner password, recovery code). Elements added for personal sign-ins are optional, for cache mixes with an older `dashboard.html`. |
+| `cardmaker.js` | Print files | Card layout, 3D model and STL writer, previews, ZIP writer, print notes and the all-cards README ([section 6](#6-the-card-maker)) |
+| `bambu3mf.js`, `bambu-printers/*.json` | Bambu Studio project | Builds a .3mf for the chosen enclosed Bambu Lab printer (X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C, X2D; 0.4 mm nozzle; ASA or ABS; light + dark parts on their own filaments; 100% infill; bed capped at 90 °C for the PVC tag; the NFC pause already set; on the H2D, H2D Pro and X2D light = left nozzle, dark = right). One settings file per printer, made by Bambu Studio itself (`tools/build_templates.py`). `bambu-template.json` (P2S) stays for older cached copies of the script. Also `zipWriter`, the deflated ZIP behind the Owner tab's all-cards download. |
+| `tools/build_templates.py`, `tools/resolve.py` | Maintenance scripts (the pages never load them) | Rebuild `bambu-printers/` when Bambu Studio updates its presets: Bambu Studio's command line re-targets a two-colour card project to each printer's system presets and exports it; its project settings become that printer's file (for the P2S this matched the earlier GUI-built template key for key). |
 | `style.css` | Styling | Brand colours and type ([Tenaris brand](#tenaris-brand)). Frutiger if installed locally, otherwise Source Sans 3. |
 | `logo.svg` | Tenaris signature | The official full-colour artwork from tenaris.com, unchanged (only a `<title>` added). Used in both page headers and for the home-screen icons. |
 | `logo.js` | Tenaris signature outlines | The same artwork as flattened outlines with their colours, for the card maker (one colour on the 3D card). Also records the Multibar's size for clear-space and minimum-size checks. |
 | `source-sans-3-regular.woff2`, `source-sans-3-bold.woff2` | Page typeface | Source Sans 3 (Adobe, SIL Open Font License), unmodified release files. Also kept in the offline copy. |
-| `source-sans-3-bold.ttf` | Card lettering | Source Sans 3 Bold, unmodified, read by opentype.js |
+| `source-sans-3-bold.ttf` | Card lettering | Source Sans 3 Bold, unmodified, read by opentype.js; its kerning (GPOS, inside extension lookups opentype.js can't read) by `gposKerning` in cardmaker.js |
 | `qrcode.js` | QR encoder | qrcode-generator 2.0.4 (MIT), unmodified. SHA-256 `79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c` |
 | `opentype.js` | Font reader | opentype.js 2.0.0 (MIT), unmodified `dist/opentype.min.js`. SHA-256 `b39d7bf9661481cec5c118a0d92b02951171d99c30d4d11252a72ecb0285439e` |
 | `earcut.js` | Polygon triangulation | earcut 3.2.4 (ISC), unmodified `dist/earcut.min.js`. SHA-256 `29df76691215df89bf904051f35eb7aae1831011093d9783e843c3421931a334` |
@@ -199,15 +200,16 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
    - Text outlines come from `opentype.js` and the font, with curves flattened to about 0.15 mm. The name is normalised first (NFC, leftover combining marks dropped, curly quotes made straight); only letters, digits and . , - ' " ( ) & # / are accepted.
    - Glyphs built from overlapping pieces (the cedilla of Ç and Ş) are merged into one outline (`unionContours`, non-zero rule). Accents on capitals are lifted until they are 0.6 mm clear of their letter (`raiseMarks`). Letters are placed at least 0.6 mm apart (`shape`).
    - Text is fitted to width; the name wraps onto two lines if needed. Smallest capital height 3.5 mm (3.7 for the comma and #, 3.9 for Å and cedilla letters), so every stroke, gap and counter is at least 0.5 mm.
+   - Typesetting: the font's kerning plus tracking (headline 0.03 em, name 0.04 em or 0.02 em when a long name only fits tighter, labels up to 0.12 em), never closer than 0.6 mm; lines start at their visible ink edge, so the logo, headline and name share one left edge. Front: the name's baseline is as far from the bottom as the logo is from the top; EMERGENCY / CONTACT sits 0.75 of its capital height above the name, lines 1.32 capital heights apart. Back: a left column level with the QR's dark rows, the tap symbol aligned to the column edge over the tag, and a 10 mm dark band (`splitOutline`: the back is two zones) with the 911 line.
    - `checkClearances` refuses designs where text would sit over the NFC pocket or in the logo's clear space, leave the card, enter the QR area, or come within 0.6 mm of other art.
 2. **Filling** (`fillZone`): nests the outlines by containment. Alternate levels get alternate colours (zone → letter → letter hole → …).
 3. **3D model** (`model(card)`), printed front face down:
-   - **Layers:** each filled region becomes a prism. Front skin z 0–0.6 (mirrored, because it's printed face down), white core 0.6–1.6 with a 26 mm pocket, one solid white roof layer 1.6–1.8, back skin 1.8–2.2.
-   - Returns `black` and `white` (binary STL), `thickness` (2.2), `pauseZ` (1.6: the Z where the roof starts; pause after this layer), `pauseLayer` (9), `layerHeight` (0.2), `layers`, `pocket` and `layout`.
+   - **Layers:** each filled region becomes a prism. Front skin z 0–0.6 (mirrored, because it's printed face down), light ("white") core 0.6–1.6 with a 26.4 mm pocket, one solid light roof layer 1.6–1.8, back skin 1.8–2.2.
+   - Returns `black` and `white` (binary STL: the dark and light parts, saved as `-DARK.stl` / `-LIGHT.stl`), `thickness` (2.2), `pauseZ` (1.6: the Z where the roof starts; pause after this layer), `pauseLayer` (9), `layerHeight` (0.2), `layers`, `pocket` and `layout`.
    - **QR:** drawn as rows of same-colour rectangles.
    - **Caps** are triangulated with `earcut`. Every point is nudged by up to 2 × 10⁻⁵ mm, always identically for the same point. Without this, letters sharing a baseline create collinear points and T-junctions.
    - **Output** is binary STL, one file per colour, in one coordinate system. Each part is a set of closed solids that touch along shared faces.
-4. **Bambu Studio project:** the dashboard passes the two STL parts and `pauseZ` to `bambu3mf.js` (`Bambu3MF.make`), which makes a .3mf for a Bambu Lab P2S with the pause already in it. `cardmaker.js` doesn't depend on it.
+4. **Bambu Studio project:** the dashboard passes the two STL parts, `pauseZ` and the chosen printer to `bambu3mf.js` (`Bambu3MF.make`), which makes a .3mf for that Bambu Lab printer with the pause already in it. `cardmaker.js` doesn't depend on it.
 5. **Previews** (`preview(card, side)`, `drawFace`): render the layout onto canvas. QR squares are snapped to whole pixels, so no seams appear.
 6. **ZIP** (`zip`, `files(card)`): stored (uncompressed) ZIP with CRC-32 and UTF-8 names, holding both STL parts and the print notes (`printNotes`). File names use plain letters (`slug`: José → Jose).
 
@@ -217,8 +219,8 @@ The emergency page always fetches `contacts.enc.json?v=<time>`, which bypasses G
 |---|---|
 | Card size | 85.6 × 53.98 × 2.2 mm, corner radius 3.18 |
 | Layers (0.2 mm each) | front 0.6 · core 1.0 · roof 0.2 · back 0.4; pause at Z 1.6 |
-| NFC tag | NTAG215 round sticker, 25 × 0.8 mm, centred at (67, 39) on the front |
-| Pocket | 26 mm across, 1.0 mm deep |
+| NFC tag | NTAG215 PVC coin, 25.4 (1 in) × 0.8 mm, centred at (67, 38) on the front |
+| Pocket | 26.4 mm across, 1.0 mm deep |
 | QR area | 40 mm, top right of the back, 1.6 mm from the edges |
 | Smallest QR square | 0.8 mm |
 | Smallest capital height | 3.5 mm (3.7 for , and #; 3.9 for Å and cedillas) |
@@ -306,11 +308,12 @@ An automated suite was used during development. It isn't included in this reposi
 - **Encryption:** the published file was opened independently with Python's `cryptography` library: each sign-in's `login` via PBKDF2, its `wrap` and the recovery block via ECDH P-256, the admin block and the card entries via AES-GCM. It was also checked that no readable names, emails, numbers or tokens appear in any published version.
 - **Print files:**
   - both STL parts watertight (every edge paired)
-  - black + white areas tile each layer exactly, and the volume equals the card minus the sealed pocket
-  - the pocket is 26 mm round at the tag position and closed below and above; `pauseZ` is the pocket top, and the .3mf pauses at the same layer
+  - dark + light areas tile each layer exactly, and the volume equals the card minus the sealed pocket
+  - the pocket is 26.4 mm round at the tag position and closed below and above; `pauseZ` is the pocket top, and the .3mf pauses at the same layer
   - the front, rendered from the bottom face and turned over, matches the preview (not mirrored); the QR decodes upright (zxing-cpp) from the top face
   - capital heights, the thinnest strokes and gaps in both colours (≥ 0.5 mm) and the logo's size and clear space, measured on renders of the STL
-  - the .3mf opens and slices in the Bambu Studio command-line tool for the P2S, with both filaments and the pause at the right layer
+  - the .3mf opens and slices in the Bambu Studio command-line tool for all nine printers (ASA; ABS on the H2D and X1 Carbon), and the G-code is parsed (arcs included): `M400 U1` comes after the last layer-8 move and before any layer-9 move; the pocket is open at 26.4 mm on layers 4–8 and fully covered on the others; the first extrusion after the pause is the prime tower; the roof over the pocket is a one-colour bridge; the bed is 90 °C
+  - the Owner tab's all-cards ZIP (unpublished, duplicate and unprintable cards included in the test): folders, CSV and README, and a .3mf taken from it slices the same way
   - the ZIP is valid
 
 **Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, WhatsApp), and a physical 3D print.

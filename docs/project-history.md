@@ -189,6 +189,16 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
 
 ---
 
+### 2026-10-05: PVC coin tag, 90 °C bed, colour-neutral files, all-cards download
+
+- **Tag:** the owner's tags are NTAG215 **PVC coin tags, 25.4 mm (1 in) × 0.8 mm** (not 25 mm stickers). Pocket **26.4 × 1.0 mm** (tag + 1 mm across, as tag sellers advise for embedding: a 26 × 1 mm slot for 25 mm tags; printed holes come out 0.1–0.4 mm small). The tag centre moved from y 39 to **38 mm** so 2.8 mm of card stays above the pocket; EMERGENCY CONTACT shrank by about 0.1 mm.
+- **Bed capped at 90 °C** in the .3mf for ASA and ABS. PVC softens at about 80 °C; tags made for embedding are rated for beds up to 90 °C; Bambu's own P2S presets use 90 °C for ABS and Generic ASA (only Bambu ASA says 100 °C). The NTAG215 chip is rated to 125 °C unpowered. The changed filament keys are listed in `different_settings_to_system` (entries 1 and 2) so Bambu Studio keeps them.
+- **Colours chosen later:** two colours only, one dark and one light. Files and parts are now named DARK / LIGHT (were BLACK / WHITE); the code still calls them `black` / `white`.
+- **Pause checked in real G-code:** Bambu Studio 2.8 CLI slices; `M400 U1` sits between layer 8 (Z 1.6) and layer 9; Bambu firmware parks the head over the waste chute on `M400 U1` (same as a pause from the screen); after resume the prime tower prints first, then the roof bridges the tag in the light filament.
+- **Owner tab → Print files for all cards:** one ZIP with a folder per card (.3mf, both STLs, print notes), `NFC-links.csv` and a README; unprintable names are left out and listed; unpublished cards need a confirm.
+- **Any enclosed Bambu printer (same day):** the owner may print on another Bambu, maybe a two-nozzle one. A **Printer** choice (X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C, X2D) picks one of nine settings files that Bambu Studio's own command line makes from its presets (`tools/build_templates.py`). On the H2D, H2D Pro and X2D the light colour is fixed to the left nozzle and the dark to the right: Bambu Studio's default grouping put both on one nozzle in its command-line slicer, which purges every layer (about 3 g and 8 minutes more per card) and risks a dark tint in the white lettering. The H2C keeps automatic grouping (a fixed one fails without the printer's nozzle list). All nine were sliced and their G-code checked.
+- **Lettering refined (same day):** the font's kerning (read from GPOS ourselves), tracking for capitals, ink-edge alignment, the name on a bottom margin matching the logo's top margin, a clearer step between headline and name; on the back a left column aligned to the QR code, the tap symbol on that column, BACKUP as a small label over a 4 mm number, and the 911 line in a dark band.
+
 ## 6. Individual sign-ins: design notes
 
 Details in [technical.md](technical.md) (data file format version 4) and [security.md](security.md). The key ideas:

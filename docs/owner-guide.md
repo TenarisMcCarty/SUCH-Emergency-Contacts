@@ -6,7 +6,7 @@ The site owner looks after what supervisors never touch: who can sign in, owner 
 
 Bookmark it. On the owner link you sign in with **your own owner password**, not the supervisors' password. Once signed in you get:
 
-- an **Owner** badge in the header and an **Owner** tab, starting with **People who can sign in** ([section 14](#14-people-who-can-sign-in))
+- an **Owner** badge in the header and an **Owner** tab, starting with **Print files for all cards** ([section 17](#17-print-files-for-all-cards)) and **People who can sign in** ([section 14](#14-people-who-can-sign-in))
 - everything supervisors have (see the [supervisor guide](supervisor-guide.md))
 - on the sign-in screen, under **Forgot owner password?**: the recovery-code reset, reclaiming owner access, and **Start over**
 
@@ -30,6 +30,7 @@ The supervisors' password does **not** work on the owner link and can't open the
 14. [People who can sign in](#14-people-who-can-sign-in)
 15. [Switching off the shared password](#15-switching-off-the-shared-password)
 16. [Moving to personal sign-ins (once)](#16-moving-to-personal-sign-ins-once)
+17. [Print files for all cards](#17-print-files-for-all-cards)
 
 ---
 
@@ -291,3 +292,25 @@ The first publish with this version of the dashboard saves the data file in a ne
 4. When everyone shows **Active**, switch off the shared password and replace the GitHub token ([section 15](#15-switching-off-the-shared-password)).
 
 Right after an update, a browser may briefly still run the old dashboard. If it asks for an **Old admin key**, says the password is wrong, or says *"The dashboard was just updated"*, wait a few minutes and reload. The old dashboard can't change the new file.
+
+---
+
+## 17. Print files for all cards
+
+**Owner** tab → **Print files for all cards** → choose the **Printer** (the same choice as in Print & QR) and the **Filament** (ASA or ABS) → **Download all cards (ZIP)**. It makes every card's files at once (a few seconds per card; the message under the button counts them), so you don't have to go through **Print & QR** card by card.
+
+The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ASA.zip`, holds:
+
+| | |
+|---|---|
+| a folder per card, e.g. `card-Jane-Doe-1234-Family/` | `…-H2D.3mf` (Bambu Studio project for the chosen printer, ready to print), `…-DARK.stl` and `…-LIGHT.stl` (the same card as STL parts) and `…-print-notes.txt` (the card's link, settings, the pause, inserting the tag, testing and locking) |
+| `NFC-links.csv` | every card's driver, holder, link and folder, and whether it's published: the list for writing the tags |
+| `README.txt` | the batch at a glance: card size, tag, pause, and the order of work |
+
+- Files are made from what the dashboard shows now, including changes you haven't published. If some cards aren't published yet, it asks before downloading: their links (tag and QR code) only work after you publish.
+- A card whose driver name can't be printed (too long, or characters the card can't print) is left out, and the message and README name it. Fix it with **Cards → Rename** and download again.
+- Two cards with the same driver and holder get separate folders (`…-2`).
+- **Every card has its own link.** A tag in the wrong card opens the wrong driver's page. Write each tag from that card's own folder just before printing it, and test the finished card (it must show that driver's name) before locking the tag.
+
+How to print each card: [Cards and printing](cards-and-printing.md#5-printing-it).
+

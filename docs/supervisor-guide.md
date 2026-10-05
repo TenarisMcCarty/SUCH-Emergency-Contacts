@@ -191,10 +191,10 @@ Everything needed to make the 3D-printed card, generated from the card's data.
 
 | Button | Gives you |
 |---|---|
-| **Bambu Studio project (3MF)** | The card ready for a Bambu Lab P2S: both colours, settings and the pause for the NFC tag already set. Choose **ASA** or **ABS** under **Filament** first. |
-| **STL files and print notes (ZIP)** | The black and white parts as STL files, plus print notes with the settings and the pause height, for setting up the print yourself |
+| **Bambu Studio project (3MF)** | The card ready for the chosen Bambu Lab printer: both colours, settings and the pause for the NFC tag already set. Choose the **Printer** and **ASA** or **ABS** under **Filament** first. |
+| **STL files and print notes (ZIP)** | The dark and light parts as STL files, plus print notes with the settings and the pause height, for setting up the print yourself |
 
-- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 round sticker, 25 mm, 0.8 mm thick).
+- **NFC tag:** the card's link, with a **Copy link** button, for writing to the tag (an NTAG215 PVC coin tag, 25.4 mm (1 in) across, 0.8 mm thick).
 - **Backup line:** a phone number printed on every card. If the page ever can't load, it tells families to call the backup number on their card, so set this before printing cards. Publish after changing it.
 
 If a driver's name can't print cleanly (too long, or characters the card can't print), both download buttons are disabled with a message. Shorten or fix the name with **Cards → Rename**.

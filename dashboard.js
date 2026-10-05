@@ -1125,6 +1125,33 @@ $('backup').onchange = e => {
 };
 $('copy-card-link').onclick = e => copy($('card-link').value, e.currentTarget);
 
+// The Bambu printer the .3mf files are made for: one choice for both tabs, remembered on this device. Nothing is
+// preselected the first time, so a project is never made for a printer nobody chose.
+const PRINTER_KEY = 'print-printer';
+const printerSelects = ['print-printer', 'all-printer'];
+function fillPrinters() {
+  if (typeof Bambu3MF === 'undefined' || !Bambu3MF.PRINTERS) return; // an older cached bambu3mf.js
+  let saved = '';
+  try { saved = localStorage.getItem(PRINTER_KEY) || ''; } catch {}
+  if (!Bambu3MF.PRINTERS.some(p => p.id === saved)) saved = '';
+  for (const id of printerSelects) {
+    if (!$(id)) continue;
+    $(id).replaceChildren(el('option', { value: '', textContent: 'Choose printer', disabled: true, selected: !saved }),
+      ...Bambu3MF.PRINTERS.map(p => el('option', { value: p.id, textContent: 'Bambu Lab ' + p.label, selected: p.id === saved })));
+    $(id).onchange = e => {
+      try { localStorage.setItem(PRINTER_KEY, e.target.value); } catch {}
+      for (const other of printerSelects) if ($(other)) $(other).value = e.target.value;
+    };
+  }
+}
+fillPrinters();
+// The chosen printer, or a message saying what's missing.
+function chosenPrinter(selectId) {
+  if (typeof Bambu3MF === 'undefined' || !Bambu3MF.PRINTERS) return { problem: 'The dashboard was just updated. Reload the page.' };
+  const p = $(selectId) && Bambu3MF.PRINTERS.find(x => x.id === $(selectId).value);
+  return p ? { printer: p } : { problem: 'Choose the printer first.' };
+}
+
 // Make the chosen card's print files and hand them to the browser:
 // '3mf' = Bambu Studio project (bambu3mf.js), 'stl' = ZIP with both STL parts and the print notes.
 async function download(what) {
@@ -1138,9 +1165,11 @@ async function download(what) {
     if (typeof Bambu3MF === 'undefined') {
       return printProblem("The Bambu Studio project maker (bambu3mf.js) didn't load. Reload the page, or use the STL files.");
     }
+    const { printer, problem } = chosenPrinter('print-printer');
+    if (problem) return printProblem(problem);
     const m = CardMaker.model(info);
-    const bytes = await Bambu3MF.make({ black: m.black, white: m.white, name: base, pauseZ: m.pauseZ, layerHeight: m.layerHeight, material: $('print-material') ? $('print-material').value : 'ASA' });
-    saveFile(base + '.3mf', new Blob([bytes], { type: 'model/3mf' }));
+    const bytes = await Bambu3MF.make({ black: m.black, white: m.white, name: base, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material: $('print-material') ? $('print-material').value : 'ASA' });
+    saveFile(`${base}-${printer.id}.3mf`, new Blob([bytes], { type: 'model/3mf' }));
   } catch (e) {
     printProblem(e.message);
   }
@@ -1149,6 +1178,59 @@ async function download(what) {
 // Optional: for a few minutes after an update, GitHub's cache can pair this script with an older dashboard.html.
 onClick('dl-3mf', () => download('3mf'));
 onClick('dl-stl', () => download('stl'));
+
+// Owner tab: every card's print files in one ZIP. A folder per card (Bambu Studio project, STL parts, print
+// notes), NFC-links.csv (each card's link, for writing the tags) and README.txt. Cards whose name can't be
+// printed are left out and listed. Files are compressed one at a time, so 50+ cards fit in memory.
+let allCardsBusy = false;
+onClick('dl-all-cards', async () => {
+  if (allCardsBusy) return;
+  const cards = state.cards.slice();
+  if (!cards.length) return say('all-cards-msg', 'No cards yet.', true);
+  if (typeof Bambu3MF === 'undefined' || typeof Bambu3MF.zipWriter !== 'function' || typeof CardMaker.batchNotes !== 'function') {
+    return say('all-cards-msg', 'The card maker is out of date in this browser. Reload the page and try again.', true);
+  }
+  const { printer, problem } = chosenPrinter('all-printer');
+  if (problem) return say('all-cards-msg', problem, true);
+  const waiting = cards.filter(c => !isLive(c)).length;
+  if (waiting && !confirm(`${waiting} of ${cards.length} cards aren't published yet. Their links (tag and QR code) only work after you publish.\n\nDownload anyway?`)) return;
+  allCardsBusy = true;
+  $('dl-all-cards').disabled = true;
+  const material = $('all-material') ? $('all-material').value : 'ASA';
+  const root = `Tenaris-cards-${today()}-${printer.id}-${material}/`, zip = Bambu3MF.zipWriter(), enc = new TextEncoder();
+  const made = [], skipped = [], used = new Set();
+  try {
+    await CardMaker.load();
+    for (const [i, card] of cards.entries()) {
+      say('all-cards-msg', `Making card ${i + 1} of ${cards.length}…`);
+      const info = printInfo(card);
+      const base = 'card-' + CardMaker.slug(card.driver + (card.note ? ' ' + card.note : ''));
+      let name = base;
+      for (let n = 2; used.has(name.toLowerCase()); n++) name = `${base}-${n}`;
+      used.add(name.toLowerCase());
+      let m;
+      try { m = CardMaker.model(info); } catch (e) { skipped.push(`${cardLabel(card)}: ${e.message}`); continue; }
+      const dir = root + name + '/';
+      await zip.add(`${dir}${name}-${printer.id}.3mf`, await Bambu3MF.make({ black: m.black, white: m.white, name, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material }));
+      await zip.add(dir + name + '-DARK.stl', m.black);
+      await zip.add(dir + name + '-LIGHT.stl', m.white);
+      await zip.add(dir + name + '-print-notes.txt', enc.encode(CardMaker.printNotes(info, m, { printer })));
+      made.push({ driver: card.driver, holder: card.note || '', link: info.link, folder: name, live: isLive(card) });
+    }
+    if (!made.length) throw new Error(`None of the cards can be printed: ${skipped.join(' ')}`);
+    const cell = v => { const t = /^[=+\-@]/.test(v) ? "'" + v : v; return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const csv = [['Driver', 'Holder', 'Card link', 'Folder', 'Published'], ...made.map(c => [c.driver, c.holder, c.link, c.folder, c.live ? 'Yes' : 'No'])];
+    await zip.add(root + 'NFC-links.csv', enc.encode('\uFEFF' + csv.map(r => r.map(cell).join(',')).join('\r\n') + '\r\n'));
+    await zip.add(root + 'README.txt', enc.encode(CardMaker.batchNotes(made, material, skipped, printer)));
+    saveFile(`Tenaris-cards-${today()}-${printer.id}-${material}.zip`, new Blob(zip.finish(), { type: 'application/zip' }));
+    say('all-cards-msg', `Downloaded ${made.length} card${made.length === 1 ? '' : 's'}.` + (skipped.length ? ` Left out: ${skipped.join(' ')}` : ''), skipped.length > 0);
+  } catch (e) {
+    say('all-cards-msg', e.message, true);
+  } finally {
+    allCardsBusy = false;
+    $('dl-all-cards').disabled = false;
+  }
+});
 
 // ================= History =================
 

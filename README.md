@@ -74,7 +74,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
-- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (2.2 mm, NFC tag sealed inside), as a ready-to-print **Bambu Studio project (3MF)** for the P2S with the tag pause already set, or as **STL files** with print notes.
+- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (2.2 mm, NFC tag sealed inside), as a ready-to-print **Bambu Studio project (3MF)** for the chosen enclosed Bambu Lab printer (single- or two-nozzle) with the tag pause already set, or as **STL files** with print notes.
 - **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
 - **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
 - **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or a sign-in, the data file is unreadable.

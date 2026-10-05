@@ -258,7 +258,9 @@
           </div>
 
           <h2 class="section">3D-printed card</h2>
-          <p class="small muted">Bambu Lab P2S with AMS, 0.4 mm nozzle. NFC tag: NTAG215 sticker, 25 × 0.8 mm.</p>
+          <p class="small muted">Enclosed Bambu Lab printer · AMS · 0.4 mm nozzle · one dark + one light filament · NTAG215 PVC coin tag, 25.4 × 0.8 mm</p>
+          <label for="print-printer">Printer</label>
+          <select id="print-printer"></select>
           <label for="print-material">Filament</label>
           <select id="print-material">
             <option value="ASA" selected>ASA</option>
@@ -345,6 +347,19 @@
 
       <!-- Owner (only with #owner in the address) -->
       <section data-panel="owner" hidden>
+        <h2 class="section">Print files for all cards</h2>
+        <label for="all-printer">Printer</label>
+        <select id="all-printer"></select>
+        <label for="all-material">Filament</label>
+        <select id="all-material">
+          <option value="ASA" selected>ASA</option>
+          <option value="ABS">ABS</option>
+        </select>
+        <div class="btn-row">
+          <button id="dl-all-cards" class="btn btn-primary" type="button">Download all cards (ZIP)</button>
+        </div>
+        <p id="all-cards-msg" class="msg" role="status"></p>
+
         <h2 class="section">People who can sign in</h2>
         <ul id="account-list" class="rows"></ul>
         <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
