@@ -89,7 +89,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `index.html`, `app.js` | The emergency page families see |
 | `dashboard.html`, `dashboard.js` | The dashboard for supervisors and the owner |
 | `cardmaker.js` | Makes the 3D card (two STL parts, previews, print notes, ZIP) in the browser |
-| `bambu3mf.js`, `bambu-template.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF), one piece or several on one plate |
+| `bambu3mf.js`, `bambu-printers/*.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF) for the chosen printer, one piece or several on one plate (`bambu-template.json` stays for older cached copies) |
 | `crypto.js` | Encryption, shared by both pages |
 | `schedule.js` | Works out who is on shift; Spanish shift names and times |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
