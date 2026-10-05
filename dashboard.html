@@ -151,8 +151,9 @@
     </section>
 
     <!-- ============ Dashboard ============ -->
-    <div id="dash" hidden>
-      <section class="status-panel">
+    <!-- On a computer: sections on the left, the open section in the middle, status and Publish on the right. -->
+    <div id="dash" class="app" hidden>
+      <section class="status-panel" aria-label="Status">
         <div class="status-line">
           <span id="pub-badge" class="badge"></span>
           <span id="pub-text"></span>
@@ -178,73 +179,100 @@
       </section>
 
       <nav class="tabs" aria-label="Sections">
-        <button type="button" data-tab="people" class="active">People</button>
-        <button type="button" data-tab="shifts">Shifts</button>
+        <button type="button" data-tab="shifts" class="active" aria-current="page">Shifts</button>
+        <button type="button" data-tab="people">People</button>
         <button type="button" data-tab="cards">Cards</button>
         <button type="button" data-tab="print">Print &amp; QR</button>
-        <button type="button" data-tab="history">History</button>
+        <button type="button" data-tab="history" class="tab-gap">History</button>
         <button type="button" data-tab="settings">Settings</button>
         <button type="button" data-tab="help">Help</button>
         <button type="button" data-tab="owner" hidden>Owner</button>
       </nav>
 
+      <!-- Shifts -->
+      <section data-panel="shifts">
+        <div class="page-head">
+          <h1>Shifts</h1>
+          <p class="lead small muted">Houston time. If shifts overlap, the first one listed gets the primary call.</p>
+        </div>
+        <div id="gaps" class="gaps"></div>
+
+        <h2 class="section">Who works each shift</h2>
+        <div class="table-scroll"><table id="shift-matrix" class="matrix"></table></div>
+
+        <h2 class="section">Shift times</h2>
+        <div id="shift-list" class="shift-grid"></div>
+        <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
+
+        <div class="pair">
+          <div>
+            <h2 class="section">Fallback</h2>
+            <label for="fallback">If nobody is on shift, the primary call is</label>
+            <select id="fallback"></select>
+          </div>
+          <div>
+            <h2 class="section">Check a time</h2>
+            <div class="field-row">
+              <label>Day <select id="preview-day"></select></label>
+              <label>Time <input id="preview-time" type="time" value="15:00"></label>
+            </div>
+            <ol id="preview" class="preview"></ol>
+          </div>
+        </div>
+      </section>
+
       <!-- People -->
-      <section data-panel="people">
+      <section data-panel="people" hidden>
+        <div class="page-head"><h1>People</h1></div>
+        <div class="list-head people-cols" aria-hidden="true"><span>Name</span><span>Role</span><span>Role in Spanish</span><span>Phone</span><span>Number checked</span><span></span></div>
         <div id="people-list"></div>
         <button id="add-person" class="btn btn-light" type="button">Add person</button>
 
         <h2 class="section">Text message</h2>
-        <label for="message">English</label>
-        <textarea id="message" rows="3"></textarea>
-        <label for="message-es">Spanish</label>
-        <textarea id="message-es" rows="3" lang="es"></textarea>
+        <div class="pair">
+          <div><label for="message">English</label>
+          <textarea id="message" rows="3"></textarea></div>
+          <div><label for="message-es">Spanish</label>
+          <textarea id="message-es" rows="3" lang="es"></textarea></div>
+        </div>
         <p class="hint">Use {driver} for the driver's name.</p>
 
-        <h2 class="section">Yard address</h2>
-        <input id="address" autocomplete="off" aria-label="Yard address" placeholder="e.g. 1234 Example Rd, Houston, TX 77000">
-
-        <h2 class="section">WhatsApp</h2>
-        <label class="check"><input id="whatsapp-on" type="checkbox"> Show a WhatsApp button for the primary call</label>
-      </section>
-
-      <!-- Shifts -->
-      <section data-panel="shifts" hidden>
-        <p class="lead small muted">Houston time. If shifts overlap, the first one listed gets the primary call.</p>
-        <div id="gaps" class="gaps"></div>
-        <div id="shift-list"></div>
-        <button id="add-shift" class="btn btn-light" type="button">Add shift</button>
-
-        <h2 class="section">Fallback</h2>
-        <label for="fallback">If nobody is on shift, the primary call is</label>
-        <select id="fallback"></select>
-
-        <h2 class="section">Check a time</h2>
-        <div class="field-row">
-          <label>Day <select id="preview-day"></select></label>
-          <label>Time <input id="preview-time" type="time" value="15:00"></label>
+        <div class="pair">
+          <div>
+            <h2 class="section">Yard address</h2>
+            <input id="address" autocomplete="off" aria-label="Yard address" placeholder="e.g. 1234 Example Rd, Houston, TX 77000">
+          </div>
+          <div>
+            <h2 class="section">WhatsApp</h2>
+            <label class="check"><input id="whatsapp-on" type="checkbox"> Show a WhatsApp button for the primary call</label>
+          </div>
         </div>
-        <ol id="preview" class="preview"></ol>
       </section>
 
       <!-- Cards -->
       <section data-panel="cards" hidden>
-        <h2 class="section">Add a card</h2>
-        <div class="field-row">
+        <div class="page-head"><h1>Cards</h1></div>
+        <div class="inline-form add-card-form">
           <div><label for="new-driver">Driver name and ID</label>
           <input id="new-driver" autocomplete="off" placeholder="e.g. Jane Doe (1234)"></div>
           <div><label for="new-note">Given to</label>
           <input id="new-note" autocomplete="off" placeholder="e.g. Family (only shown here)"></div>
+          <button id="add-card" class="btn btn-light" type="button">Add card</button>
         </div>
-        <button id="add-card" class="btn btn-light" type="button">Add card</button>
         <p id="card-msg" class="msg" role="status"></p>
 
-        <h2 class="section">All cards (<span id="card-count">0</span>)</h2>
-        <ul id="card-list" class="rows"></ul>
+        <div class="list-bar">
+          <h2 class="section">All cards (<span id="card-count">0</span>)</h2>
+          <input id="card-search" type="search" autocomplete="off" aria-label="Search cards" placeholder="Search">
+        </div>
+        <div class="list-head card-cols" aria-hidden="true"><span>Driver</span><span>Given to</span><span>Status</span><span></span></div>
+        <ul id="card-list" class="rows card-rows"></ul>
         <p id="no-cards" class="small muted">No cards yet.</p>
       </section>
 
       <!-- Print & QR -->
       <section data-panel="print" hidden>
+        <div class="page-head"><h1>Print &amp; QR</h1></div>
         <p id="print-empty" class="small muted">Add a card first (Cards tab).</p>
         <div id="print-body">
           <label for="print-card">Card</label>
@@ -257,30 +285,37 @@
             <figure><div id="preview-back" class="card-preview"></div><figcaption>Back</figcaption></figure>
           </div>
 
-          <h2 class="section">3D-printed card</h2>
-          <p class="small muted">Enclosed Bambu Lab printer · AMS · 0.4 mm nozzle · one dark + one light filament · NTAG215 PVC coin tag, 25.4 × 0.8 mm</p>
-          <label for="print-printer">Printer</label>
-          <select id="print-printer"></select>
-          <label for="print-material">Filament</label>
-          <select id="print-material">
-            <option value="ASA" selected>ASA</option>
-            <option value="ABS">ABS</option>
-          </select>
-          <div class="btn-row">
-            <button id="dl-3mf" class="btn btn-primary" type="button">Bambu Studio project (3MF)</button>
-            <button id="dl-stl" class="btn btn-light" type="button">STL files and print notes (ZIP)</button>
-          </div>
+          <div class="pair">
+            <div>
+              <h2 class="section">3D-printed card</h2>
+              <p class="small muted">Enclosed Bambu Lab printer · AMS · 0.4 mm nozzle · one dark + one light filament · NTAG215 PVC coin tag, 25.4 × 0.8 mm</p>
+              <div class="field-row">
+                <div><label for="print-printer">Printer</label>
+                <select id="print-printer"></select></div>
+                <div><label for="print-material">Filament</label>
+                <select id="print-material">
+                  <option value="ASA" selected>ASA</option>
+                  <option value="ABS">ABS</option>
+                </select></div>
+              </div>
+              <div class="btn-row">
+                <button id="dl-3mf" class="btn btn-primary" type="button">Bambu Studio project (3MF)</button>
+                <button id="dl-stl" class="btn btn-light" type="button">STL files and print notes (ZIP)</button>
+              </div>
+            </div>
+            <div>
+              <h2 class="section">NFC tag</h2>
+              <div class="copy-row">
+                <input id="card-link" readonly aria-label="Card link">
+                <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+              </div>
+              <p class="hint">Write it to the tag with NFC Tools before printing, and lock the tag only after testing the finished card.</p>
 
-          <h2 class="section">NFC tag</h2>
-          <div class="copy-row">
-            <input id="card-link" readonly aria-label="Card link">
-            <button id="copy-card-link" class="btn btn-light" type="button">Copy link</button>
+              <h2 class="section">Backup line</h2>
+              <input id="backup" type="tel" autocomplete="off" aria-label="Backup line" placeholder="(555) 555-0100">
+              <p class="hint">Printed on every card. After changing it, publish and print new cards.</p>
+            </div>
           </div>
-          <p class="hint">Write it to the tag with NFC Tools before printing, and lock the tag only after testing the finished card.</p>
-
-          <h2 class="section">Backup line</h2>
-          <input id="backup" type="tel" autocomplete="off" aria-label="Backup line" placeholder="(555) 555-0100">
-          <p class="hint">Printed on every card. After changing it, publish and print new cards.</p>
 
           <!-- Empty placeholders: an older cached dashboard.js still looks these up for a few minutes after an update. -->
           <span id="tag-thickness" class="retired" hidden></span><span id="dl-all" class="retired" hidden></span><span id="dl-black" class="retired" hidden></span><span id="dl-white" class="retired" hidden></span><span id="dl-notes" class="retired" hidden></span><span id="dl-paper" class="retired" hidden></span><span id="dl-label" class="retired" hidden></span><span id="dl-qr-png" class="retired" hidden></span><span id="dl-qr-svg" class="retired" hidden></span>
@@ -289,12 +324,15 @@
 
       <!-- History -->
       <section data-panel="history" hidden>
+        <div class="page-head"><h1>History</h1></div>
+        <div class="list-head history-cols" aria-hidden="true"><span>Published</span><span>By</span><span>Changes</span></div>
         <ol id="history-list" class="history"></ol>
         <p id="no-history" class="small muted">Nothing published yet.</p>
       </section>
 
       <!-- Settings -->
       <section data-panel="settings" hidden>
+        <div class="page-head"><h1>Settings</h1></div>
         <div id="me-box" hidden>
           <h2 class="section">Signed in as</h2>
           <p id="me-text"></p>
@@ -314,13 +352,14 @@
 
       <!-- Help -->
       <section data-panel="help" hidden class="help">
+        <div class="page-head"><h1>Help</h1></div>
         <h2 class="section">How it works</h2>
         <p>Each card opens a page with a <strong>Text All Yard Supervisors</strong> button and Call buttons. Whoever is on shift is the <strong>primary call</strong>. Published changes reach every card within a minute.</p>
 
         <h2 class="section">Common tasks</h2>
         <dl class="tasks">
           <dt>Shift rotation changed</dt><dd>Shifts → tick who works each shift → Publish</dd>
-          <dt>Someone joins or leaves</dt><dd>People → Add person or Remove person → check Shifts → Publish</dd>
+          <dt>Someone joins or leaves</dt><dd>People → Add person or remove them → check Shifts → Publish</dd>
           <dt>New card</dt><dd>Cards → Add card → Publish → Print &amp; QR</dd>
           <dt>Lost card</dt><dd>Cards → Remove → Publish. Only that card stops working.</dd>
           <dt>Name typo on a card</dt><dd>Cards → Rename → Publish, then print a new card. The tag stays the same.</dd>
@@ -334,6 +373,7 @@
           <dt>Publish fails</dt><dd>Read the message under Publish. For GitHub problems, ask the site owner.</dd>
           <dt>Someone else published first</dt><dd>Lock, sign in again and redo your change.</dd>
           <dt>Forgot password</dt><dd>Forgot password? on the sign-in screen</dd>
+          <dt>Locked by itself</dt><dd>After 30 minutes without use, with nothing waiting to publish. Sign in again.</dd>
         </dl>
 
         <h2 class="section">Guides</h2>
@@ -347,54 +387,75 @@
 
       <!-- Owner (only with #owner in the address) -->
       <section data-panel="owner" hidden>
-        <h2 class="section">Print files for all cards</h2>
-        <label for="all-printer">Printer</label>
-        <select id="all-printer"></select>
-        <label for="all-material">Filament</label>
-        <select id="all-material">
-          <option value="ASA" selected>ASA</option>
-          <option value="ABS">ABS</option>
-        </select>
-        <div class="btn-row">
-          <button id="dl-all-cards" class="btn btn-primary" type="button">Download all cards (ZIP)</button>
+        <div class="page-head"><h1>Owner</h1></div>
+        <div class="tiles">
+          <div class="tile tile-wide">
+            <h2 class="section">People who can sign in</h2>
+            <ul id="account-list" class="rows"></ul>
+            <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
+            <div class="inline-form add-account-form">
+              <label>Email <input id="new-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="jane.doe@tenaris.com"></label>
+              <label>Name <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
+              <button id="add-account" class="btn btn-light" type="button">Add person</button>
+            </div>
+            <p id="account-msg" class="msg" role="status"></p>
+            <p id="token-advice" class="warn small" hidden><span id="token-advice-text"></span> <button id="token-advice-btn" class="link-btn" type="button">Replace GitHub token</button></p>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Print files for all cards</h2>
+            <div class="field-row">
+              <div><label for="all-printer">Printer</label>
+              <select id="all-printer"></select></div>
+              <div><label for="all-material">Filament</label>
+              <select id="all-material">
+                <option value="ASA" selected>ASA</option>
+                <option value="ABS">ABS</option>
+              </select></div>
+            </div>
+            <div class="btn-row">
+              <button id="dl-all-cards" class="btn btn-primary" type="button">Download all cards (ZIP)</button>
+            </div>
+            <p id="all-cards-msg" class="msg" role="status"></p>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">GitHub connection</h2>
+            <p id="gh-status" class="status-text"></p>
+            <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Shared supervisors' password</h2>
+            <p id="shared-status" class="status-text"></p>
+            <div class="btn-row">
+              <button id="shared-off" class="btn btn-light" type="button">Turn off the shared password</button>
+              <button id="shared-on" class="btn btn-light" type="button" hidden>Set a new shared password</button>
+            </div>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Take away someone's access</h2>
+            <p class="small muted">Replaces the GitHub token, and the shared password if it's on.</p>
+            <button id="revoke-access" class="btn btn-light" type="button">New password and token</button>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Owner password</h2>
+            <button id="change-owner-password" class="btn btn-light" type="button">Change owner password</button>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Recovery code</h2>
+            <p id="recovery-status" class="status-text"></p>
+            <button id="new-recovery" class="btn btn-light" type="button">Make a new recovery code</button>
+          </div>
+
+          <div class="tile">
+            <h2 class="section">Your contact for supervisors</h2>
+            <input id="owner-contact" autocomplete="off" aria-label="Your contact for supervisors" placeholder="e.g. Salil, 555-555-0100">
+          </div>
         </div>
-        <p id="all-cards-msg" class="msg" role="status"></p>
-
-        <h2 class="section">People who can sign in</h2>
-        <ul id="account-list" class="rows"></ul>
-        <p id="no-accounts" class="small muted">Nobody has their own sign-in yet.</p>
-        <div class="field-row">
-          <label>Email <input id="new-email" type="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="jane.doe@tenaris.com"></label>
-          <label>Name <input id="new-name" autocomplete="off" placeholder="Jane Doe"></label>
-        </div>
-        <button id="add-account" class="btn btn-light" type="button">Add person</button>
-        <p id="account-msg" class="msg" role="status"></p>
-        <p id="token-advice" class="warn small" hidden><span id="token-advice-text"></span> <button id="token-advice-btn" class="link-btn" type="button">Replace GitHub token</button></p>
-
-        <h2 class="section">Shared supervisors' password</h2>
-        <p id="shared-status" class="status-text"></p>
-        <div class="btn-row">
-          <button id="shared-off" class="btn btn-light" type="button">Turn off the shared password</button>
-          <button id="shared-on" class="btn btn-light" type="button" hidden>Set a new shared password</button>
-        </div>
-
-        <h2 class="section">GitHub connection</h2>
-        <p id="gh-status" class="status-text"></p>
-        <button id="replace-token" class="btn btn-light" type="button">Replace GitHub token</button>
-
-        <h2 class="section">Owner password</h2>
-        <button id="change-owner-password" class="btn btn-light" type="button">Change owner password</button>
-
-        <h2 class="section">Recovery code</h2>
-        <p id="recovery-status" class="status-text"></p>
-        <button id="new-recovery" class="btn btn-light" type="button">Make a new recovery code</button>
-
-        <h2 class="section">Your contact for supervisors</h2>
-        <input id="owner-contact" autocomplete="off" aria-label="Your contact for supervisors" placeholder="e.g. Salil, 555-555-0100">
-
-        <h2 class="section">Take away someone's access</h2>
-        <p class="small muted">Replaces the GitHub token, and the shared password if it's on.</p>
-        <button id="revoke-access" class="btn btn-light" type="button">New password and token</button>
 
         <p class="owner-foot"><a href="https://github.com/TenarisMcCarty/SUCH-Emergency-Contacts/blob/main/docs/owner-guide.md" target="_blank" rel="noopener noreferrer">Owner guide</a></p>
       </section>

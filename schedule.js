@@ -45,11 +45,11 @@ function yardNow(timeZone, date = new Date()) {
 }
 
 // Is this shift on? A shift that runs past midnight (e.g. 22:00–06:00) belongs to the day it starts.
+// Starting and ending at the same time is a 24-hour shift: 06:00–06:00 on Monday runs until Tuesday 06:00.
 function shiftOn(shift, { day, minutes }) {
   const start = toMinutes(shift.start);
   const end = toMinutes(shift.end);
   const yesterday = (day + 6) % 7;
-  if (start === end) return shift.days.includes(day); // 24-hour shift
   if (start < end) return shift.days.includes(day) && minutes >= start && minutes < end;
   return (shift.days.includes(day) && minutes >= start) || (shift.days.includes(yesterday) && minutes < end);
 }

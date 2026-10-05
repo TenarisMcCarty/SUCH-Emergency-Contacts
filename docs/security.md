@@ -109,7 +109,7 @@ Notes:
 - Keep the **owner password** and **recovery code** only in the owner's password manager, separate from the supervisors' password.
 - When someone should lose access, **Remove** their sign-in and replace the GitHub token. If they knew the shared password, use **Owner tab → New password and token** instead. Then delete the old token on GitHub ([owner guide](owner-guide.md#9-taking-away-someones-access)).
 - Set the GitHub token to the longest expiry offered, and put a reminder in a calendar before it expires.
-- **Lock** the dashboard when you've finished, especially on shared computers.
+- **Lock** the dashboard when you've finished, especially on shared computers. It also locks by itself after 30 minutes without use, unless changes are waiting to be published (so nobody loses work); a computer left open with unpublished changes stays signed in.
 
 ---
 

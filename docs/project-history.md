@@ -88,6 +88,8 @@ Every choice the owner made, with the reason. When in doubt later, these are the
 | **90-day number checks**: each number shows when it was last checked; amber after 90 days with **Still right** | Keeps numbers current. Dates are stored only in the dashboard's encrypted data, never on cards. Changing a number counts as checking it. |
 | **Shift-gap warning** on the Shifts tab | Shows every time in the week with nobody on shift (the fallback person gets the primary call then). Gaps aren't errors. |
 | GitHub token set to **never expire** | Owner's setting, so there's no expiry warning feature. |
+| **Dashboard laid out for a computer**, opening on **Shifts** | Supervisors use it from a PC; the family page stays phone-first. Shifts is what changes at every rotation. |
+| **Locks by itself after 30 minutes without use**, never with unpublished changes | An office computer left signed in shouldn't stay open; nobody should lose unpublished work. |
 
 ### Cards and printing
 
@@ -199,6 +201,22 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
 - **Any enclosed Bambu printer (same day):** the owner may print on another Bambu, maybe a two-nozzle one. A **Printer** choice (X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C, X2D) picks one of nine settings files that Bambu Studio's own command line makes from its presets (`tools/build_templates.py`). On the H2D, H2D Pro and X2D the light colour is fixed to the left nozzle and the dark to the right: Bambu Studio's default grouping put both on one nozzle in its command-line slicer, which purges every layer (about 3 g and 8 minutes more per card) and risks a dark tint in the white lettering. The H2C keeps automatic grouping (a fixed one fails without the printer's nozzle list). All nine were sliced and their G-code checked.
 - **Lettering refined (same day):** the font's kerning (read from GPOS ourselves), tracking for capitals, ink-edge alignment, the name on a bottom margin matching the logo's top margin, a clearer step between headline and name; on the back a left column aligned to the QR code, the tap symbol on that column, BACKUP as a small label over a 4 mm number, and the 911 line in a dark band.
 
+### 2026-10-05: dashboard for a computer, and fixes found on review
+
+- **Layout:** from 820 px wide, the sections are listed on the left and the open section fills the middle; from 1400 px, the status panel (with Publish) stays in view on the right and the bottom bar goes. Narrower windows keep the phone layout. All new styles are under `.dash`, so the family page is pixel-identical (checked by screenshot comparison).
+- **Shifts first:** the dashboard opens on Shifts, listed first. **Who works each shift** is a table (person × shift) replacing the tick lists inside each shift box; shift boxes sit two across, with a 7-day toggle row and **←/→** to change the order (the order decides the primary call, and there was no way to change it before).
+- **People, Cards, History** as tables; Cards has a search box, adds on Enter and renames in the row (no more browser prompts). Owner tab in boxes.
+- **Fixes found on review:**
+  - dates were UTC dates, a day ahead every evening in Houston (card "added", number checks, token and recovery dates, the all-cards ZIP name), now Houston dates;
+  - phone numbers showed as `+15555550101`; now `555-555-0101`;
+  - unticking and re-ticking someone, or emptying a Spanish shift name, showed a phantom "Changed shifts";
+  - signing in while GitHub's API was busy (the dashboard falls back to the site's copy) made the next publish fail with a misleading "someone else published"; it now fetches GitHub's file id first;
+  - a text message without `{driver}` could be published, so the yard wouldn't know which driver a text was about; publishing now stops;
+  - a 24-hour shift (start = end) ran midnight to midnight instead of from its start time;
+  - an emptied time box looked empty but kept the old time; it now shows the saved time again;
+  - the supervisor guide described the old five-word suggested passwords.
+- **Idle lock:** 30 minutes without input locks the dashboard, unless changes are waiting or a publish or all-cards download is running.
+
 ## 6. Individual sign-ins: design notes
 
 Details in [technical.md](technical.md) (data file format version 4) and [security.md](security.md). The key ideas:
@@ -267,6 +285,7 @@ GitHub Pages caches each file for up to **10 minutes**. Right after a deploy, a 
 - **`cardmaker.js` reads both `logo.js` formats** (old flat arrays and new coloured shapes); see [section 10](#10-incidents-and-lessons).
 - **After the deploy that introduced sign-ins (format version 4):** an older cached dashboard can't sign in for up to 10 minutes. That's harmless; reload. A new dashboard with an older cached `crypto.js` says it was just updated and asks for a reload.
 - **The emergency page reads only the `data` and `cards` parts of the file**, which never changed format. So cards keep working through every dashboard change.
+- **The computer layout (2026-10-05) kept every element ID** an older `dashboard.js` uses. The new `#shift-matrix` and `#card-search` are optional in the new script; without `#shift-matrix` (an older cached `dashboard.html`) each shift box gets its own tick list back. All new styles are under `.dash`, so `index.html` can't be affected by the shared `style.css`.
 
 ---
 
@@ -309,6 +328,17 @@ The automated tests ran on the owner's Mac. They lived in a temporary working fo
     - capital heights, stroke and gap widths measured on renders
     - logo size and clear space
   - **Print & QR tab:** every button, both filaments, problem states, behaviour without `bambu3mf.js`, no script errors.
+  - **Dashboard for a computer (2026-10-05):**
+    - opens on Shifts; three columns at 1440 px, two at 1000–1200 px, tables from 1100 px
+    - the who-works-each-shift table, shift order, day buttons, emptied time boxes
+    - no phantom changes (re-ticking, emptied Spanish name, retyped phone)
+    - phone display, People/Cards/History tables, card search, Enter to add, in-row rename and its focus
+    - `{driver}` check, publishing after a sign-in that used the site's copy (and refusing when GitHub has a newer file), notes cleared after publishing
+    - Houston dates on a computer set to Tokyo time, including the all-cards ZIP and its README
+    - idle lock: locks when idle, not with unpublished changes, not on a setup screen, ignores pointer events without movement
+    - 24-hour shifts in `schedule.js`
+    - deploy mixes: old `dashboard.html`, old `dashboard.js`, old `style.css`
+    - the family page pixel-identical with the new `style.css` at 390 and 1440 px
   - **3MF:** checked in the Bambu Studio command-line tool ([section 5](#5-the-3d-card-design-history-and-final-spec)).
 - **Results at the last release:**
 
@@ -319,11 +349,13 @@ The automated tests ran on the owner's Mac. They lived in a temporary working fo
   | Family page and dashboard | 63/0 |
   | Print & QR | 25/0 |
   | Test data | 6/0 |
+  | Dashboard for a computer (2026-10-05) | 89/0 |
 - **Practical notes for this Mac:**
   - Headless Chrome needs the command sandbox off.
   - `--dump-dom` hangs, so use the DevTools protocol.
   - Python's test web server needs `request_queue_size = 128`, or the dashboard's 11 parallel script loads get connection resets.
   - Give each parallel test run its own ports.
+  - Turn on `Emulation.setFocusEmulationEnabled`, or headless Chrome never fires `blur` events.
 - **Not yet verified on real devices:**
   - group-text formats on iPhone and Samsung
   - NFC reading through the printed card

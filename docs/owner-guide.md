@@ -6,7 +6,7 @@ The site owner looks after what supervisors never touch: who can sign in, owner 
 
 Bookmark it. On the owner link you sign in with **your own owner password**, not the supervisors' password. Once signed in you get:
 
-- an **Owner** badge in the header and an **Owner** tab, starting with **Print files for all cards** ([section 17](#17-print-files-for-all-cards)) and **People who can sign in** ([section 14](#14-people-who-can-sign-in))
+- an **Owner** badge in the header and an **Owner** tab: **People who can sign in** ([section 14](#14-people-who-can-sign-in)) across the top, then a box for each job: **Print files for all cards** ([section 17](#17-print-files-for-all-cards)), GitHub connection, shared password, taking away access, owner password, recovery code and your contact
 - everything supervisors have (see the [supervisor guide](supervisor-guide.md))
 - on the sign-in screen, under **Forgot owner password?**: the recovery-code reset, reclaiming owner access, and **Start over**
 

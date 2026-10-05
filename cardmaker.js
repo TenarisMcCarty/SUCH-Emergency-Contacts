@@ -877,7 +877,9 @@ const CardMaker = (() => {
 
   // README for the owner's "all cards" ZIP. cards: [{ driver, holder, link, folder, live }].
   function batchNotes(cards, material, skipped = [], printer = null) {
-    const day = new Date().toISOString().slice(0, 10);
+    const p = {}; // Houston date, YYYY-MM-DD
+    for (const x of new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())) p[x.type] = x.value;
+    const day = `${p.year}-${p.month}-${p.day}`;
     return [
       `TENARIS EMERGENCY CARDS — print files for ${cards.length} card${cards.length === 1 ? '' : 's'} (${printer ? 'Bambu Lab ' + printer.label + ', ' : ''}${material}, made ${day})`,
       '',

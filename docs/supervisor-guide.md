@@ -5,7 +5,7 @@ How to keep the emergency cards up to date. You need two things from the site ow
 - **The dashboard link:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html
 - **Your sign-in:** your email and a temporary password (you choose your own the first time). Until the owner switches it off, the **shared supervisors' password** also works.
 
-You don't need a GitHub account, and you don't need to install anything. The dashboard works in any up-to-date browser on a phone or computer.
+You don't need a GitHub account, and you don't need to install anything. The dashboard is laid out for a computer (any up-to-date browser); it still works on a phone in a single column. It opens on **Shifts**, the tab you'll change most. The sections are listed down the left: Shifts, People, Cards, Print & QR, then History, Settings and Help.
 
 **Contents**
 
@@ -29,6 +29,7 @@ You don't need a GitHub account, and you don't need to install anything. The das
 2. Type your **Email** and **Password** and press **Unlock**. Your browser's password manager can save them.
    - **Shared supervisors' password:** leave **Email** empty and type the shared password. (Before anyone has their own sign-in, there's no Email box at all.)
 3. When you're done, press **Lock** (top right). This forgets everything on that device. If you have changes you haven't published, the browser warns you first.
+4. **It also locks by itself** after 30 minutes without anyone using it (no typing, clicking or scrolling), so a computer left signed in doesn't stay open. It never does this while you have changes waiting to be published; publish or discard them first.
 
 ### Your first sign-in
 
@@ -40,7 +41,7 @@ The site owner gives you a **temporary password** (two words, two digits and a s
 
 ### Problems signing in
 
-- **"Wrong email or password."** Check both for typos. The suggested passwords are five lowercase words joined by hyphens, like `maple-orbit-canyon-lantern-fizzy`.
+- **"Wrong email or password."** Check both for typos. Suggested and temporary passwords are two lowercase words, two digits and a symbol, joined like `maple-river-47!`.
 - **Forgot your password?** Type your email, then press **Forgot password?** under Unlock. It writes an email to the site owner asking for a reset; press Send. The owner gives you a new temporary password in person or by phone, and you choose a new password when you sign in. No cards stop working.
 - **"The shared supervisors' password is switched off."** Sign in with your own email and password. No sign-in yet? Ask the site owner.
 - **Forgot the shared password?** Ask the site owner.
@@ -52,7 +53,7 @@ The site owner gives you a **temporary password** (two words, two digits and a s
 
 ## 2. The status panel
 
-The box at the top of the dashboard always shows the current state.
+The status panel always shows the current state. On a wide screen (1400 pixels or more) it's the column on the right and stays in view while you scroll; on a smaller screen it's the box at the top.
 
 | Badge | Meaning |
 |---|---|
@@ -70,13 +71,15 @@ Below the badge:
 - **Facts line:** how many people and cards there are, and when the last change was published and by whom.
 - **Numbers to check:** "*N* phone numbers haven't been checked in 90 days", with an **Open People** link. Only shown when something is due ([section 3](#3-people)).
 
-When there are unpublished changes, a dark bar with a **Publish** button also stays at the bottom of the screen.
+When there are unpublished changes and the screen is narrower than that, a dark bar with a **Publish** button also stays at the bottom of the screen.
 
 ---
 
 ## 3. People
 
 Everyone on this list receives the group text, and everyone appears on the card page with a Call button.
+
+On a computer, People is a table: one row per person, with the column names on top. On a phone each person is a box.
 
 Each person has:
 
@@ -85,14 +88,14 @@ Each person has:
 | **Name** | Yes | Required. |
 | **Role** | Yes (under the name) | Optional, e.g. "1st shift lead". |
 | **Role in Spanish (optional)** | Yes, on the Spanish page | Leave blank to show the English role on the Spanish page too. |
-| **Phone** | No (only used to dial and text) | Required. Any US 10-digit format works, e.g. `(555) 555-0100`, `555.555.0100`, `+1 555 555 0100`. It's tidied to `+15555550100` when you leave the box. |
+| **Phone** | No (only used to dial and text) | Required. Any US 10-digit format works, e.g. `(555) 555-0100`, `555.555.0100`, `+1 555 555 0100`. It's tidied to `555-555-0100` when you leave the box. |
 
 - **Add person** adds a row; there's room for up to **10 people**.
-- **Remove person** deletes them and also takes them off every shift.
+- **×** at the end of a row removes that person (after a confirm) and also takes them off every shift.
 
 ### Checking numbers every 90 days
 
-Under each phone number is the date it was last checked, e.g. *Number checked Oct 2, 2026.* After 90 days it turns amber: *Number not checked since …* Call or text that person, make sure the number still works, then press **Still right** and **Publish**.
+Next to each phone number is the date it was last checked, e.g. *Checked Oct 2, 2026*. After 90 days it turns amber: *Not checked since …* Call or text that person, make sure the number still works, then press **Still right** and **Publish**.
 
 - Changing a number counts as checking it.
 - Numbers that were there before this feature count as checked on the last publish before it.
@@ -100,7 +103,7 @@ Under each phone number is the date it was last checked, e.g. *Number checked Oc
 
 ### Text message
 
-This is the group text the family sends to everyone. `{driver}` is replaced with the driver's name from their card.
+This is the group text the family sends to everyone. `{driver}` is replaced with the driver's name from their card. Both messages must contain `{driver}`; otherwise publishing stops, because the yard wouldn't know which driver the text is about.
 
 - **English** is used on the English page. Default: *EMERGENCY – need to reach driver {driver}. Please call me back at this number.*
 - **Spanish** is used when the family has the page in Spanish. Default: *EMERGENCIA – necesito comunicarme con el conductor {driver}. Por favor llámeme a este número.*
@@ -125,8 +128,8 @@ This tab decides **who is the primary call** (the big Call button on the card pa
 
 ### How the order works
 
-1. The dashboard looks down the shift list **from the top** and finds the first shift that is on right now.
-2. The first person ticked on that shift (in the order of the People list) is the **primary call**.
+1. The dashboard goes through the shifts **in order** (left to right in **Who works each shift**, and the order of the boxes under **Shift times**) and finds the first shift that is on right now.
+2. The first person ticked on that shift (top to bottom: the order of the People list) is the **primary call**.
 3. Everyone else on a shift that's on right now is listed under **Also working now**.
 4. Everyone else is listed under **Not scheduled · still emergency contacts**.
 5. If **nobody** is on shift, the primary call is the person chosen in **If nobody is on shift, the primary call is**.
@@ -137,17 +140,18 @@ Above the shift list, an amber box lists every time in the week when nobody is o
 
 Gaps aren't errors (the fallback person covers them), and you can still publish. The box just makes sure they're on purpose.
 
-Keep the rotating shifts (1st, 2nd, 3rd) **above** the Day shift. Then the shift lead is the primary call and the day staff appear as "Also working".
+Keep the rotating shifts (1st, 2nd, 3rd) **before** the Day shift. Then the shift lead is the primary call and the day staff appear as "Also working". The **←** and **→** buttons on each shift box move it earlier or later.
 
 ### Settings on this tab
 
 - **All times are Houston time** (Central), even if a family is somewhere else. Their card page then adds a note: "Shift times are Houston time."
-- **Each shift has:**
+- **Who works each shift:** a table with a row per person and a column per shift (its times and days under its name). Tick a box to put that person on that shift. A person can be on more than one shift. This is what changes at every rotation.
+- **Shift times:** a box per shift. Each shift has:
   - **Name** and an optional **Spanish name**. The usual names (1st shift, 2nd shift, 3rd shift, Day (8–5), Day, Night) translate automatically; the grey hint shows the automatic Spanish.
-  - **Starts** and **Ends**. A shift that ends earlier than it starts runs past midnight, e.g. 22:00–06:00. It counts as belonging to the day it **starts**: a Friday 22:00–06:00 shift covers Saturday 02:00. A shift that starts and ends at the same time runs 24 hours.
-  - **Days:** tick the days the shift runs.
-  - **Who works it:** tick the people on that shift. A person can be on more than one shift.
-- **Add shift** / **Remove shift**.
+  - **Starts** and **Ends**. A shift that ends earlier than it starts runs past midnight, e.g. 22:00–06:00. It counts as belonging to the day it **starts**: a Friday 22:00–06:00 shift covers Saturday 02:00. A shift that starts and ends at the same time runs 24 hours from its start, e.g. 06:00 Monday to 06:00 Tuesday.
+  - **Days:** click a day to switch it on (green) or off.
+  - **←** / **→**: move the shift earlier or later; **×**: remove it.
+- **Add shift** adds a box at the end (last in order) and puts the cursor in its name.
 
 The defaults for a new setup are:
 
@@ -168,13 +172,14 @@ Pick a **Day** and **Time** to see exactly who a card would show then: the prima
 
 Each card (family or school) has its own secret link, written to its NFC tag and printed as its QR code.
 
-- **Add card:**
+- **Add card** (the line at the top; pressing Enter also adds it):
   - **Driver name and ID:** shown on the page and printed on the card, e.g. `Jane Doe (1234)`.
   - **Given to:** a note like "Family" or "School", so you can tell cards apart. Families never see it.
 
   A new card shows **Not published yet** until you publish. Its link only works after that.
+- **Search** (next to *All cards*) narrows the list by driver name, ID or *Given to*.
 - **Print & QR** (on each card): opens the Print & QR tab for that card.
-- **Rename:** fix the driver name or the note. The card's link doesn't change, so the NFC tag doesn't need rewriting. Publish. If the printed name was wrong, print a new card, with a new tag holding the same link, and destroy the old one.
+- **Rename:** fix the driver name or the note, right in the row; Enter or **Save** keeps it, Escape or **Cancel** doesn't. The card's link doesn't change, so the NFC tag doesn't need rewriting. Publish. If the printed name was wrong, print a new card, with a new tag holding the same link, and destroy the old one.
 - **Remove:** permanently switches that card off once you publish. Use it for a lost card. Every other card keeps working. A removed card can't be brought back; make a new one instead.
 
 > A driver can have several cards (e.g. family and school). Each one can be removed on its own.
@@ -205,12 +210,12 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
 ## 7. Publishing
 
-1. Press **Publish** in the status panel or the bottom bar.
+1. Press **Publish** in the status panel (or the bottom bar on a smaller screen).
 2. If something is missing, publishing stops and the dashboard takes you to the problem. It checks that:
    - there is at least one person
    - every person has a name and a valid US phone number
    - no two people share a phone number
-   - both text messages are filled in
+   - both text messages are filled in and contain `{driver}`
    - every shift has a name and at least one day
 3. With your own sign-in, History shows your name automatically. With the shared password, the first time you publish on a device the dashboard asks for **your name**, for the History tab; you can change it later in **Settings**.
 4. The badge goes **Publishing → Updating → Live**.
@@ -248,13 +253,13 @@ Every publish adds an entry with the date and time, who published, and what chan
 ## 10. Common jobs, step by step
 
 **The shift rotation changed**
-1. **Shifts** → untick and tick people under **Who works it**.
+1. **Shifts** → untick and tick people in **Who works each shift**.
 2. **Check a time** for a couple of moments to confirm.
 3. **Publish.**
 
 **Someone new joined / someone left**
-1. **People** → **Add person** (fill in name, role, phone) or **Remove person**.
-2. **Shifts** → tick the new person on their shift.
+1. **People** → **Add person** (fill in name, role, phone), or **×** at the end of someone's row.
+2. **Shifts** → tick the new person on their shift in **Who works each shift**.
 3. **Publish.**
 
 **A phone number changed**
@@ -293,6 +298,8 @@ Ask the site owner to add them. The owner gives them a temporary password in per
 | "Can't reach GitHub right now." | Check your internet connection. You can still edit; publish when you're back online. |
 | "Fix these first: …" | The message lists what's missing (a name, a phone number, …) and opens the right tab. |
 | "Add your name first (Settings → Your name)…" | Type your name in **Settings → Your name**, then publish again. |
+| "Put {driver} in the text message…" | **People → Text message:** put `{driver}` back where the driver's name should go. |
+| The sign-in screen appears by itself | The dashboard locks after 30 minutes without use (never with unpublished changes). Sign in again. |
 | Badge stuck on **Delayed** | GitHub is slow. It nearly always catches up within 10 minutes. |
 | "The driver name is too long to print." (Print & QR) | **Cards → Rename** to a shorter form, e.g. initials for middle names. |
 | "The driver name has characters the card can't print" (Print & QR) | **Cards → Rename** using letters, digits and . , - ' " ( ) & # / only. |

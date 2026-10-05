@@ -73,11 +73,17 @@ function say(id, text, bad = false) {
 const clone = value => JSON.parse(JSON.stringify(value));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const newId = () => toB64(crypto.getRandomValues(new Uint8Array(6)));
-const today = () => new Date().toISOString().slice(0, 10);
+// Today's date in Houston, e.g. "2026-10-05". (Not toISOString: that's the UTC date, a day ahead every evening.)
+function houstonDate(date) {
+  const p = {};
+  for (const x of new Intl.DateTimeFormat('en-US', { timeZone: YARD_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)) p[x.type] = x.value;
+  return `${p.year}-${p.month}-${p.day}`;
+}
+const today = () => houstonDate(new Date());
 const when = iso => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const personName = c => c.name.trim() || 'a person with no name';
 const daysSince = iso => Math.floor((Date.parse(today()) - Date.parse(iso)) / 864e5);
-const dateLabel = iso => new Date(iso + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+const dateLabel = iso => (/^\d{4}-\d\d-\d\d$/.test(iso || '') ? new Date(iso + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : iso || '');
 const isDue = c => c.phone && daysSince(c.confirmed) >= CHECK_DAYS;
 const askOwner = () => (role === 'owner' ? 'Fix it in the Owner tab.' : `Ask the site owner${owner && owner.contact ? ` (${owner.contact})` : ''} to fix it.`);
 
@@ -122,6 +128,8 @@ function normalizePhone(text) {
 
 // "+15555550100" → "555-555-0100" (how it's printed on cards)
 const formatPhone = p => (p ? p.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3') : '');
+// A saved number the way people write it; anything else (half-typed) as typed.
+const showPhone = p => (/^\+1\d{10}$/.test(p || '') ? formatPhone(p) : p || '');
 
 // Passwords: at least 8 characters, with at least one number and one symbol.
 const PASSWORD_RULE = 'at least 8 characters, with a number and a symbol';
@@ -202,9 +210,12 @@ function publishError(status) {
 }
 
 // Check the token works and that nobody has published since we loaded.
+let ghRun = 0; // a check that started before the latest publish is out of date when it answers
 async function checkGitHub() {
+  const run = ++ghRun;
   try {
-    const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`);
+    const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`, { timeout: 15000 });
+    if (run !== ghRun) return;
     if (res.status === 401) ghProblem = `Publishing won't work right now: the site's GitHub connection has expired. ${askOwner()}`;
     else if (res.ok) {
       const j = await res.json();
@@ -215,6 +226,7 @@ async function checkGitHub() {
     } else if (res.status === 404) ghProblem = null; // nothing published yet
     else ghProblem = `GitHub answered with error ${res.status}. Publishing may not work right now.`;
   } catch {
+    if (run !== ghRun) return;
     ghProblem = "Can't reach GitHub right now. You can make changes, but publishing may fail.";
   }
   refresh();
@@ -656,7 +668,7 @@ function enterDashboard(opened, publishedText, { mustPublish: must = false, me: 
   // When each number was last checked (kept with the dashboard data, not on the cards).
   // Numbers from before this was tracked count as checked on the last publish.
   const checked = opened.confirmed || {};
-  const lastPublish = log.length ? log[log.length - 1].at.slice(0, 10) : today();
+  const lastPublish = log.length ? houstonDate(new Date(log[log.length - 1].at)) : today();
   for (const c of state.contacts) {
     c.roleEs = c.roleEs || '';
     c.confirmed = checked[c.id] || lastPublish;
@@ -685,6 +697,23 @@ addEventListener('beforeunload', e => {
   if (state && changes().length) { e.preventDefault(); e.returnValue = ''; }
 });
 
+// Lock by itself after 30 minutes without use (an office computer left signed in), but never with changes waiting
+// to be published or while publishing.
+const IDLE_LOCK_MS = 30 * 60 * 1000;
+let lastUse = Date.now();
+for (const type of ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll']) {
+  addEventListener(type, e => {
+    if (type === 'pointermove' && !e.movementX && !e.movementY) return; // the page moved under a resting pointer
+    lastUse = Date.now();
+  }, { passive: true, capture: true });
+}
+// Setup steps (a recovery code, a temporary password, a GitHub token in another tab) are never interrupted.
+setInterval(() => {
+  if (Date.now() - lastUse < IDLE_LOCK_MS || busy || allCardsBusy || $('dash').hidden) return;
+  if (state && changes().length) return;
+  location.reload();
+}, 60 * 1000);
+
 // The yard address is saved as "yardAddress" ("" hides it). Without one, cards show the built-in YARD_ADDRESS,
 // and so does this box. (A few hours' worth of dashboards wrote "address" and saved "" automatically,
 // so a non-empty "address" still counts but an empty one doesn't.) undefined = leave it out of the file.
@@ -695,12 +724,22 @@ function savedAddress(data) {
 
 // ================= Tabs =================
 
-let tab = 'people';
-for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => openTab(b.dataset.tab);
+let tab = 'shifts'; // the tab supervisors change most often
+for (const b of document.querySelectorAll('[data-tab]')) {
+  b.onclick = () => {
+    openTab(b.dataset.tab);
+    if (matchMedia('(min-width: 820px)').matches) scrollTo(0, 0); // computer layout: start the section at its top
+  };
+}
 
 function openTab(name) {
   tab = name;
-  for (const b of document.querySelectorAll('[data-tab]')) b.classList.toggle('active', b.dataset.tab === name);
+  renaming = null;
+  for (const b of document.querySelectorAll('[data-tab]')) {
+    b.classList.toggle('active', b.dataset.tab === name);
+    if (b.dataset.tab === name) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
   for (const p of document.querySelectorAll('[data-panel]')) p.hidden = p.dataset.panel !== name;
   showTab(document.querySelector(`[data-tab="${name}"]`));
   renderTab();
@@ -744,7 +783,7 @@ function changes() {
     for (const o of before.contacts) if (!now.has(o.id)) out.push('Removed ' + personName(o));
     if (before.message !== state.message) out.push('Changed the text message');
     if (before.messageEs !== state.messageEs) out.push('Changed the Spanish text message');
-    if (JSON.stringify(before.schedule) !== JSON.stringify(state.schedule)) out.push('Changed shifts');
+    if (scheduleKey(before.schedule) !== scheduleKey(state.schedule)) out.push('Changed shifts');
     if ((before.backup || '') !== (state.backup || '')) out.push('Changed the backup line');
     if ((before.address || '') !== (state.address || '')) out.push('Changed the yard address');
     if (!!before.whatsapp !== !!state.whatsapp) out.push(state.whatsapp ? 'Switched the WhatsApp button on' : 'Switched the WhatsApp button off');
@@ -771,6 +810,14 @@ function changes() {
   if (pending.has('token')) out.push('Replaced the GitHub token');
   if (pending.has('recovery')) out.push('Made a new recovery code');
   return out;
+}
+
+// The schedule as text for comparing: unticking and re-ticking someone, or emptying a Spanish name, isn't a change.
+function scheduleKey(s) {
+  return JSON.stringify({
+    fallback: s.fallback,
+    shifts: s.shifts.map(x => ({ name: x.name, nameEs: x.nameEs || '', start: x.start, end: x.end, days: [...x.days].sort(), people: [...x.people].sort() })),
+  });
 }
 
 // Personal sign-ins added, reset, changed or removed since the last publish.
@@ -843,37 +890,41 @@ setInterval(() => state && renderNow(), 30 * 1000);
 
 // ================= People =================
 
+// One row per person: a table on a computer (column names in the header row), labelled boxes on a phone.
 function renderPeople() {
-  $('people-list').replaceChildren(...state.contacts.map((c, i) => {
-    const input = (label, key, extra = {}) => el('label', {}, label, el('input', {
-      value: c[key], autocomplete: 'off', ...extra,
+  $('people-list').replaceChildren(...state.contacts.map(c => {
+    const was = { phone: c.phone, confirmed: c.confirmed };
+    const remove = el('button', { type: 'button', class: 'icon-btn row-remove', textContent: '×', title: 'Remove person', 'aria-label': `Remove ${personName(c)}`, onclick: () => removePerson(c) });
+    const input = (label, key, extra = {}) => el('label', {}, el('span', { class: 'lbl', textContent: label }), el('input', {
+      value: key === 'phone' ? showPhone(c.phone) : c[key], autocomplete: 'off', ...extra,
       oninput: e => {
-        c[key] = e.target.value;
-        if (key === 'phone') c.confirmed = today(); // a new number counts as checked
+        if (key === 'phone') { // saved as +1…; a new number counts as checked, the same number typed again doesn't
+          const p = normalizePhone(e.target.value);
+          c.phone = p || e.target.value;
+          c.confirmed = p === was.phone ? was.confirmed : today();
+        } else c[key] = e.target.value;
+        if (key === 'name') remove.setAttribute('aria-label', `Remove ${personName(c)}`);
         refresh();
       },
     }));
     const due = isDue(c);
-    const checked = c.phone && el('p', { class: 'checked' + (due ? ' due' : '') },
-      due ? `Number not checked since ${dateLabel(c.confirmed)}.`
-        : `Number checked ${c.confirmed === today() ? 'today' : dateLabel(c.confirmed)}.`,
+    const checked = el('div', { class: 'check-cell' + (due ? ' due' : '') },
+      c.phone && el('span', { textContent: due ? `Not checked since ${dateLabel(c.confirmed)}` : c.confirmed === today() ? 'Checked today' : `Checked ${dateLabel(c.confirmed)}` }),
       due && el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Still right', onclick: () => {
         c.confirmed = today();
         renderPeople();
         refresh();
       } }));
-    return el('fieldset', { class: 'box person' },
-      el('legend', { textContent: `Person ${i + 1}` }),
-      el('div', { class: 'field-row' },
-        input('Name', 'name'),
-        input('Role', 'role', { placeholder: 'e.g. 1st shift lead' }),
-        input('Role in Spanish (optional)', 'roleEs', { placeholder: 'e.g. Supervisor del 1er turno', lang: 'es' }),
-        input('Phone', 'phone', {
-          type: 'tel', placeholder: '(555) 555-0100',
-          onchange: e => { const p = normalizePhone(e.target.value); if (p) { c.phone = e.target.value = p; refresh(); } },
-        })),
+    return el('div', { class: 'person-row' },
+      input('Name', 'name'),
+      input('Role', 'role', { placeholder: 'e.g. 1st shift lead' }),
+      input('Role in Spanish (optional)', 'roleEs', { placeholder: 'e.g. Supervisor del 1er turno', lang: 'es' }),
+      input('Phone', 'phone', {
+        type: 'tel', placeholder: '(555) 555-0100',
+        onchange: e => { const p = normalizePhone(e.target.value); if (p) e.target.value = showPhone(p); },
+      }),
       checked,
-      el('button', { type: 'button', class: 'link-btn box-remove', textContent: 'Remove person', onclick: () => removePerson(c) }));
+      remove);
   }));
   $('add-person').disabled = state.contacts.length >= MAX_PEOPLE;
   $('message').value = state.message;
@@ -886,8 +937,8 @@ $('add-person').onclick = () => {
   state.contacts.push({ id: newId(), name: '', role: '', roleEs: '', phone: '', confirmed: today() });
   renderPeople();
   refresh();
-  const boxes = document.querySelectorAll('#people-list fieldset');
-  boxes[boxes.length - 1].querySelector('input').focus();
+  const rows = $('people-list').children;
+  rows[rows.length - 1].querySelector('input').focus();
 };
 
 function removePerson(c) {
@@ -897,6 +948,7 @@ function removePerson(c) {
   if (state.schedule.fallback === c.id) state.schedule.fallback = state.contacts[0] ? state.contacts[0].id : null;
   renderPeople();
   refresh();
+  $('add-person').focus();
 }
 
 $('message').oninput = e => { state.message = e.target.value; refresh(); };
@@ -910,6 +962,7 @@ $('due-open').onclick = () => openTab('people');
 function renderShifts() {
   const s = state.schedule;
   $('shift-list').replaceChildren(...s.shifts.map(shiftBox));
+  renderMatrix();
   $('fallback').replaceChildren(...state.contacts.map(c => el('option', { value: c.id, textContent: personName(c), selected: c.id === s.fallback })));
   if (!$('preview-day').options.length) {
     const now = yardNow(YARD_TIME_ZONE);
@@ -957,45 +1010,115 @@ function renderGaps() {
       gaps.length > shown.length && el('li', { textContent: `and ${gaps.length - shown.length} more` }))));
 }
 
-function shiftBox(shift) {
-  const changed = () => { refresh(); renderPreview(); renderGaps(); };
+// "Every day", "Mon–Fri", "Sat, Sun", "Mon, Wed, Fri"
+function daysLabel(days) {
+  const d = [...new Set(days)].sort((a, b) => a - b);
+  if (!d.length) return 'No days';
+  if (d.length === 7) return 'Every day';
+  if (d.length >= 3 && d[d.length - 1] - d[0] === d.length - 1) return `${DAYS[d[0]]}–${DAYS[d[d.length - 1]]}`;
+  return d.map(i => DAYS[i]).join(', ');
+}
+
+const togglePerson = (shift, id, on) => { shift.people = on ? [...shift.people.filter(x => x !== id), id] : shift.people.filter(x => x !== id); };
+const shiftChanged = () => { refresh(); renderPreview(); renderGaps(); };
+
+// Who works each shift: a person per row, a shift per column (in order: the first shift on gets the primary call).
+// An older cached dashboard.html has no table: then each shift box has its own "Who works it" ticks instead.
+function renderMatrix() {
+  const table = $('shift-matrix');
+  if (!table) return;
+  const shifts = state.schedule.shifts;
+  if (!state.contacts.length || !shifts.length) {
+    return table.replaceChildren(el('tbody', {}, el('tr', {}, el('td', { class: 'muted small empty', textContent: state.contacts.length ? 'Add a shift first.' : 'Add people first.' }))));
+  }
+  const head = el('tr', {}, el('th', { scope: 'col', class: 'corner', textContent: 'Person' }),
+    ...shifts.map(s => el('th', { scope: 'col' },
+      s.name || 'Shift',
+      el('span', { textContent: `${timeLabel(s.start)} – ${timeLabel(s.end)}` }),
+      el('span', { textContent: daysLabel(s.days) }))));
+  const rows = state.contacts.map(c => el('tr', {},
+    el('th', { scope: 'row' }, personName(c), c.role.trim() && el('span', { textContent: c.role.trim() })),
+    ...shifts.map(s => {
+      const on = s.people.includes(c.id);
+      const cell = el('td', { class: on ? 'on' : '' });
+      cell.append(el('label', {}, el('input', { type: 'checkbox', checked: on, 'aria-label': `${personName(c)} works ${s.name || 'this shift'}`, onchange: e => {
+        togglePerson(s, c.id, e.target.checked);
+        cell.classList.toggle('on', e.target.checked);
+        shiftChanged();
+      } })));
+      return cell;
+    })));
+  table.replaceChildren(el('thead', {}, head), el('tbody', {}, ...rows));
+}
+
+function moveShift(shift, by) {
+  const list = state.schedule.shifts, i = list.indexOf(shift), j = i + by;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  renderShifts();
+  refresh();
+  // Keep the keyboard on the moved box: the same arrow, or the other one once it reaches the end.
+  const box = $('shift-list').children[j];
+  const btn = box.querySelector(by < 0 ? '.move-up' : '.move-down');
+  (btn.disabled ? box.querySelector(by < 0 ? '.move-down' : '.move-up') : btn).focus();
+}
+
+function shiftBox(shift, index, all) {
+  const changed = () => { shiftChanged(); renderMatrix(); };
+  const label = () => shift.name.trim() || 'this shift'; // read when used: the name can change after this is drawn
   const legend = el('legend', { textContent: shift.name || 'Shift' });
   const autoEs = () => { const es = shiftName({ ...shift, nameEs: '' }, 'es'); return es !== shift.name ? `${es} (automatic)` : 'e.g. Turno de noche'; };
   const esName = el('input', { value: shift.nameEs || '', placeholder: autoEs(), lang: 'es', oninput: e => { shift.nameEs = e.target.value; changed(); } });
+  // Each part of a time box counts as a change while it's typed in, so an emptied box gets the saved time back
+  // only when you leave it.
+  const time = key => el('input', {
+    type: 'time', value: shift[key],
+    onchange: e => { if (e.target.value) { shift[key] = e.target.value; changed(); } },
+    onblur: e => { if (!e.target.value) e.target.value = shift[key]; },
+  });
+  const up = el('button', { type: 'button', class: 'icon-btn move-up', textContent: '←', title: 'Move earlier', disabled: index === 0, onclick: () => moveShift(shift, -1) });
+  const down = el('button', { type: 'button', class: 'icon-btn move-down', textContent: '→', title: 'Move later', disabled: index === all.length - 1, onclick: () => moveShift(shift, 1) });
+  const remove = el('button', { type: 'button', class: 'icon-btn row-remove', textContent: '×', title: 'Remove shift', onclick: () => {
+    if (!confirm(`Remove ${label()}?`)) return;
+    state.schedule.shifts = state.schedule.shifts.filter(x => x !== shift);
+    renderShifts();
+    refresh();
+    $('add-shift').focus();
+  } });
+  const names = () => {
+    up.setAttribute('aria-label', `Move ${label()} earlier`);
+    down.setAttribute('aria-label', `Move ${label()} later`);
+    remove.setAttribute('aria-label', `Remove ${label()}`);
+  };
+  names();
   return el('fieldset', { class: 'box shift' },
     legend,
+    el('div', { class: 'box-tools' }, up, down, remove),
     el('div', { class: 'field-row' },
-      el('label', {}, 'Name', el('input', { value: shift.name, oninput: e => { shift.name = e.target.value; legend.textContent = shift.name || 'Shift'; esName.placeholder = autoEs(); changed(); } })),
+      el('label', {}, 'Name', el('input', { value: shift.name, oninput: e => { shift.name = e.target.value; legend.textContent = shift.name || 'Shift'; esName.placeholder = autoEs(); names(); changed(); } })),
       el('label', {}, 'Spanish name (optional)', esName)),
     el('div', { class: 'field-row' },
-      el('label', {}, 'Starts', el('input', { type: 'time', value: shift.start, onchange: e => { if (e.target.value) shift.start = e.target.value; changed(); } })),
-      el('label', {}, 'Ends', el('input', { type: 'time', value: shift.end, onchange: e => { if (e.target.value) shift.end = e.target.value; changed(); } }))),
+      el('label', {}, 'Starts', time('start')),
+      el('label', {}, 'Ends', time('end'))),
     el('p', { class: 'eyebrow', textContent: 'Days' }),
-    el('div', { class: 'chips' }, ...DAYS.map((d, i) => el('label', { class: 'chip' },
+    el('div', { class: 'days', role: 'group', 'aria-label': `Days for ${label()}` }, ...DAYS.map((d, i) => el('label', { class: 'day' },
       el('input', { type: 'checkbox', checked: shift.days.includes(i), onchange: e => {
-        shift.days = e.target.checked ? [...shift.days, i].sort() : shift.days.filter(x => x !== i);
+        shift.days = e.target.checked ? [...shift.days, i].sort((a, b) => a - b) : shift.days.filter(x => x !== i);
         changed();
-      } }), d))),
-    el('p', { class: 'eyebrow', textContent: 'Who works it' }),
-    state.contacts.length
+      } }), el('span', { textContent: d })))),
+    !$('shift-matrix') && el('p', { class: 'eyebrow', textContent: 'Who works it' }),
+    !$('shift-matrix') && (state.contacts.length
       ? el('div', { class: 'chips' }, ...state.contacts.map(c => el('label', { class: 'chip' },
-          el('input', { type: 'checkbox', checked: shift.people.includes(c.id), onchange: e => {
-            shift.people = e.target.checked ? [...shift.people, c.id] : shift.people.filter(id => id !== c.id);
-            changed();
-          } }), personName(c))))
-      : el('p', { class: 'small muted', textContent: 'Add people first.' }),
-    el('button', { type: 'button', class: 'link-btn box-remove', textContent: 'Remove shift', onclick: () => {
-      if (!confirm(`Remove ${shift.name || 'this shift'}?`)) return;
-      state.schedule.shifts = state.schedule.shifts.filter(x => x !== shift);
-      renderShifts();
-      refresh();
-    } }));
+          el('input', { type: 'checkbox', checked: shift.people.includes(c.id), onchange: e => { togglePerson(shift, c.id, e.target.checked); changed(); } }), personName(c))))
+      : el('p', { class: 'small muted', textContent: 'Add people first.' })));
 }
 
 $('add-shift').onclick = () => {
   state.schedule.shifts.push({ name: 'New shift', start: '08:00', end: '16:00', days: [0, 1, 2, 3, 4], people: [] });
   renderShifts();
   refresh();
+  const boxes = $('shift-list').children;
+  boxes[boxes.length - 1].querySelector('input:not([type=checkbox])').select();
 };
 $('fallback').onchange = e => { state.schedule.fallback = e.target.value; refresh(); renderPreview(); renderGaps(); };
 $('preview-day').onchange = $('preview-time').onchange = () => renderPreview();
@@ -1017,42 +1140,84 @@ function renderPreview() {
 const cardLabel = c => c.driver + (c.note ? ` (${c.note})` : '');
 const isLive = c => published && published.state.cards.some(p => p.key === c.key);
 
+let renaming = null;      // the card being renamed in its row
+let renameFocus = false;  // put the cursor in its name box on the next draw
+
+// A row per card: driver (and when it was added), who has it, status, buttons. Search narrows the list.
 function renderCards() {
-  $('card-list').replaceChildren(...state.cards.map(card => {
-    const live = isLive(card);
-    return el('li', {},
-      el('div', {},
-        el('strong', { textContent: card.driver }),
-        el('span', { textContent: [card.note, 'added ' + card.added].filter(Boolean).join(' · ') }),
-        el('span', { class: 'badge small ' + (live ? 'live' : 'changes'), textContent: live ? 'Active' : 'Not published yet' })),
-      el('div', { class: 'actions' },
-        el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Print & QR', onclick: () => openPrint(card) }),
-        el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Rename', onclick: () => renameCard(card) }),
-        el('button', { type: 'button', class: 'btn btn-danger btn-small', textContent: 'Remove', onclick: () => removeCard(card) })));
-  }));
+  const q = $('card-search') ? $('card-search').value.trim().toLowerCase() : '';
+  const shown = state.cards.filter(c => !q || `${c.driver} ${c.note}`.toLowerCase().includes(q));
+  $('card-list').replaceChildren(...shown.map(card => (card === renaming ? renameRow(card) : cardRow(card))));
   $('card-count').textContent = state.cards.length;
-  $('no-cards').hidden = state.cards.length > 0;
+  $('no-cards').hidden = shown.length > 0;
+  $('no-cards').textContent = state.cards.length ? 'No cards match.' : 'No cards yet.';
 }
 
-$('add-card').onclick = () => {
+function cardRow(card) {
+  const live = isLive(card);
+  return el('li', { 'data-key': card.key },
+    el('div', { class: 'c-driver' },
+      el('strong', { textContent: card.driver }),
+      el('span', { textContent: 'Added ' + dateLabel(card.added) })),
+    el('div', { class: 'c-note' }, el('span', { textContent: card.note || '—' })),
+    el('div', { class: 'c-status' }, el('span', { class: 'badge small ' + (live ? 'live' : 'changes'), textContent: live ? 'Active' : 'Not published yet' })),
+    el('div', { class: 'actions' },
+      el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Print & QR', onclick: () => openPrint(card) }),
+      el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Rename', onclick: () => renameCard(card) }),
+      el('button', { type: 'button', class: 'btn btn-danger btn-small', textContent: 'Remove', onclick: () => removeCard(card) })));
+}
+
+// Rename in place: Enter saves, Escape cancels.
+function renameRow(card) {
+  const keys = e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') cancel(); };
+  const driver = el('input', { value: card.driver, autocomplete: 'off', 'aria-label': 'Driver name and ID', onkeydown: keys });
+  const note = el('input', { value: card.note, autocomplete: 'off', 'aria-label': 'Given to', placeholder: 'Given to', onkeydown: keys });
+  const done = () => {
+    renaming = null;
+    renderCards();
+    const row = $('card-list').querySelector(`[data-key="${card.key}"]`); // back to that card's Rename button
+    if (row) row.querySelectorAll('.actions .btn')[1].focus();
+  };
+  const cancel = done;
+  const save = () => {
+    if (!driver.value.trim()) return driver.focus();
+    card.driver = driver.value.trim();
+    card.note = note.value.trim();
+    done();
+    refresh();
+  };
+  const li = el('li', { class: 'renaming' },
+    el('div', { class: 'c-driver' }, driver),
+    el('div', { class: 'c-note' }, note),
+    el('div', { class: 'c-status' }),
+    el('div', { class: 'actions' },
+      el('button', { type: 'button', class: 'btn btn-primary btn-small', textContent: 'Save', onclick: save }),
+      el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Cancel', onclick: cancel })));
+  if (renameFocus) { renameFocus = false; setTimeout(() => driver.select()); }
+  return li;
+}
+
+function addCard() {
+  renaming = null;
   const driver = $('new-driver').value.trim();
   if (!driver) return say('card-msg', 'Enter the driver name and ID first.', true);
   const card = { driver, note: $('new-note').value.trim(), key: newKey(), added: today() };
   state.cards.push(card);
   $('new-driver').value = $('new-note').value = '';
-  say('card-msg', `Added. Publish to switch it on, then get its files in Print & QR.`);
+  if ($('card-search')) $('card-search').value = '';
+  say('card-msg', `Added ${cardLabel(card)}. Publish to switch it on, then get its files in Print & QR.`);
   renderCards();
   refresh();
-};
+  $('new-driver').focus();
+}
+$('add-card').onclick = addCard;
+for (const id of ['new-driver', 'new-note']) $(id).onkeydown = e => { if (e.key === 'Enter' && !e.repeat) addCard(); };
+if ($('card-search')) $('card-search').oninput = () => { renaming = null; renderCards(); };
 
 function renameCard(card) {
-  const driver = prompt('Driver name and ID:', card.driver);
-  if (driver === null || !driver.trim()) return;
-  const note = prompt('Given to (only shown here):', card.note);
-  card.driver = driver.trim();
-  if (note !== null) card.note = note.trim();
+  renaming = card;
+  renameFocus = true;
   renderCards();
-  refresh();
 }
 
 function removeCard(card) {
@@ -1237,9 +1402,16 @@ onClick('dl-all-cards', async () => {
 // Personal sign-ins: the name the owner gave them. Shared password and owner: the name typed in Settings.
 const VIA = { shared: ' (shared password)', owner: ' (owner)' };
 
+// Date and time, with the year when it isn't this year.
+const whenFull = iso => {
+  const d = new Date(iso);
+  return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+};
+
 function renderHistory() {
   $('history-list').replaceChildren(...log.slice().reverse().map(entry => el('li', {},
-    el('p', { class: 'eyebrow', textContent: `${when(entry.at)}${entry.who ? ' · ' + entry.who + (VIA[entry.via] || '') : ''}` }),
+    el('p', { class: 'eyebrow h-when', textContent: whenFull(entry.at) }),
+    el('p', { class: 'h-who', textContent: entry.who ? entry.who + (VIA[entry.via] || '') : '' }),
     el('ul', {}, ...entry.what.map(t => el('li', { textContent: t }))))));
   $('no-history').hidden = log.length > 0;
 }
@@ -1281,9 +1453,9 @@ onClick('change-my-password', () => {
 
 function renderOwner() {
   $('gh-status').textContent = (ghProblem ? ghProblem + ' ' : 'Connected. ') +
-    `Token added ${github.addedAt}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
+    `Token added ${dateLabel(github.addedAt)}${github.addedBy ? ' by ' + github.addedBy : ''}${pending.has('token') ? ' (not published yet)' : ''}.`;
   const unpublished = ['recovery', 'upgrade', 'owner-access'].some(p => pending.has(p));
-  $('recovery-status').textContent = `Set up ${owner.at || ''}${unpublished ? ' (not published yet)' : ''}.`;
+  $('recovery-status').textContent = `Set up ${dateLabel(owner.at)}${unpublished ? ' (not published yet)' : ''}.`;
   $('owner-contact').value = (owner && owner.contact) || '';
   renderAccounts();
 }
@@ -1299,7 +1471,7 @@ function renderAccounts() {
       el('div', {},
         el('strong', { textContent: a.name }),
         el('span', { textContent: a.email }),
-        el('span', { textContent: `Added ${a.addedAt}${a.addedBy ? ' by ' + a.addedBy : ''}` }),
+        el('span', { textContent: `Added ${dateLabel(a.addedAt)}${a.addedBy ? ' by ' + a.addedBy : ''}` }),
         el('span', { class: 'badge small ' + (status === 'Active' ? 'live' : 'changes'), textContent: status })),
       el('div', { class: 'actions' },
         el('button', { type: 'button', class: 'btn btn-light btn-small', textContent: 'Reset password', onclick: () => resetAccount(a) }),
@@ -1318,7 +1490,7 @@ function renderAccounts() {
   if ($('token-advice-text')) $('token-advice-text').textContent = tokenAdvice;
 }
 
-onClick('add-account', async () => {
+async function addAccount() {
   const email = typedEmail('new-email');
   const name = $('new-name').value.trim();
   if (!email) return say('account-msg', email === null ? "That doesn't look like an email address." : 'Enter their email address.', true);
@@ -1329,7 +1501,9 @@ onClick('add-account', async () => {
     $('new-email').value = $('new-name').value = '';
     say('account-msg', `Added ${name}. Publish to switch on their sign-in.`);
   });
-});
+}
+onClick('add-account', addAccount);
+for (const id of ['new-email', 'new-name']) if ($(id)) $(id).onkeydown = e => { if (e.key === 'Enter' && !e.repeat) addAccount(); };
 
 function resetAccount(a) {
   if (!confirm(`Reset the password for ${a.name}?\n\nYou'll get a new temporary password to give them. Their current password stops working once you publish.`)) return;
@@ -1448,7 +1622,9 @@ function problems() {
   const phones = state.contacts.map(c => normalizePhone(c.phone)).filter(Boolean);
   if (new Set(phones).size !== phones.length) out.push(['people', 'Two people have the same phone number.']);
   if (!state.message.trim()) out.push(['people', 'Write the text message.']);
+  else if (!state.message.includes('{driver}')) out.push(['people', "Put {driver} in the text message, so the yard knows which driver it's about."]);
   if (!state.messageEs.trim()) out.push(['people', 'Write the Spanish text message.']);
+  else if (!state.messageEs.includes('{driver}')) out.push(['people', 'Put {driver} in the Spanish text message.']);
   for (const s of state.schedule.shifts) {
     if (!s.name.trim()) out.push(['shifts', 'Every shift needs a name.']);
     if (!s.days.length) out.push(['shifts', `${s.name || 'A shift'} has no days ticked.`]);
@@ -1493,6 +1669,18 @@ async function publish() {
   say('publish-msg', '');
   refresh();
   try {
+    // Signed in while GitHub's API was busy (the data came from the site's copy): GitHub's id for the file is
+    // still needed to replace it, and the check that nobody published since.
+    if (!sha) {
+      const res = await gh(`/repos/${REPO}/contents/${FILE}?ref=main`, { timeout: 15000 }).catch(() => null);
+      if (res && res.ok) {
+        const j = await res.json();
+        if (published && atob(j.content.replace(/\s/g, '')) !== published.text) throw new Error(publishError(409));
+        sha = j.sha;
+      } else if (!res || res.status !== 404) { // 404: no file yet, so this publish creates it
+        throw new Error(res ? publishError(res.status) : "Couldn't reach GitHub, so nothing was published. Check the internet connection and try again.");
+      }
+    }
     const data = {
       message: state.message.trim(),
       messageEs: state.messageEs.trim(),
@@ -1517,6 +1705,7 @@ async function publish() {
     });
     if (!res.ok) throw new Error(publishError(res.status));
     sha = (await res.json()).content.sha;
+    ghRun++; // a GitHub check still under way is about the old file
 
     log = newLog;
     pending.clear();
@@ -1526,6 +1715,7 @@ async function publish() {
     deployState = 'deploying';
     ghProblem = null;
     busy = false;
+    clearNotes();
     renderAll();
     watchDeploy();
   } catch (e) {
@@ -1547,7 +1737,13 @@ $('discard').onclick = () => {
   tokenAdvice = '';
   pending.clear();
   say('publish-msg', '');
+  clearNotes();
   renderAll();
 };
+
+// "Added …. Publish to …" notes are out of date once changes are published or thrown away.
+function clearNotes() {
+  for (const id of ['card-msg', 'account-msg']) if ($(id)) say(id, '');
+}
 
 start();
