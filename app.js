@@ -1,11 +1,10 @@
 // app.js — the emergency page (index.html), in English or Spanish.
 // A card's link ends in #<card key>. Browsers never send the part after # to any
 // server, so the key stays on the phone. We download the locked contacts file,
-// unlock it with the key (crypto.js), and show who to call, based on who is on
-// shift right now (schedule.js).
+// unlock it with the key (crypto.js), and show every yard supervisor, A–Z, with one group text to all of them.
 
 const $ = id => document.getElementById(id);
-let card = null; // what the card unlocked: { driver, message, messageEs, contacts, schedule, address, whatsapp }
+let card = null; // what the card unlocked: { driver, message, messageEs, contacts, … }
 
 // ================= Words on the page =================
 
@@ -19,13 +18,9 @@ const TEXT = {
     loading: 'Loading…',
     contactFor: 'Emergency contact for',
     textAll: 'Text All Yard Supervisors (Preferred)',
-    primary: 'Primary call',
-    alsoWorking: 'Also working now',
-    offShift: 'Not scheduled · still emergency contacts',
-    others: 'Other contacts',
+    supervisors: 'Yard supervisors',
     call: 'Call',
     callName: name => `Call ${name}`,
-    whatsapp: name => `WhatsApp ${name}`,
     yard: 'Yard',
     directions: 'Directions',
     saveContacts: 'Save yard numbers to Contacts',
@@ -33,7 +28,6 @@ const TEXT = {
     contactName: 'Tenaris Yard Supervisors',
     contactCompany: 'Tenaris',
     contactNote: driver => `Emergency contact for driver ${driver}`,
-    tzNote: 'Shift times are Houston time.',
     offline: 'Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.',
     error1: "This card couldn't be loaded.",
     error2: 'Call the backup number printed on your card.',
@@ -49,13 +43,9 @@ const TEXT = {
     loading: 'Cargando…',
     contactFor: 'Contacto de emergencia para',
     textAll: 'Enviar mensaje a todos los supervisores del patio (preferido)',
-    primary: 'Llamada principal',
-    alsoWorking: 'También trabajando ahora',
-    offShift: 'No programados · también son contactos de emergencia',
-    others: 'Otros contactos',
+    supervisors: 'Supervisores del patio',
     call: 'Llamar',
     callName: name => `Llamar a ${name}`,
-    whatsapp: name => `WhatsApp a ${name}`,
     yard: 'Patio',
     directions: 'Cómo llegar',
     saveContacts: 'Guardar números del patio en Contactos',
@@ -63,7 +53,6 @@ const TEXT = {
     contactName: 'Supervisores del patio Tenaris',
     contactCompany: 'Tenaris',
     contactNote: driver => `Contacto de emergencia del conductor ${driver}`,
-    tzNote: 'Los horarios de turno están en la hora de Houston.',
     offline: 'Internet débil o sin conexión: se muestra la copia guardada en este teléfono. Los mensajes y las llamadas funcionan con señal normal.',
     error1: 'No se pudo cargar esta tarjeta.',
     error2: 'Llame al número de respaldo impreso en su tarjeta.',
@@ -92,14 +81,14 @@ function applyLanguage() {
   document.documentElement.lang = lang;
   document.title = t.title;
   const set = { 't-product': t.product, 't-911': t.lifeThreatening, 't-call911': t.call911, loading: t.loading, 't-for': t.contactFor,
-    'main-label': t.primary, 't-also': t.alsoWorking, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry,
+    't-list': t.supervisors, 'offline-note': t.offline, 't-error1': t.error1, 't-error2': t.error2, retry: t.retry,
     't-yard': t.yard, directions: t.directions, 'save-contacts': t.saveContacts, 'test-flag': t.testSite };
   for (const [id, words] of Object.entries(set)) if ($(id)) $(id).textContent = words;
   if ($('lang')) {
     $('lang').textContent = t.switchTo;
     $('lang').lang = lang === 'en' ? 'es' : 'en';
   }
-  if (card) { renderTextButtons(); renderOrder(); }
+  if (card) render();
 }
 
 if ($('test-flag') && typeof TEST_SITE !== 'undefined') $('test-flag').hidden = !TEST_SITE;
@@ -132,10 +121,9 @@ async function load() {
     const res = await fetch('contacts.enc.json?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('No contacts file.');
     const key = cardKey();
-    card = withSchedule(await openCard(key, await res.json()));
+    card = await openCard(key, await res.json());
     try { localStorage.setItem('card', key); } catch {}
-    renderTextButtons();
-    renderOrder();
+    render();
     renderExtras();
     $('offline-note').hidden = res.headers.get('X-Offline-Copy') !== '1';
     show('card');
@@ -155,67 +143,54 @@ const textFor = () => {
   return template.split('{driver}').join(card.driver);
 };
 
-function renderTextButtons() {
+// Every supervisor on the card, A–Z by name as written (first name first). Same order in English and Spanish.
+const supervisors = () => card.contacts.filter(c => (c.name || '').trim() && clean(c.phone || ''))
+  .sort((a, b) => a.name.trim().localeCompare(b.name.trim(), 'en', { sensitivity: 'base', numeric: true }));
+const roleOf = c => ((lang === 'es' && (c.roleEs || '').trim()) || c.role || '').trim();
+
+function render() {
   const t = T();
+  const people = supervisors();
   $('driver').textContent = card.driver;
-  // Everyone who can be reached today, in the dashboard's order: people on time off are left out (arrange, schedule.js).
-  const { main, also, off } = arrange(card, yardNow(yardZone()));
-  const reach = new Set([main, ...also, ...off].filter(Boolean).map(e => e.contact.id));
-  const numbers = card.contacts.filter(c => reach.has(c.id)).map(c => clean(c.phone));
-  const body = encodeURIComponent(textFor());
 
   // Group text to everyone. iPhone and Android need different link formats.
+  const numbers = people.map(c => clean(c.phone));
+  const body = encodeURIComponent(textFor());
   $('text-all').textContent = t.textAll;
   $('text-all').href = apple()
     ? `sms:/open?addresses=${numbers.join(',')}&body=${body}`
     : `sms:${numbers.join(',')}?body=${body}`;
-}
 
-// Houston time. (The fallback covers an older cached schedule.js for a few minutes after an update.)
-const yardZone = () => (typeof YARD_TIME_ZONE !== 'undefined' ? YARD_TIME_ZONE : card.schedule.timeZone || 'America/Chicago');
-
-// Who's on shift now gets the big button, then others working, then everyone off shift.
-function renderOrder() {
-  const t = T();
-  const { main, also, off } = arrange(card, yardNow(yardZone()));
-  $('main-label').textContent = t.primary;
-  $('main-name').textContent = main.contact.name;
-  $('main-detail').textContent = detailLine(main, lang);
-  $('call-main').textContent = t.callName(main.contact.name);
-  $('call-main').href = 'tel:' + clean(main.contact.phone);
-
-  // WhatsApp only opens a chat with one person, so it's offered for the primary call only.
-  const wa = $('whatsapp');
-  if (wa) {
-    wa.hidden = !card.whatsapp;
-    wa.textContent = t.whatsapp(main.contact.name);
-    wa.href = `https://wa.me/${clean(main.contact.phone).replace('+', '')}?text=${encodeURIComponent(textFor())}`;
+  // Everyone, A–Z, each with a Call button. An older cached page has no #list: use its last list, hide the rest.
+  const list = $('list') || $('off-list');
+  if (!$('list') && $('off-heading')) {
+    $('off-heading').textContent = t.supervisors;
+    $('off-section').hidden = false;
   }
-
-  $('also-section').hidden = !also.length;
-  $('also-list').replaceChildren(...also.map(row));
-  $('off-section').hidden = !off.length;
-  $('off-heading').textContent = card.schedule.shifts.length ? t.offShift : t.others;
-  $('off-list').replaceChildren(...off.map(row));
-
-  $('tz-note').hidden = Intl.DateTimeFormat().resolvedOptions().timeZone === yardZone();
-  $('tz-note').textContent = t.tzNote;
+  for (const id of ['main-label', 'also-section', 'whatsapp', 'tz-note']) if ($(id)) $(id).hidden = true;
+  const oldMain = document.querySelector('.main-contact');
+  if (oldMain) oldMain.hidden = true;
+  if (list) list.replaceChildren(...people.map(row));
 }
 
-function row(entry) {
+function row(contact) {
   const t = T();
   const name = document.createElement('strong');
-  name.textContent = entry.contact.name;
-  const detail = document.createElement('span');
-  detail.textContent = detailLine(entry, lang);
+  name.textContent = contact.name;
   const who = document.createElement('div');
-  who.append(name, detail);
+  who.append(name);
+  const role = roleOf(contact);
+  if (role) {
+    const detail = document.createElement('span');
+    detail.textContent = role;
+    who.append(detail);
+  }
 
   const call = document.createElement('a');
   call.className = 'btn btn-outline';
-  call.href = 'tel:' + clean(entry.contact.phone);
+  call.href = 'tel:' + clean(contact.phone);
   call.textContent = t.call;
-  call.setAttribute('aria-label', t.callName(entry.contact.name));
+  call.setAttribute('aria-label', t.callName(contact.name));
 
   const li = document.createElement('li');
   li.append(who, call);
@@ -252,8 +227,8 @@ const vEsc = s => String(s).replace(/[\\,;]/g, m => '\\' + m).replace(/\r?\n/g, 
 // labels, so the note lists who is who as well. A call back from the yard then shows the contact's name.
 function vcard() {
   const t = T();
-  const people = card.contacts.map(c => {
-    const role = ((lang === 'es' && (c.roleEs || '').trim()) || c.role || '').trim();
+  const people = supervisors().map(c => {
+    const role = roleOf(c);
     return { label: role ? `${c.name} – ${role}` : c.name, phone: clean(c.phone) };
   }).filter(p => p.phone);
   const note = [t.contactNote(card.driver), ...people.map(p => `${p.label}: ${p.phone}`)].join('\n');
@@ -286,7 +261,6 @@ addEventListener('beforeinstallprompt', e => e.preventDefault());
 
 $('retry').onclick = load;
 addEventListener('hashchange', load);
-setInterval(() => { if (card) { renderTextButtons(); renderOrder(); } }, 60 * 1000); // keep the order and the group text right across shift changes and days
 
 // Save a copy on the phone so the page still opens with weak or no data (see sw.js).
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

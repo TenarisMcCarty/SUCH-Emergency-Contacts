@@ -22,7 +22,7 @@ Anyone on the internet can see:
 - from the file's structure: roughly how many cards exist (one encrypted entry each), how many people have their own sign-in (one entry each), whether the shared supervisors' password is on, and when each change was published (commit times)
 - commit messages, which are always just "Update emergency card data"
 
-Nobody can read names, emails, phone numbers, roles, shifts, driver names, messages, the change history or the GitHub token without one of the keys described below.
+Nobody can read names, emails, phone numbers, roles, driver names, messages, the change history or the GitHub token without one of the keys described below.
 
 ---
 
@@ -35,7 +35,7 @@ All encryption happens in the browser, using the standard Web Crypto API. Nothin
 | Key | Where it lives | What it opens |
 |---|---|---|
 | **Card key** (128-bit, random, one per card) | Only in that card's link, after `#`. Browsers never send this part to a server, GitHub included. | That card's entry: the current data key and that card's driver name |
-| **Data key** (128-bit, random) | Inside each card's entry and the admin block. **A new one is made on every publish.** | The shared data: people, phone numbers, roles, shifts, messages, backup line |
+| **Data key** (128-bit, random) | Inside each card's entry and the admin block. **A new one is made on every publish.** | The shared data: people, phone numbers, roles, messages, backup line |
 | **Admin key** (128-bit, random) | Locked separately for each way in (the rows below). **A new one is made on every publish.** | The admin block: everything above, plus every card's key and label, the GitHub token, the owner's contact, the list of people who can sign in and the change history |
 | **Personal sign-in** (email + password) | One supervisor each | Their own private key (P-256), which opens the admin key |
 | **Shared supervisors' password** | Supervisors (and the owner), until the owner switches it off | Its own private key, which opens the admin key |
@@ -62,7 +62,7 @@ The full file format is in the [technical reference](technical.md#the-data-file-
 
 ## 3. Who can see and do what
 
-| | Read contacts and shifts | See other drivers' names | Publish changes | Read the GitHub token | Change the supervisors' password | Owner sign-in / Owner tab |
+| | Read contacts | See other drivers' names | Publish changes | Read the GitHub token | Change the supervisors' password | Owner sign-in / Owner tab |
 |---|---|---|---|---|---|---|
 | Anyone on the internet | No | No | No | No | No | No |
 | Holder of a card (or its link) | **Yes** (all contacts) | No (only their own driver) | No | No | No | No |
@@ -77,7 +77,7 @@ The full file format is in the [technical reference](technical.md#the-data-file-
 Notes:
 
 - **A card holder can see every contact's name and phone number.** That's the purpose of the card. Treat a card like a business card with private numbers on it.
-- **Time off is in the same part of the file.** The page doesn't show it, but someone with a card and technical skill could read the dates a supervisor is away and who covers. Ended time off is dropped at the next publish (it stays in older versions in the repository history, like everything else).
+- **Older shift and time-off data.** Before the 2026-10-06 change, the same part of the file held a shift schedule and time off (the dates a supervisor was away, and who covered). The page no longer shows or uses it. The next publish replaces it with an empty schedule, but until then it's still in the current file, and it stays in older versions in the repository history, like everything else. Someone with a card and technical skill could read it there.
 - **Removing a card** stops it working for everything published afterwards, because a new data key is made on every publish and the removed card never receives it.
 - **Publishing needs the GitHub token**, which is stored in the admin block. Anyone who can sign in can therefore publish. That's what lets supervisors work without GitHub accounts. It's also why removing someone should come with a new token.
 - **Removing a personal sign-in** stops it for everything published afterwards: the admin key is new on every publish and is never locked for that person again. Nobody else's password changes.
@@ -90,7 +90,7 @@ Notes:
 
 - **Strict Content-Security-Policy** on both pages:
   - Only this site's own scripts run; there are no outside scripts, fonts, trackers or analytics.
-  - The emergency page connects only to this site. Its WhatsApp and Directions buttons are ordinary links: they hand the yard's number and message, or the address, to WhatsApp or the maps app only when tapped.
+  - The emergency page connects only to this site. Its Directions button is an ordinary link: it hands the yard address to the maps app only when tapped.
   - The dashboard additionally connects to `api.github.com`, to publish.
 - **No cookies.** The emergency page stores only the language choice, its offline copy and the last card link opened (so the home-screen icon can reopen it; that link is already in the phone's browser history). The dashboard stores only "Your name" for History. Passwords, the recovery code, the token and card keys stay in memory and are forgotten on **Lock**, reload or close.
 - **Referrer** headers are switched off, so following a link from these pages doesn't leak the address, and search engines are asked not to index them.

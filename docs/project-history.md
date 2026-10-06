@@ -21,7 +21,7 @@ A complete record of how this site was built, every decision the owner made and 
 
 ## 1. What the project is
 
-- **Purpose:** drivers at the Tenaris HLO yard in Houston can't carry phones while working. Their families (and schools) get a wallet card with a hidden **NFC tag** and a **QR code**. Tapping or scanning opens a page that reaches the yard's supervisors in one or two taps: a group text to all of them, and Call buttons ordered by who is on shift right now.
+- **Purpose:** drivers at the Tenaris HLO yard in Houston can't carry phones while working. Their families (and schools) get a wallet card with a hidden **NFC tag** and a **QR code**. Tapping or scanning opens a page that reaches the yard's supervisors in one or two taps: a group text to all of them, and a Call button for each, A–Z (until 2026-10-06, Call buttons were ordered by who was on shift).
 - **Who uses what:**
   - Families: the emergency page (`index.html` + `app.js`), opened from their card's own link.
   - Supervisors: the dashboard (`dashboard.html`), each with their own email and password.
@@ -243,6 +243,14 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
 - **Whole piece one colour:** a 1.2 mm dark rim round the light core, from the plate to the top, so the edges match the faces (owner: "whole card can be blue or green and text white"). Costs a filament swap per layer on one-nozzle printers (card about 1 h 20 min instead of 1 h); the H2D's two nozzles don't mind.
 - **Fixes on review:** the browser could exceed its argument limit building a large .3mf (`push(...lines)`); a two-line name could put the top of EMERGENCY's G into the logo's clear space with Semibold's rounder letters (now fitted on the real ink); old cached scripts now ask for a reload instead of silently leaving out keychains or the detail speeds.
 - **Checked:** watertight parts and exact volumes (including the stepped edges); layouts for awkward names; the card, keychain and one-plate files sliced for all nine printers in ABS and PETG with one pause before layer 13, the pocket open on layers 3–12 and sealed in the light filament; the top and first layers drawn from the G-code (every letter and all 7 logo bars traced; the QR read back from the drawn first layer); the dashboard's Print & QR and Owner downloads in a browser test.
+
+### 2026-10-06: shift schedule removed, every supervisor listed A–Z
+
+- **Decision:** the family page no longer picks a "Primary call" from a shift schedule. The big green **Text All Yard Supervisors (Preferred)** button (a group text to every supervisor) is the main action. Under it, **Yard supervisors** (ES "Supervisores del patio") lists every supervisor A–Z by name as written (the same order in Spanish), each with a small outlined **Call** button. Nothing on the page depends on the time of day any more.
+- **Reason:** supervisors won't keep a shift rota up to date, and a stale rota sends families to someone who doesn't answer, which loses their trust. Texting every supervisor at once is the dependable first step.
+- **Removed:** Primary call, Also working now, Not scheduled · still emergency contacts, the Fallback contact, Time off (and its cover), the WhatsApp button, the "Shift times are Houston time" note, and in the dashboard the **Shifts** tab (shift table, shift times, Check a time) and the "Right now" box in the status panel. The dashboard now opens on **Supervisors**, and their order there doesn't matter. This supersedes the earlier decisions in [section 3](#3-decision-log) about the primary call, WhatsApp, the shift-gap warning, Time off and opening on Shifts; they stay as the record.
+- **Data and older cached files:** the data keeps a `schedule` object, now always `{ timeZone, fallback: <first supervisor A–Z>, shifts: [], away: [] }`, only so a page or dashboard still running older cached code keeps working; `whatsapp` is no longer written. Old shift and time-off data stays in the file until the next publish. `schedule.js` is unchanged and still loaded; its shift functions stay only for older cached pages. `index.html` keeps the old element ids as hidden placeholders and the new `app.js` also works with an older `index.html`; `dashboard.html` loads `dashboard.js?v=20261006`, and the new `dashboard.js` hides the Shifts tab, "Right now" box and WhatsApp switch if an older `dashboard.html` is shown.
+- **Unchanged:** printed cards and card links, so no card needs reprinting.
 
 ## 6. Individual sign-ins: design notes
 

@@ -74,7 +74,7 @@ When there's no data yet, the dashboard starts setup automatically. Whoever comp
 2. **Set up · step 2 of 4: Connect to GitHub.** Paste a token ([section 4](#4-the-github-token)).
 3. **Set up · step 3 of 4: Choose your owner password.**
 4. **Set up · step 4 of 4: Save your recovery code**, plus your contact details for supervisors.
-5. Fill in **Supervisors** and **Shifts**, add cards (**People**), set the **Backup line** (Print & QR), then **Publish**.
+5. Fill in **Supervisors**, add cards (**People**), set the **Backup line** (Print & QR), then **Publish**.
 
 ---
 
@@ -202,7 +202,7 @@ Use this only if nobody can sign in (no shared password, no personal sign-in) **
 
 1. Owner link → **Forgot owner password?** → **Start over** → confirm.
 2. Follow the four setup steps ([section 3](#3-first-time-setup-from-scratch)).
-3. Re-enter people and shifts, add every card again, then **Publish**.
+3. Re-enter the supervisors, add every card again, then **Publish**.
 4. Rewrite every NFC tag and reprint every card.
 
 ---
@@ -215,7 +215,7 @@ The first version of this site used a copy-and-paste editor with a 22-character 
 2. **Upgrade · step 2 of 4:** connect GitHub.
 3. **Upgrade · step 3 of 4:** choose your owner password.
 4. **Upgrade · step 4 of 4:** save your recovery code.
-5. Set up **Shifts**, then **Publish**.
+5. **Publish.**
 
 Contacts and cards carry over, and cards already written keep working. This repository has already been upgraded.
 

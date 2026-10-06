@@ -48,23 +48,16 @@
       <!-- Empty placeholders: an older cached app.js may still look for these for a few minutes after an update. -->
       <p id="hint" class="retired" hidden></p>
       <a id="text-retry" class="retired" hidden></a>
-
-      <h2 id="main-label" class="section">Primary call</h2>
-      <div class="main-contact">
-        <p id="main-name" class="main-name"></p>
-        <p id="main-detail" class="detail"></p>
-        <a id="call-main" class="btn btn-call">Call</a>
-        <a id="whatsapp" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer" hidden>WhatsApp</a>
+      <div class="retired" hidden>
+        <h2 id="main-label"></h2><p id="main-name"></p><p id="main-detail"></p><a id="call-main"></a><a id="whatsapp"></a>
+        <div id="also-section"><h2 id="t-also"></h2><ul id="also-list"></ul></div>
+        <div id="off-section"><h2 id="off-heading"></h2><ul id="off-list"></ul></div>
+        <p id="tz-note"></p>
       </div>
 
-      <div id="also-section">
-        <h2 id="t-also" class="section">Also working now</h2>
-        <ul id="also-list" class="rows"></ul>
-      </div>
-
-      <div id="off-section">
-        <h2 id="off-heading" class="section">Not scheduled · still emergency contacts</h2>
-        <ul id="off-list" class="rows"></ul>
+      <div id="list-section">
+        <h2 id="t-list" class="section">Yard supervisors</h2>
+        <ul id="list" class="rows"></ul>
       </div>
 
       <div id="yard-section" hidden>
@@ -75,7 +68,6 @@
         </div>
       </div>
 
-      <p id="tz-note" class="small muted" hidden></p>
       <p id="offline-note" class="note" hidden>Weak or no internet: showing the copy saved on this phone. Texts and calls still work with normal signal.</p>
 
       <!-- Small extras at the very bottom, so they never get in the way of calling. -->

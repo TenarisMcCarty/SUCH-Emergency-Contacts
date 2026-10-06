@@ -5,21 +5,20 @@ How to keep the emergency cards up to date. You need two things from the site ow
 - **The dashboard link:** https://tenarismccarty.github.io/SUCH-Emergency-Contacts/dashboard.html
 - **Your sign-in:** your email and a temporary password (you choose your own the first time). Until the owner switches it off, the **shared supervisors' password** also works.
 
-You don't need a GitHub account, and you don't need to install anything. The dashboard is laid out for a computer (any up-to-date browser); it still works on a phone in a single column. It opens on **Shifts**, the tab you'll change most. The sections are listed down the left: Shifts, Supervisors, People (the cards), Print & QR, then History, Settings and Help.
+You don't need a GitHub account, and you don't need to install anything. The dashboard is laid out for a computer (any up-to-date browser); it still works on a phone in a single column. It opens on **Supervisors**. The sections are listed down the left: Supervisors, People (the cards), Print & QR, then History, Settings and Help.
 
 **Contents**
 
 1. [Signing in](#1-signing-in)
 2. [The status panel](#2-the-status-panel)
 3. [Supervisors](#3-supervisors)
-4. [Shifts](#4-shifts)
-5. [People (cards)](#5-people-cards)
-6. [Print & QR](#6-print--qr)
-7. [Publishing](#7-publishing)
-8. [History](#8-history)
-9. [Settings: your name and the password](#9-settings-your-name-and-the-password)
-10. [Common jobs, step by step](#10-common-jobs-step-by-step)
-11. [When something goes wrong](#11-when-something-goes-wrong)
+4. [People (cards)](#4-people-cards)
+5. [Print & QR](#5-print--qr)
+6. [Publishing](#6-publishing)
+7. [History](#7-history)
+8. [Settings: your name and the password](#8-settings-your-name-and-the-password)
+9. [Common jobs, step by step](#9-common-jobs-step-by-step)
+10. [When something goes wrong](#10-when-something-goes-wrong)
 
 ---
 
@@ -67,7 +66,6 @@ The status panel always shows the current state. On a wide screen (1400 pixels o
 
 Below the badge:
 
-- **Right now (Houston time …):** who the cards would call at this moment: the primary call, anyone else working, and anyone away on time off today. It includes your unpublished changes, so you can check a change before publishing. It refreshes every 30 seconds.
 - **Facts line:** how many supervisors and cards there are, and when the last change was published and by whom.
 - **Numbers to check:** "*N* phone numbers haven't been checked in 90 days", with an **Open Supervisors** link. Only shown when something is due ([section 3](#3-supervisors)).
 
@@ -77,7 +75,7 @@ When there are unpublished changes and the screen is narrower than that, a dark 
 
 ## 3. Supervisors
 
-Everyone on this list receives the group text, and everyone appears on the card page with a Call button.
+Everyone on this list receives the group text, and everyone appears on the card page with a Call button. The order of this list doesn't matter: the card page sorts everyone A–Z by name.
 
 The yard's emergency contacts: the supervisors and the manager. On a computer this tab is a table, one row per person, with the column names on top; on a phone each person is a box.
 
@@ -86,12 +84,12 @@ Each person has:
 | Field | Shown to families? | Notes |
 |---|---|---|
 | **Name** | Yes | Required. |
-| **Role** | Yes (under the name) | Optional, e.g. "1st shift lead". |
+| **Role** | Yes (under the name) | Optional, e.g. "Yard supervisor". |
 | **Role in Spanish (optional)** | Yes, on the Spanish page | Leave blank to show the English role on the Spanish page too. |
 | **Phone** | No (only used to dial and text) | Required. Any US 10-digit format works, e.g. `(555) 555-0100`, `555.555.0100`, `+1 555 555 0100`. It's tidied to `555-555-0100` when you leave the box. |
 
 - **Add supervisor** adds a row; there's room for up to **10**.
-- **×** at the end of a row removes that person (after a confirm) and also takes them off every shift.
+- **×** at the end of a row removes that person (after a confirm).
 
 ### Checking numbers every 90 days
 
@@ -114,85 +112,9 @@ The family sees the message in their Messages app and can edit it before tapping
 
 Shown at the bottom of every card's page, with a **Directions** button that opens the phone's maps app. It starts as the yard's address, **302 McCarty St, Houston, TX 77029**. To change it, type it the way you'd type it into Google Maps. Empty it to hide it from the page.
 
-### WhatsApp
-
-Tick **Show a WhatsApp button for the primary call** to add a WhatsApp button under the big Call button. It opens a WhatsApp chat with whoever is the primary call at that moment, with the emergency text already written. WhatsApp links can only message one person, so only the primary call gets one.
-
-Only switch it on if the people on shift actually watch WhatsApp. It's off by default.
-
 ---
 
-## 4. Shifts
-
-This tab decides **who is the primary call** (the big Call button on the card page) at any moment.
-
-### How the order works
-
-1. The dashboard goes through the shifts **in order** (left to right in **Who works each shift**, and the order of the boxes under **Shift times**) and finds the first shift that is on right now.
-2. The first person ticked on that shift (top to bottom: the order of the Supervisors list) is the **primary call**.
-3. Everyone else on a shift that's on right now is listed under **Also working now**.
-4. Everyone else is listed under **Not scheduled · still emergency contacts**.
-5. If **nobody** is on shift, the primary call is the person chosen in **If nobody is on shift, the primary call is**.
-
-### Times with nobody on shift
-
-Above the shift list, an amber box lists every time in the week when nobody is on any shift, e.g. *Fri 10:00 PM to Mon 6:00 AM*, and who gets the primary call then (the fallback person). A shift with nobody ticked doesn't count. When every hour is covered it says *✓ Someone is on shift at every hour of the week.*
-
-Gaps aren't errors (the fallback person covers them), and you can still publish. The box just makes sure they're on purpose.
-
-Keep the rotating shifts (1st, 2nd, 3rd) **before** the Day shift. Then the shift lead is the primary call and the day staff appear as "Also working". The **←** and **→** buttons on each shift box move it earlier or later.
-
-### Settings on this tab
-
-- **All times are Houston time** (Central), even if a family is somewhere else. Their card page then adds a note: "Shift times are Houston time."
-- **Who works each shift:** a table with a row per person and a column per shift (its times and days under its name). Tick a box to put that person on that shift. A person can be on more than one shift. This is what changes at every rotation.
-- **Shift times:** a box per shift. Each shift has:
-  - **Name** and an optional **Spanish name**. The usual names (1st shift, 2nd shift, 3rd shift, Day (8–5), Day, Night) translate automatically; the grey hint shows the automatic Spanish.
-  - **Starts** and **Ends**. A shift that ends earlier than it starts runs past midnight, e.g. 22:00–06:00. It counts as belonging to the day it **starts**: a Friday 22:00–06:00 shift covers Saturday 02:00. A shift that starts and ends at the same time runs 24 hours from its start, e.g. 06:00 Monday to 06:00 Tuesday.
-  - **Days:** click a day to switch it on (green) or off.
-  - **←** / **→**: move the shift earlier or later; **×**: remove it.
-- **Add shift** adds a box at the end (last in order) and puts the cursor in its name.
-
-The defaults for a new setup are:
-
-| Shift | Time | Days |
-|---|---|---|
-| 1st shift | 06:00–14:00 | every day |
-| 2nd shift | 14:00–22:00 | every day |
-| 3rd shift | 22:00–06:00 | every day |
-| Day (8–5) | 08:00–17:00 | Monday–Friday |
-
-### Time off
-
-For anyone on holiday, sick or out of the office for some days. **Shifts → Time off → Add time off**, then:
-
-| Field | What to enter |
-|---|---|
-| **Supervisor** | Who is away. |
-| **First day**, **Last day** | Both days included, Houston dates. Changing the first day to after the last day moves the last day too. For one day, make them the same. |
-| **Covered by** | Who works their shifts while they're away, or **Nobody**. |
-
-Then **Publish**. From the first day to the last day:
-
-- they **don't appear on the card page** and **don't get the group text**, so families never call someone who's away;
-- the person covering takes their place on their shifts, in the same position (so if they were first on a shift, the cover becomes the primary call); with **Nobody**, the shift goes on without them and the next shift on, or the fallback person, takes the call;
-- **Who works each shift** marks them *Away through …* (their last day off) and the cover *Covering for …*, and the status panel lists them under **Away**.
-
-The day after the last day, everything is back to normal without anyone doing anything; ended time off disappears from the list. **×** removes an entry (for example, if the plans change). Removing someone from Supervisors also removes their time off, and anyone they were covering for shows **Nobody**.
-
-A night shift belongs to the day it starts: someone away from Saturday still works Friday night's shift until it ends on Saturday morning.
-
-Publishing stops if an entry has no person or dates, the last day is before the first or already past, it's longer than a year, the same person has two entries for the same days (combine them), the person covering is away at the same time, or **everyone** would be away on some day.
-
-Changing the **First day** of a one-day entry moves the last day with it; on longer entries the last day stays where it is.
-
-### Check a time
-
-Pick a **Date** and **Time** to see exactly who a card would show then: the primary call, also working, not scheduled and away. Use it after every rotation change, and to check time off.
-
----
-
-## 5. People (cards)
+## 4. People (cards)
 
 Each card (family or school) has its own secret link, written to its NFC tag and printed as its QR code.
 
@@ -210,7 +132,7 @@ Each card (family or school) has its own secret link, written to its NFC tag and
 
 ---
 
-## 6. Print & QR
+## 5. Print & QR
 
 Everything needed to make the 3D-printed card and its keychain, generated from the card's data.
 
@@ -234,7 +156,7 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
 ---
 
-## 7. Publishing
+## 6. Publishing
 
 1. Press **Publish** in the status panel (or the bottom bar on a smaller screen).
 2. If something is missing, publishing stops and the dashboard takes you to the problem. It checks that:
@@ -242,8 +164,6 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
    - every person has a name and a valid US phone number
    - no two people share a phone number
    - both text messages are filled in and contain `{driver}`
-   - every time-off entry has a person and both days, the last day isn't before the first or already past, it's under a year, nobody has two entries for the same days, the person covering isn't away too, and somebody is available every day
-   - every shift has a name and at least one day
 3. With your own sign-in, History shows your name automatically. With the shared password, the first time you publish on a device the dashboard asks for **your name**, for the History tab; you can change it later in **Settings**.
 4. The badge goes **Publishing → Updating → Live**.
 
@@ -253,13 +173,13 @@ Full printing instructions are in [Cards and printing](cards-and-printing.md).
 
 ---
 
-## 8. History
+## 7. History
 
-Every publish adds an entry with the date and time, who published, and what changed. With a personal sign-in, "who" is the name the site owner gave that sign-in. With the shared password, it's the name typed in Settings, marked *(shared password)*; the owner's entries are marked *(owner)*. Examples of what changed: "Edited Bob Two", "Changed shifts", "Added card: Jane Doe (1234) (Family)". The newest is at the top, and the last 200 entries are kept. History is stored encrypted with the data, so the public can't read it.
+Every publish adds an entry with the date and time, who published, and what changed. With a personal sign-in, "who" is the name the site owner gave that sign-in. With the shared password, it's the name typed in Settings, marked *(shared password)*; the owner's entries are marked *(owner)*. Examples of what changed: "Edited Bob Two", "Changed the text message", "Added card: Jane Doe (1234) (Family)". The newest is at the top, and the last 200 entries are kept. History is stored encrypted with the data, so the public can't read it.
 
 ---
 
-## 9. Settings: your name and the password
+## 8. Settings: your name and the password
 
 **Signed in with your own email:**
 
@@ -277,22 +197,11 @@ Every publish adds an entry with the date and time, who published, and what chan
 
 ---
 
-## 10. Common jobs, step by step
+## 9. Common jobs, step by step
 
-**The shift rotation changed**
-1. **Shifts** → untick and tick people in **Who works each shift**.
-2. **Check a time** for a couple of moments to confirm.
-3. **Publish.**
-
-**Someone new joined / someone left**
-1. **Supervisors** → **Add supervisor** (fill in name, role, phone), or **×** at the end of someone's row.
-2. **Shifts** → tick the new person on their shift in **Who works each shift**.
-3. **Publish.**
-
-**Someone is on holiday or out of the office**
-1. **Shifts → Time off → Add time off**: choose the person, the first and last day, and who covers (or **Nobody**).
-2. **Check a time** on one of those days to confirm who the cards will call.
-3. **Publish.** Nothing to undo when they're back.
+**A supervisor joins or leaves**
+1. **Supervisors** → **Add supervisor** (fill in name, role, phone), or **×** at the end of their row.
+2. **Publish.**
 
 **A phone number changed**
 **Supervisors** → edit **Phone** → **Publish.** No card needs reprinting.
@@ -314,7 +223,7 @@ Ask the site owner to add them. The owner gives them a temporary password in per
 
 ---
 
-## 11. When something goes wrong
+## 10. When something goes wrong
 
 | What you see | What to do |
 |---|---|
@@ -331,9 +240,6 @@ Ask the site owner to add them. The owner gives them a temporary password in per
 | "Fix these first: …" | The message lists what's missing (a name, a phone number, …) and opens the right tab. |
 | "Add your name first (Settings → Your name)…" | Type your name in **Settings → Your name**, then publish again. |
 | "Put {driver} in the text message…" | **Supervisors → Text message:** put `{driver}` back where the driver's name should go. |
-| "Time off: choose who is away." / "Time off for … : enter the first and last day." | **Shifts → Time off:** finish or remove (**×**) that entry. |
-| "… covers for … but is away then too." | Choose someone else under **Covered by**, or **Nobody**. |
-| "Everyone is away on …" | Someone has to stay reachable: shorten one of the entries. |
 | The sign-in screen appears by itself | The dashboard locks after 30 minutes without use (never with unpublished changes). Sign in again. |
 | Badge stuck on **Delayed** | GitHub is slow. It nearly always catches up within 10 minutes. |
 | "The driver name is too long to print." (Print & QR) | **People → Rename** to a shorter form, e.g. initials for middle names. |

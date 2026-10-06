@@ -27,7 +27,7 @@ https://tenarismccarty.github.io/SUCH-Emergency-Contacts/#<22-character card key
 
 The same link is written to the card's **NFC tag** and encoded in its **QR code**. A keychain made for the card gets the same link on its own tag. The card key unlocks the contacts and that card's driver name. The part after `#` never leaves the phone, so no server sees it.
 
-- **The link never changes.** Edits to people, shifts, messages or the driver's name reach the card automatically, so the tag and QR never need redoing for those.
+- **The link never changes.** Edits to supervisors, messages or the driver's name reach the card automatically, so the tag and QR never need redoing for those.
 - **Removing a card** in the dashboard switches its link off for good.
 - **Keep links working:** once a card is printed or handed out, its link must keep working. Don't remove a card that's still in use, and don't "start over" (see the [owner guide](owner-guide.md#11-starting-over-last-resort)) unless you're prepared to remake every card.
 
@@ -222,7 +222,7 @@ The tag is sealed inside the card (and the keychain), so a reprint is a new piec
 
 | Change | Reprint the card? | Tag |
 |---|---|---|
-| Supervisors, phone numbers, roles, shifts, time off, text messages | No | No change |
+| Supervisors, phone numbers, roles, text messages | No | No change |
 | Driver name (People → Rename) | Yes, for the printed name (the keychain only if its initials change) | New tag, same link |
 | Backup line | Yes, for the printed number (not the keychain) | New tag, same link |
 | Card removed (lost card or keychain) | Make a new card and keychain: the old link is off for both | New tags, new link |
@@ -237,11 +237,10 @@ Do this once, with a real printed card and real phones, before making cards for 
 - [ ] **Tag tap** (card and keychain) on an iPhone and an Android phone opens the page with the right driver.
 - [ ] **QR scan** with both phones' cameras opens the same page.
 - [ ] **Text All Yard Supervisors (Preferred)** opens Messages with every number and the message filled in, on an iPhone **and** a Samsung phone. If a phone leaves numbers out, report it; the link format can be adjusted.
-- [ ] The **Primary call** shows the person on shift now, and every Call button dials the right number.
+- [ ] **Yard supervisors** lists every supervisor A–Z, and every Call button dials the right number.
 - [ ] **Español** switches the page to Spanish, and the Spanish text message appears.
 - [ ] **Save yard numbers to Contacts** saves one contact, "Tenaris Yard Supervisors", with every number, on an iPhone and an Android phone. Note whether the iPhone shows the contact straight away with **Create New Contact**, and whether each number shows the person's name and role or just "Mobile".
 - [ ] Adding the page to the home screen from the browser menu puts the Emergency icon on both phones, and the icon opens the right driver's page.
-- [ ] If WhatsApp is switched on: the **WhatsApp** button opens a chat with the primary call, with the message filled in.
 - [ ] If an address is set: **Directions** opens the maps app at the yard.
 - [ ] **Airplane mode** on a phone that has **never** opened the page shows "This card couldn't be loaded". A phone that **has** opened it before shows the saved copy with a note; that's intended.
 - [ ] Change something in the dashboard, publish, and confirm the card shows it within about a minute.

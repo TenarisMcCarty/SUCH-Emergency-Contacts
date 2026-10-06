@@ -7,16 +7,12 @@ Drivers can't carry phones while working, so each family gets a card with an **N
 The page shows:
 
 1. **Call 911** banner at the top.
-2. **Text All Yard Supervisors (Preferred)** button: one group text to every emergency contact, naming the driver. It's sent from the family's own phone, so the yard can call them back.
-3. **Primary call**: a big Call button for whoever is on shift at that moment.
-4. **Also working now**: others on duty right now, each with a Call button.
-5. **Not scheduled · still emergency contacts**: everyone else, each with a Call button.
-6. **Yard** address with a Directions button (if set).
-7. A small **Save yard numbers to Contacts** link at the bottom: one contact, "Tenaris Yard Supervisors", with every number labelled by name and role.
+2. **Text All Yard Supervisors (Preferred)** button: one group text to every supervisor, naming the driver. It's sent from the family's own phone, so the yard can call them back. This is the main action.
+3. **Yard supervisors**: every supervisor, A–Z by name, each with their role and a small Call button.
+4. **Yard** address with a Directions button (if set).
+5. A small **Save yard numbers to Contacts** link at the bottom: one contact, "Tenaris Yard Supervisors", with every number labelled by name and role.
 
-Supervisors can also switch on a **WhatsApp** button for the primary call.
-
-Supervisors keep the contacts, shifts and cards up to date in a web **dashboard**. Changes reach every card within about a minute, and no card ever needs reprinting for a contact change.
+Supervisors keep the contacts and cards up to date in a web **dashboard**. Changes reach every card within about a minute, and no card ever needs reprinting for a contact change.
 
 ---
 
@@ -36,10 +32,10 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 
 | Guide | For | What's in it |
 |---|---|---|
-| [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in with your email, your first sign-in, Forgot password?, people, shifts, cards, printing, publishing, history, changing your password, fixing common problems |
+| [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in with your email, your first sign-in, Forgot password?, supervisors, cards, printing, publishing, history, changing your password, fixing common problems |
 | [Owner guide](docs/owner-guide.md) | Site owner | Owner password, recovery code, the GitHub token, people who can sign in (add, reset, remove), switching off the shared password, taking away access, starting over |
 | [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card and keychain (specs, Bambu Studio project, printing in ABS or PETG), testing |
-| [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the call order is chosen, English/Spanish, offline behaviour, error messages |
+| [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the supervisors are listed, English/Spanish, offline behaviour, error messages |
 | [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
 | [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
 | [Project history](docs/project-history.md) | Owner / maintainers | Every release and decision with the reasons, the brand and 3D-card work, how changes are tested and released safely, incidents, open items, and what must never change |
@@ -51,7 +47,7 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 ### Supervisors
 
 1. Open the supervisor link and sign in with your **email and password**. The site owner adds you and gives you a temporary password, which you change at your first sign-in. (Until the owner switches it off, the old shared password also works, with Email left empty.)
-2. Make your change: **Supervisors**, **Shifts** or **People** (the cards).
+2. Make your change: **Supervisors** or **People** (the cards).
 3. Press **Publish**. The status at the top turns **Live** when every card has it.
 
 The dashboard's **Help** tab lists the common jobs. The [supervisor guide](docs/supervisor-guide.md) covers everything step by step.
@@ -68,9 +64,9 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 
 ## Features at a glance
 
-- **Shift-aware calling:** the primary call follows the shift schedule, always in Houston time. The dashboard lists any times when nobody is on shift.
+- **Everyone, always:** the group text reaches every supervisor, and every supervisor is listed A–Z. The page never depends on the time of day or on a schedule being kept current.
 - **Numbers kept current:** the dashboard asks supervisors to re-check each phone number every 90 days.
-- **For families:** optional WhatsApp button, yard address with directions, and the yard's numbers saved to Contacts as one contact.
+- **For families:** yard address with directions, and the yard's numbers saved to Contacts as one contact.
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
@@ -91,7 +87,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `cardmaker.js` | Makes the 3D card (two STL parts, previews, print notes, ZIP) in the browser |
 | `bambu3mf.js`, `bambu-printers/*.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF) for the chosen printer, one piece or several on one plate (`bambu-template.json` stays for older cached copies) |
 | `crypto.js` | Encryption, shared by both pages |
-| `schedule.js` | Works out who is on shift; Spanish shift names and times |
+| `schedule.js` | The yard's address, time zone and the Test site label. Its old shift functions stay only for older cached pages. |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
 | `manifest.json`, `icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` | Home-screen name and icon for the emergency page |
 | `style.css` | Styling for both pages (Tenaris colours) |
@@ -112,7 +108,7 @@ Hosting is **GitHub Pages**, from the `main` branch, repository root. There is n
 
 - **Not yet tested on real phones or a real printer:**
   - the group-text links (iPhone and Samsung)
-  - Save to Contacts and the WhatsApp button
+  - Save to Contacts
   - NFC reading through the 3D-printed card and keychain
   - a physical print of the 3D card
 

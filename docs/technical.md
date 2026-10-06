@@ -35,14 +35,14 @@ supervisor ──(email + password)──► dashboard.html ──GitHub API PUT
 
 | File | Role | Notes |
 |---|---|---|
-| `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. |
-| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, call order, WhatsApp button, yard address and directions link, Save to Contacts (one vCard 3.0 contact with labelled numbers, made in the browser; opened directly on iPhone, downloaded elsewhere), remembering the last card key, offline note, service worker registration. Must tolerate missing elements ([section 7](#changing-the-code-safely)). |
-| `schedule.js` | Shift logic, shared | `YARD_TIME_ZONE` (`America/Chicago`, Houston), `yardNow` (weekday, minutes and Houston date), `shiftOn`, `arrange` (call order, time off and cover; returns `main`, `also`, `off` and `away`), `awayOn`, `shiftDate` (the day an overnight shift started), `addDays`, `withSchedule` (fills in shifts for first-version data), `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table |
+| `index.html` | Emergency page markup | The 911 banner is static, so it shows even if scripts fail. Every text element has an id for translation. `#hint` and `#text-retry` are empty, permanently hidden placeholders: older cached `app.js` versions still write to them. So are the ids of the removed call-order block (`#main-name`, `#call-main`, `#also-list`, `#off-list`, `#whatsapp`, `#tz-note`, …), in one hidden `div`, so an older cached `app.js` can't crash. |
+| `app.js` | Emergency page logic | English/Spanish strings, loading and decrypting, group-text links, the supervisor list (every contact, sorted A–Z by name as written), yard address and directions link, Save to Contacts (one vCard 3.0 contact with labelled numbers, made in the browser; opened directly on iPhone, downloaded elsewhere), remembering the last card key, offline note, service worker registration. Nothing it shows depends on the time of day. Must tolerate missing elements ([section 7](#changing-the-code-safely)): with an older cached `index.html` it fills that page's last list and hides the primary-call block. |
+| `schedule.js` | Yard constants, shared; old shift logic | Unchanged since 2026-10-05 and still loaded by `index.html` and `dashboard.html`. The pages use `YARD_ADDRESS`, `YARD_TIME_ZONE` (`America/Chicago`, Houston) and `TEST_SITE`. Its shift functions (`arrange`, `shiftOn`, `awayOn`, `yardNow`, `shiftDate`, `timeLabel`, `shiftName`, `detailLine`, the Spanish shift-name table, …) stay only for older cached pages and are no longer called by `app.js` or `dashboard.js`. `withSchedule` (fills in contact ids for first-version data) is still used by the dashboard's upgrade from that data. |
 | `crypto.js` | Encryption, shared | Keys, AES-GCM `lock`/`unlock`, PBKDF2 `passwordKey`, ECDH (`newRecovery`, `lockForOwner`), `openCard`; version 4: `personSlot`, `newSignIn`, `openLogin`, `openWithWrap`, `openForSignIn`, `openWithCode`, `openWithOwnerPassword`, `fromVersion3`, `buildFile4`; version 3, kept unchanged for older cached dashboards: `buildFile`, `openAdmin`, `openOwner`, `openRecovery`, `makeOwnerLogin`. Loaded by both pages into one global scope, so new names must not clash with `app.js` or `dashboard.js`. |
 | `manifest.json`, `icon-*.png`, `apple-touch-icon.png` | Home-screen app | Name "Emergency", Tenaris mark on charcoal. `start_url` is `./` (no card key), so `app.js` falls back to the last card key saved in `localStorage` when the link has no `#`. |
 | `sw.js` | Service worker | Offline copy of the emergency page ([section 5](#5-caching-deploys-and-the-offline-copy)) |
-| `dashboard.html` | Dashboard markup | Sign-in (Email, password, Forgot password?), setup steps (including the one-time temporary password), the dashboard (status panel, section list, sections; Shifts first), Owner tab. Every element ID an older `dashboard.js` uses is kept. |
-| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, shift-gap warning, publishing (with a self-check), deploy watching, Print & QR, Owner tab (print files for all cards, people who can sign in, shared password, token, owner password, recovery code), idle lock (30 minutes, never with unpublished changes). Elements added since personal sign-ins (`#shift-matrix`, `#card-search`, …) are optional, for cache mixes with an older `dashboard.html`; without `#shift-matrix` the shift boxes get their own tick lists again. Dates (`today()`) are Houston dates. |
+| `dashboard.html` | Dashboard markup | Sign-in (Email, password, Forgot password?), setup steps (including the one-time temporary password), the dashboard (status panel, section list, sections; Supervisors first), Owner tab. The removed Shifts tab's element IDs aren't kept: it loads `dashboard.js?v=20261006`, so a fresh dashboard never runs an older cached script. |
+| `dashboard.js` | Dashboard logic | GitHub API, the sign-in flows (personal, shared password, first sign-in password change, owner, owner-access setup, recovery code, reclaim, first-time setup, upgrade), editing state, change list, validation, 90-day number checks, publishing (with a self-check), deploy watching, Print & QR, Owner tab (print files for all cards, people who can sign in, shared password, token, owner password, recovery code), idle lock (30 minutes, never with unpublished changes). Elements added since personal sign-ins (`#card-search`, …) are optional, for cache mixes with an older `dashboard.html`; if an older cached `dashboard.html` is shown, it hides that page's Shifts tab, "Right now" box and WhatsApp switch. Dates (`today()`) are Houston dates. |
 | `cardmaker.js` | Print files | Card layout, 3D model and STL writer, previews, ZIP writer, print notes and the all-cards README ([section 6](#6-the-card-maker)) |
 | `bambu3mf.js`, `bambu-printers/*.json` | Bambu Studio project | Builds a .3mf for the chosen enclosed Bambu Lab printer (X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C, X2D; 0.4 mm nozzle; ABS (Bambu ABS) or PETG (Bambu PETG HF); light + dark parts on their own filaments; 100% infill; bed capped at 90 °C for the PVC tag; the NFC pause already set; on the H2D, H2D Pro and X2D light = left nozzle, dark = right). One settings file per printer, made by Bambu Studio itself (`tools/build_templates.py`). `bambu-template.json` (P2S) stays for older cached copies of the script. Also `zipWriter`, the deflated ZIP behind the Owner tab's all-cards download. |
 | `tools/build_templates.py`, `tools/resolve.py` | Maintenance scripts (the pages never load them) | Rebuild `bambu-printers/` when Bambu Studio updates its presets: Bambu Studio's command line re-targets a two-colour card project to each printer's system presets and exports it; its project settings become that printer's file (for the P2S this matched the earlier GUI-built template key for key). |
@@ -92,21 +92,19 @@ Version 4, pretty-printed JSON. All binary values (keys, nonces, ciphertext) are
   "message": "EMERGENCY – need to reach driver {driver}. …",
   "messageEs": "EMERGENCIA – necesito comunicarme con el conductor {driver}. …",  // optional
   "contacts": [ { "id": "short id", "name": "…", "role": "…", "roleEs": "…", "phone": "+15555550100" } ],  // ids: 8 chars (dashboard) or c0, c1… (upgraded)
-  "schedule": {
-    "timeZone": "America/Chicago",            // always Houston; kept so older cached app.js versions work
-    "fallback": "<contact id>",
-    "shifts": [ { "name": "1st shift", "nameEs": "", "start": "06:00", "end": "14:00",
-                  "days": [0,1,2,3,4,5,6],      // 0 = Monday … 6 = Sunday
-                  "people": ["<contact id>"] } ],
-    "away": [ { "id": "short id", "who": "<contact id>", "from": "2026-10-10", "to": "2026-10-14",  // optional: time off,
-                "cover": "<contact id> or ''" } ]  // Houston dates, both days included; ended entries are dropped on publish
+  "schedule": {                               // always exactly this: see below
+    "timeZone": "America/Chicago",
+    "fallback": "<contact id>",               // the first supervisor A–Z by name
+    "shifts": [],
+    "away": []
   },
   "backup": "+15555550199",  // optional, "" if unset
-  "yardAddress": "302 McCarty St, Houston, TX 77029",  // optional: absent = the built-in YARD_ADDRESS, "" = hidden
+  "yardAddress": "302 McCarty St, Houston, TX 77029"  // optional: absent = the built-in YARD_ADDRESS, "" = hidden
                                                      // (an older non-empty "address" field is still read)
-  "whatsapp": false          // optional, WhatsApp button for the primary call
 }
 ```
+
+**`schedule`** is no longer used by the current pages. The emergency page lists every contact A–Z by name (it sorts them itself, so the order in `contacts` doesn't matter) and the dashboard has no shifts. Every publish still writes `{ timeZone, fallback, shifts: [], away: [] }`, with `fallback` the id of the first supervisor A–Z, only so a page or dashboard still running older cached code (GitHub's CDN caches files for about 10 minutes) keeps working. Old shift and time-off data stays in the file until the next publish replaces it with the empty schedule; the emergency page ignores it either way. `whatsapp` is no longer written. Data from before 2026-10-06 may still contain it, and the current pages don't read it.
 
 **Each card entry** (opened with that card's key): `{ "dataKey": "…", "driver": "Jane Doe (1234)" }`.
 The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot:" + cardKey`)).
@@ -124,7 +122,7 @@ The entry's name `slotId` is the first 12 characters of base64url(SHA-256(`"slot
   "shared": { "pub": { "x", "y" }, "login": { …login… } },  // the shared password's sign-in, or null when switched off
   "people": [ { "email": "jane.doe@example.com", "name": "Jane Doe", "pub": { "x", "y" }, "login": { …login… },
                 "mustChange": true, "addedAt": "2026-10-02", "addedBy": "…" } ],
-  "log":    [ { "at": "ISO time", "who": "Jane Doe", "email": "…", "via": "person", "what": ["Changed shifts", "…"] } ],  // last 200
+  "log":    [ { "at": "ISO time", "who": "Jane Doe", "email": "…", "via": "person", "what": ["Changed the text message", "…"] } ],  // last 200
                 // via: "person" (who = the name the owner gave), "shared" or "owner" (who = typed in Settings); email only for "person"
   "confirmed": { "<contact id>": "2026-10-02" }  // when each number was last checked; may be absent
 }
@@ -154,7 +152,7 @@ Whoever publishes rebuilds the whole file from the admin block: a new data key a
 - `admin` is AES-GCM with a random 22-character admin key, containing `{ dataKey, cards }`.
 - `data` is `{ message, primary, contacts: [{ name, role, phone }] }`, with no ids, schedule or Spanish fields.
 
-`app.js` still reads it (`withSchedule` gives contacts ids and makes `primary` the fallback), and the dashboard upgrades it.
+`app.js` still reads it (the list needs only `contacts`, `message` and the driver name), and the dashboard upgrades it (`withSchedule` gives the contacts ids).
 
 ---
 
@@ -168,7 +166,7 @@ Whoever publishes rebuilds the whole file from the admin block: a new data key a
 
 **Publishing:**
 
-1. Validate: names, US phone numbers, no duplicate phones, both messages, shift names and days.
+1. Validate: names, US phone numbers, no duplicate phones, both messages.
 2. `buildFile4`: new data key and admin key K; encrypt `data`; one entry per card; the admin block (new log entry appended); K wrapped for the shared password (if on), each person and the owner.
 3. Self-check: the new file must open with every card key, and with every private key the tab knows (the sign-in used, the owner's recovery code, sign-ins made in this session), at least one; and there must be one `people` entry per person. Otherwise nothing is sent.
 4. `PUT …/contents/contacts.enc.json` with `{ message: "Update emergency card data", content: base64, branch: "main", sha }`.
@@ -261,8 +259,8 @@ Try every change on the test copy first ([above](#the-test-copy-staging)), and g
    - the link format: site + `#` + 22-character base64url key
    - the slot-id formula
    - the encryption of card entries
-2. **Only ever add to the data format.** Phones may run a cached older `app.js`, so never rename or remove fields it reads: `message`, `contacts[].{id,name,role,phone}`, `schedule`, `cards`, and the card-entry fields. New fields must be optional on read.
-3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`. A dashboard tab still running an older `dashboard.js` drops fields it doesn't know (e.g. `address`, `whatsapp`, `confirmed`) if it publishes, so re-check them after a deploy that adds fields. A `dashboard.js` from before version 4 can't open a version 4 file at all; the new `dashboard.js` says "just updated, reload" if it meets an older cached `crypto.js`.
+2. **Only ever add to the data format.** Phones may run a cached older `app.js`, so never rename or remove fields it reads: `message`, `contacts[].{id,name,role,phone}`, `schedule` (still written, but empty: [see above](#the-data-file-contactsencjson)), `cards`, and the card-entry fields. New fields must be optional on read.
+3. **Expect mixed versions for up to 10 minutes after a deploy.** `app.js` must work with an older `index.html`: treat any new element as optional, as `applyLanguage` does. Likewise, an older `app.js` must not break on a newer `index.html`. A dashboard tab still running an older `dashboard.js` drops fields it doesn't know (e.g. `yardAddress`, `confirmed`) if it publishes, so re-check them after a deploy that adds fields. A `dashboard.js` from before version 4 can't open a version 4 file at all; the new `dashboard.js` says "just updated, reload" if it meets an older cached `crypto.js`.
 4. **If you change emergency-page files:** add new ones to `PATHS` in `sw.js`, and optionally bump `CACHE` so phones drop old copies.
 5. **Never hand-edit `contacts.enc.json`.** The dashboard's `sha` check would refuse the next publish anyway, but a broken file would break every card.
 6. **Keep names out of commit messages.** They're public.
@@ -275,7 +273,6 @@ Try every change on the test copy first ([above](#the-test-copy-staging)), and g
 
 An automated suite was used during development. It isn't included in this repository, because it depends on a local Chrome, Python and a simulated GitHub. It drove headless Chrome against the site plus a simulated GitHub API and Pages, and covered:
 
-- **Shift logic:** unit tests for overnight shifts, weekdays, 24-hour shifts, people on two shifts, time zones and daylight saving, and Spanish times and shift names; time off (cover, night shifts that start before or end after it, the fallback away, the cover away too, everyone away, entries for removed people).
 - **Dashboard flows:**
   - first-time setup (supervisors' password, token checked against the repository owner, owner password, recovery code) and validation errors
   - owner sign-in with the owner password, and the supervisors' password refused on the owner link
@@ -296,18 +293,14 @@ An automated suite was used during development. It isn't included in this reposi
   - older cached code: a pre-version-4 `dashboard.js` can't sign in to a version 4 file and publishes nothing; the new `dashboard.js` with an older `crypto.js` or `dashboard.html` behaves safely
   - upgrading from first-version data
   - 90-day number checks: missing dates count from the last publish, **Still right**, a changed number counts as checked, dates kept only in the admin block
-  - shift gaps: overnight and weekend gaps merged across Sunday→Monday, listed Monday first, ✓ when covered
-  - yard address (trimmed) and the WhatsApp switch in the change list and the published data
+  - yard address (trimmed) in the change list and the published data
 - **Emergency page:**
   - iPhone and Android link formats
-  - call order against an independent Python implementation
-  - time-zone note
   - error states
   - HTML in names shown as text
   - English/Spanish: auto-detection, toggle, remembered choice, Spanish message and roles
   - offline copy and recovery once back online
   - deploy mixes: an older cached `index.html` with the new `app.js`, and the reverse
-  - WhatsApp link (number and message, English and Spanish), hidden when off or on older data
   - yard address with Apple Maps (iPhone) / Google Maps (others) links
   - the vCard: one contact, every number labelled (itemN.TEL + X-ABLabel), escaping, Spanish name and roles, address and note; iPhone opens it, Android downloads it
   - the manifest loads under the CSP, Chrome's installability check passes, the plain address reopens the last card, and a wrong key isn't remembered
@@ -323,8 +316,9 @@ An automated suite was used during development. It isn't included in this reposi
   - the Owner tab's all-cards ZIP (unpublished, duplicate and unprintable cards included in the test): folders with card, keychain and one-plate projects, CSV and README, and a .3mf taken from it slices the same way
   - Print & QR: the four previews, keychain initials (default, changed, refused, reset) and all four downloads
   - the ZIP is valid
+- **No primary call, no shifts (2026-10-06):** in headless Chrome with a fake GitHub (45 checks): every supervisor listed A–Z with role and a Call link to the right number, in English and Spanish; the group text reaches everyone in the iPhone and Android formats; Save to Contacts is A–Z; nothing from the old call-order block shows; the dashboard opens on Supervisors with no Shifts tab, "Right now" box or WhatsApp switch, and old shift data isn't listed as a change; a publish writes the empty `schedule` (fallback = first A–Z) and no `whatsapp`; deploy mixes: older `index.html` + new `app.js`, new `index.html` + older `app.js`, the older page and the older dashboard on the new data, and an older `dashboard.html` + new `dashboard.js`, all without script errors.
 
-**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts, WhatsApp), and a physical print of the face-up card and the keychain.
+**Not yet verified:** real phones (group-text formats, NFC through the card, Save to Contacts), and a physical print of the face-up card and the keychain.
 
 ---
 
@@ -338,5 +332,5 @@ An automated suite was used during development. It isn't included in this reposi
 - **GitHub REST API:** used only by the dashboard (the contents endpoint).
   - Loading works without authentication (60 requests per hour per IP address), falling back to the site copy.
   - Publishing uses the fine-grained token (5,000 requests per hour).
-- **Links out (only when a family taps them):** `wa.me` (WhatsApp), `maps.apple.com` and `google.com/maps` (directions). Nothing is loaded from them.
+- **Links out (only when a family taps them):** `maps.apple.com` and `google.com/maps` (directions). Nothing is loaded from them.
 - **No other services:** no analytics, fonts, CDNs or third-party scripts.
