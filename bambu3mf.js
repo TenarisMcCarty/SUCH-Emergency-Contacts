@@ -18,6 +18,8 @@
  *                (a card and its keychain), side by side with 6 mm between them and centred as a group (clear of
  *                the prime tower, which sits behind the middle of the plate).
  *                They share the plate's one pause, so their pockets must have the same roof height (pauseZ).
+ * positions      with pieces: [[x, y], …], each piece's centre on the plate (from platePlan()) instead of the row
+ * tower          with positions: [x, y], the prime tower's front-left corner (wipe_tower_x / wipe_tower_y)
  * printer        one of Bambu3MF.PRINTERS' ids (default 'P2S'): the enclosed Bambu Lab printers with a 0.4 mm
  *                nozzle, single- and two-nozzle. On the H2D, H2D Pro and X2D each colour gets its own nozzle
  *                (filament grouping "Manual": LIGHT = left nozzle, DARK = right), so the colours never share a
@@ -39,6 +41,10 @@
  * precedes, its top Z, and the Z printed before the pause).
  * Bambu3MF.zipWriter() -> { add(name, bytes), finish() }: a deflated ZIP built one file at a time (the
  * dashboard's "all cards" download).
+ * Bambu3MF.platePlan(printer, { w, h }) -> { slots: [[x, y], …], tower: [x, y] }: as many w × h footprints as fit
+ * on that printer's plate (rows from the front, left to right), clear of the prime tower and of the plate's no-go
+ * areas, where every nozzle reaches.
+ * Bambu3MF.plateSTL(pieces, positions) -> { black, white }: the pieces' parts as two binary STLs, placed as on the plate.
  */
 const Bambu3MF = (() => {
   'use strict';
@@ -258,7 +264,7 @@ const Bambu3MF = (() => {
   }
 
   // ---------- project settings ----------
-  function projectSettings(tpl, { material, layerHeight, ironing }) {
+  function projectSettings(tpl, { material, layerHeight, ironing, towerWidth }) {
     const s = JSON.parse(JSON.stringify(tpl.settings));
     const patch = tpl.materials[material];
     if (!patch) throw new Error(`Unknown material "${material}" (use ${Object.keys(tpl.materials).join(' or ')})`);
@@ -272,6 +278,9 @@ const Bambu3MF = (() => {
     };
     setProcess('layer_height', String(round4(layerHeight)));
     setProcess('ironing_type', ironing ? 'topmost' : 'no ironing');
+    // Full plates: the tower's real size (about 35 mm, Bambu Studio's rib-wall tower), so Bambu Studio doesn't move it
+    // onto the pieces to make room for a wider one.
+    if (towerWidth) setProcess('prime_tower_width', String(towerWidth));
     for (const [key, max] of Object.entries(DETAIL)) {
       if (!Array.isArray(s[key])) continue;
       const v = s[key].map(x => String(Math.min(Number(x), max)));
@@ -297,13 +306,13 @@ const Bambu3MF = (() => {
   }
 
   // ---------- main ----------
-  async function make({ black, white, name = 'card', pieces, pauseZ, layerHeight = 0.2, printer = 'P2S', material = 'ABS', ironing = false, template } = {}) {
+  async function make({ black, white, name = 'card', pieces, positions, tower, pauseZ, layerHeight = 0.2, printer = 'P2S', material = 'ABS', ironing = false, template } = {}) {
     const list = pieces || [{ black, white, name }];
     if (!list.length || list.some(p => !p.black || !p.white)) throw new Error('make(): black and white STL data are required');
     if (typeof pauseZ !== 'number' || !isFinite(pauseZ)) throw new Error('make(): pauseZ (mm) is required');
     if (!(layerHeight >= 0.04 && layerHeight <= 0.32)) throw new Error('make(): layerHeight out of range');
     const tpl = template || await loadTemplate(printer);
-    const settings = projectSettings(tpl, { material, layerHeight, ironing });
+    const settings = projectSettings(tpl, { material, layerHeight, ironing, towerWidth: positions && tower ? TOWER : 0 });
     // Two fixed nozzles (H2D, H2D Pro, X2D): filament 1 (LIGHT) on the left nozzle, filament 2 (DARK) on the right.
     // These are project options (Bambu Studio keeps them from the file), repeated in the plate's metadata below.
     // The H2C's right side is a nozzle changer: a fixed grouping needs the printer's own nozzle list, so it keeps
@@ -340,6 +349,12 @@ const Bambu3MF = (() => {
     const GAP = 6, total = objs.reduce((t, o) => t + o.width, 0) + GAP * (objs.length - 1);
     let x = bedX - total / 2;
     for (const o of objs) { o.place = `1 0 0 0 1 0 0 0 1 ${num(x + o.width / 2)} ${num(bedY)} 0`; x += o.width + GAP; }
+    // A full plate (platePlan): each piece where it was planned, the prime tower in the room kept for it.
+    if (positions) {
+      if (positions.length !== objs.length) throw new Error('make(): one position per piece');
+      objs.forEach((o, i) => { o.place = `1 0 0 0 1 0 0 0 1 ${num(positions[i][0])} ${num(positions[i][1])} 0`; });
+      if (tower) { settings.wipe_tower_x = [num(tower[0])]; settings.wipe_tower_y = [num(tower[1])]; }
+    }
 
     const objectModels = objs.map(o => {
       const lines = [];
@@ -427,5 +442,96 @@ const Bambu3MF = (() => {
     return zip(files.map(([n, text]) => ({ name: n, data: enc.encode(text) })));
   }
 
-  return { make, pauseLayer, loadTemplate, zipWriter, PRINTERS, FIRST_LAYER, PIECES: true };
+  // ---------- full plates ----------
+  // The prime tower: about 35 × 35 mm from its front-left corner on every printer (Bambu Studio's rib-wall tower; measured
+  // in its G-code), plus room for its brim.
+  const TOWER = 35, TOWER_ROOM = 5, EDGE = 8, SPACING = 6;
+  const rectOf = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+  const overlap = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  // As many w × h footprints as fit: inside the plate less EDGE, where every nozzle reaches (two-nozzle printers),
+  // SPACING apart, clear of the plate's no-go area and the prime tower. Rows from the front, left to right; the
+  // block is centred on the plate. The tower goes beside the block, behind it, or in the back row's last place.
+  async function platePlan(printer, { w, h }) {
+    const s = (await loadTemplate(printer)).settings;
+    let [x0, y0, x1, y1] = rectOf(s.printable_area.map(p => p.split('x').map(Number)));
+    for (const a of s.extruder_printable_area || []) {
+      const r = rectOf(a.split(',').map(p => p.split('x').map(Number)));
+      x0 = Math.max(x0, r[0]); y0 = Math.max(y0, r[1]); x1 = Math.min(x1, r[2]); y1 = Math.min(y1, r[3]);
+    }
+    const nogo = [];
+    if ((s.bed_exclude_area || []).length > 2) nogo.push(rectOf(s.bed_exclude_area.map(p => p.split('x').map(Number))));
+    x0 += EDGE; y0 += EDGE; x1 -= EDGE; y1 -= EDGE;
+    const T = TOWER + 2 * TOWER_ROOM, cols = Math.floor((x1 - x0 + SPACING) / (w + SPACING)), rows = Math.floor((y1 - y0 + SPACING) / (h + SPACING));
+    if (cols < 1 || rows < 1) throw new Error(`A ${w} x ${h} mm set doesn't fit on the ${printer} plate.`);
+    const bw = cols * w + (cols - 1) * SPACING, bh = rows * h + (rows - 1) * SPACING;
+    let layout;
+    if (x1 - x0 - bw >= T + SPACING) {           // beside the block, on the right
+      const left = x0 + (x1 - x0 - bw - SPACING - T) / 2, bottom = y0 + (y1 - y0 - bh) / 2;
+      layout = { left, bottom, rows, tower: [left + bw + SPACING + TOWER_ROOM, bottom + bh / 2 - TOWER / 2] };
+    } else if (y1 - y0 - bh >= T + SPACING) {    // behind the block
+      const left = x0 + (x1 - x0 - bw) / 2, bottom = y0 + (y1 - y0 - bh - SPACING - T) / 2;
+      layout = { left, bottom, rows, tower: [left + bw / 2 - TOWER / 2, bottom + bh + SPACING + TOWER_ROOM] };
+    } else {                                     // in the back row's last place
+      const left = x0 + (x1 - x0 - bw) / 2, bottom = y0 + (y1 - y0 - bh) / 2, top = bottom + bh;
+      layout = { left, bottom, rows, tower: [left + bw - w / 2 - TOWER / 2, top - h / 2 - TOWER / 2], drop: [rows - 1, cols - 1] };
+    }
+    const towerRect = [layout.tower[0] - TOWER_ROOM, layout.tower[1] - TOWER_ROOM, layout.tower[0] + TOWER + TOWER_ROOM, layout.tower[1] + TOWER + TOWER_ROOM];
+    const slots = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (layout.drop && layout.drop[0] === r && layout.drop[1] === c) continue;
+      const cx = layout.left + c * (w + SPACING) + w / 2, cy = layout.bottom + r * (h + SPACING) + h / 2;
+      const box = [cx - w / 2 - SPACING / 2, cy - h / 2 - SPACING / 2, cx + w / 2 + SPACING / 2, cy + h / 2 + SPACING / 2];
+      if (overlap(box, towerRect) || nogo.some(n => overlap(box, n))) continue;
+      slots.push([round4(cx), round4(cy)]);
+    }
+    if (!slots.length) throw new Error(`No room for a set on the ${printer} plate.`);
+    return { slots, tower: layout.tower.map(round4) };
+  }
+
+  // The pieces' parts in two binary STLs (all DARK parts, all LIGHT parts), each piece placed like make() places it:
+  // the middle of its footprint at its position, its bottom on the plate. Bambu Studio moves an imported object to
+  // the middle of the plate, so it also returns `centre`: the middle of all the pieces' footprint, the object's
+  // Position X / Y that puts every piece back where it was planned (clear of the prime tower).
+  function plateSTL(pieces, positions) {
+    const all = [Infinity, Infinity, -Infinity, -Infinity];
+    const parts = { black: [], white: [] };
+    pieces.forEach((pc, i) => {
+      const bufs = { black: pc.black instanceof Uint8Array ? pc.black : new Uint8Array(pc.black), white: pc.white instanceof Uint8Array ? pc.white : new Uint8Array(pc.white) };
+      const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+      for (const u8 of Object.values(bufs)) {
+        const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), n = dv.getUint32(80, true);
+        for (let t = 0; t < n; t++) for (let k = 0; k < 3; k++) for (let c = 0; c < 3; c++) {
+          const v = dv.getFloat32(84 + t * 50 + 12 + k * 12 + c * 4, true);
+          if (v < lo[c]) lo[c] = v;
+          if (v > hi[c]) hi[c] = v;
+        }
+      }
+      const shift = [positions[i][0] - (lo[0] + hi[0]) / 2, positions[i][1] - (lo[1] + hi[1]) / 2, -lo[2]];
+      all[0] = Math.min(all[0], lo[0] + shift[0]); all[1] = Math.min(all[1], lo[1] + shift[1]);
+      all[2] = Math.max(all[2], hi[0] + shift[0]); all[3] = Math.max(all[3], hi[1] + shift[1]);
+      for (const key of ['black', 'white']) parts[key].push({ u8: bufs[key], shift });
+    });
+    const out = {};
+    for (const key of ['black', 'white']) {
+      const total = parts[key].reduce((t, p) => t + new DataView(p.u8.buffer, p.u8.byteOffset, p.u8.byteLength).getUint32(80, true), 0);
+      const buf = new Uint8Array(84 + 50 * total), dv = new DataView(buf.buffer);
+      enc.encodeInto(`Tenaris plate ${key === 'black' ? 'DARK' : 'LIGHT'}`, buf.subarray(0, 80));
+      dv.setUint32(80, total, true);
+      let o = 84;
+      for (const { u8, shift } of parts[key]) {
+        const sv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), n = sv.getUint32(80, true);
+        for (let t = 0; t < n; t++, o += 50) {
+          const q = 84 + t * 50;
+          for (let c = 0; c < 3; c++) dv.setFloat32(o + c * 4, sv.getFloat32(q + c * 4, true), true); // normal
+          for (let k = 0; k < 3; k++) for (let c = 0; c < 3; c++)
+            dv.setFloat32(o + 12 + k * 12 + c * 4, sv.getFloat32(q + 12 + k * 12 + c * 4, true) + shift[c], true);
+        }
+      }
+      out[key] = buf;
+    }
+    out.centre = [round4((all[0] + all[2]) / 2), round4((all[1] + all[3]) / 2)];
+    return out;
+  }
+
+  return { make, pauseLayer, loadTemplate, zipWriter, platePlan, plateSTL, PRINTERS, FIRST_LAYER, PIECES: true };
 })();

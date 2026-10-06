@@ -252,6 +252,11 @@ Based on the *Tenaris Brandmark Basic Guidelines* (Tenaris Marketing Communicati
 - **Data and older cached files:** the data keeps a `schedule` object, now always `{ timeZone, fallback: <first supervisor A–Z>, shifts: [], away: [] }`, only so a page or dashboard still running older cached code keeps working; `whatsapp` is no longer written. Old shift and time-off data stays in the file until the next publish. `schedule.js` is unchanged and still loaded; its shift functions stay only for older cached pages. `index.html` keeps the old element ids as hidden placeholders and the new `app.js` also works with an older `index.html`; `dashboard.html` loads `dashboard.js?v=20261006`, and the new `dashboard.js` hides the Shifts tab, "Right now" box and WhatsApp switch if an older `dashboard.html` is shown.
 - **Unchanged:** printed cards and card links, so no card needs reprinting.
 
+### 2026-10-06: raised lettering, full plates
+
+- **Raised lettering:** the front's lettering and logo, on the card and the keychain, get one more layer, light only, printed after the top layer's dark, so they stand 0.1 mm higher, like a credit card's raised numbers. The light is printed alone: cleaner edges, purer white. The card stays 1.7 mm (1.8 at the lettering), the keychain 3.0 mm (3.1); the pause is unchanged (after Z 1.3 mm, before layer 13, now of 17 on the card and 30 on the keychain). Ironing stays off.
+- **Full plates:** Owner tab → Print files for all cards → **Full plates (3MF)** or **Full plates (STL)** puts every card with its keychain beside it on full plates, as many sets as fit (H2S 10; H2D, H2D Pro and H2C 9; X1 Carbon, X1E, P1S, P2S and X2D 4): one .3mf per plate, or each plate's DARK and LIGHT STL, plus `NFC-links.csv` in plate order and a README. The tags go in blank at the pause and are written from the CSV after printing. **Download all cards (ZIP)** (a folder per person, tags written before printing) stays.
+
 ## 6. Individual sign-ins: design notes
 
 Details in [technical.md](technical.md) (data file format version 4) and [security.md](security.md). The key ideas:

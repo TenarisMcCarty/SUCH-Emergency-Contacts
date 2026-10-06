@@ -33,8 +33,8 @@ The plain site address (without a card key) shows "This card couldn't be loaded"
 | Guide | For | What's in it |
 |---|---|---|
 | [Supervisor guide](docs/supervisor-guide.md) | Supervisors | Signing in with your email, your first sign-in, Forgot password?, supervisors, cards, printing, publishing, history, changing your password, fixing common problems |
-| [Owner guide](docs/owner-guide.md) | Site owner | Owner password, recovery code, the GitHub token, people who can sign in (add, reset, remove), switching off the shared password, taking away access, starting over |
-| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card and keychain (specs, Bambu Studio project, printing in ABS or PETG), testing |
+| [Owner guide](docs/owner-guide.md) | Site owner | Owner password, recovery code, the GitHub token, people who can sign in (add, reset, remove), switching off the shared password, taking away access, starting over, print files for all cards |
+| [Cards and printing](docs/cards-and-printing.md) | Whoever makes cards | Writing NFC tags, the 3D-printed card and keychain (specs, Bambu Studio project, printing in ABS or PETG), full plates, testing |
 | [The emergency page](docs/emergency-page.md) | Everyone | Exactly what families see, how the supervisors are listed, English/Spanish, offline behaviour, error messages |
 | [Security](docs/security.md) | Owner / IT | What's public, what's encrypted, who can see what, and the known limits |
 | [Technical reference](docs/technical.md) | Developers | Architecture, the data file format, every file, deployment and caching, how to change things safely |
@@ -54,7 +54,7 @@ The dashboard's **Help** tab lists the common jobs. The [supervisor guide](docs/
 
 ### Site owner
 
-Open the owner link and sign in with **your own owner password**; supervisor sign-ins don't work there. That gives you the **Owner** tab: people who can sign in, the shared password, GitHub token, owner password, recovery code, your contact details, and taking away access. If the owner link says **"Set up owner access"**, do that first ([owner guide, section 2](docs/owner-guide.md#2-setting-up-owner-access-on-existing-data)).
+Open the owner link and sign in with **your own owner password**; supervisor sign-ins don't work there. That gives you the **Owner** tab: people who can sign in, print files for all cards, the shared password, GitHub token, owner password, recovery code, your contact details, and taking away access. If the owner link says **"Set up owner access"**, do that first ([owner guide, section 2](docs/owner-guide.md#2-setting-up-owner-access-on-existing-data)).
 
 ### Making a new card
 
@@ -70,7 +70,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 - **English and Spanish:** phones set to Spanish open in Spanish, a header button switches language, and the text message is translated too.
 - **One-click publishing:** the dashboard saves straight to GitHub. There's no copying, pasting or committing by hand.
 - **Per-card keys:** a lost card can be switched off on its own; every other card keeps working.
-- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (1.7 mm, NFC tag sealed inside) and a matching keychain (same link, the driver's initials), as ready-to-print **Bambu Studio projects (3MF)** for the chosen enclosed Bambu Lab printer (single- or two-nozzle) with the tag pause already set (card, keychain, or both on one plate), or as **STL files** with print notes.
+- **3D card files:** from a card's data, the dashboard makes a two-colour, wallet-size 3D card (1.7 mm, NFC tag sealed inside, light lettering raised 0.1 mm) and a matching keychain (same link, the driver's initials), as ready-to-print **Bambu Studio projects (3MF)** for the chosen enclosed Bambu Lab printer (single- or two-nozzle) with the tag pause already set (card, keychain, or both on one plate), or as **STL files** with print notes. The owner can download every card at once: a folder per card, or every card with its keychain on **full plates**, as many sets as fit on the printer.
 - **Works with weak signal:** after a phone has opened its card once, the page opens from a saved copy when the internet is down. Texts and calls only need normal signal.
 - **Tenaris brand:** follows the Tenaris Brandmark Basic Guidelines: the official signature (full colour on screen; one colour on the two-colour 3D card), minimum sizes and clear space, Tenaris Green, Blue and Gray, and a Frutiger-style typeface.
 - **Encrypted:** the repository is public, but every contact, name and setting is encrypted. Without a card or a sign-in, the data file is unreadable.
@@ -85,7 +85,7 @@ Open the owner link and sign in with **your own owner password**; supervisor sig
 | `index.html`, `app.js` | The emergency page families see |
 | `dashboard.html`, `dashboard.js` | The dashboard for supervisors and the owner |
 | `cardmaker.js` | Makes the 3D card (two STL parts, previews, print notes, ZIP) in the browser |
-| `bambu3mf.js`, `bambu-printers/*.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF) for the chosen printer, one piece or several on one plate (`bambu-template.json` stays for older cached copies) |
+| `bambu3mf.js`, `bambu-printers/*.json` | Turns the STL parts into a ready-to-print Bambu Studio project (3MF) for the chosen printer, one piece or several on one plate, or full plates with as many card-and-keychain sets as fit (`bambu-template.json` stays for older cached copies) |
 | `crypto.js` | Encryption, shared by both pages |
 | `schedule.js` | The yard's address, time zone and the Test site label. Its old shift functions stay only for older cached pages. |
 | `sw.js` | Keeps an offline copy of the emergency page on phones |
@@ -109,7 +109,7 @@ Hosting is **GitHub Pages**, from the `main` branch, repository root. There is n
 - **Not yet tested on real phones or a real printer:**
   - the group-text links (iPhone and Samsung)
   - Save to Contacts
-  - NFC reading through the 3D-printed card and keychain
+  - NFC reading through the 3D-printed card and keychain, and writing tags through them (full plates)
   - a physical print of the 3D card
 
   Run the trial checklist in [Cards and printing](docs/cards-and-printing.md#trial-checklist) before making a batch.

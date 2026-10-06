@@ -297,7 +297,15 @@ Right after an update, a browser may briefly still run the old dashboard. If it 
 
 ## 17. Print files for all cards
 
-**Owner** tab → **Print files for all cards** → choose the **Printer** (the same choice as in Print & QR) and the **Filament** (ABS or PETG) → **Download all cards (ZIP)**. It makes every card's files at once (a few seconds per card; the message under the button counts them), so you don't have to go through **Print & QR** card by card.
+**Owner** tab → **Print files for all cards** → choose the **Printer** (the same choice as in Print & QR) and the **Filament** (ABS or PETG) → **Download all cards (ZIP)**, **Full plates (3MF)** or **Full plates (STL)**. Each makes every card's files at once (a few seconds per card; the message under the buttons shows how far it has got), so you don't have to go through **Print & QR** card by card.
+
+| Button | Gives you | NFC tags |
+|---|---|---|
+| **Download all cards (ZIP)** | A folder per card: the card, the keychain, and both on one plate | Written and tested before printing, one person at a time |
+| **Full plates (3MF)** | Every card with its keychain on full plates: one Bambu Studio project per plate | Put in blank at the pause, written after printing |
+| **Full plates (STL)** | The same plates, as each plate's DARK and LIGHT STL files | The same |
+
+### Download all cards (ZIP)
 
 The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ABS.zip`, holds:
 
@@ -314,4 +322,20 @@ The ZIP, e.g. `Tenaris-cards-2026-10-05-H2D-ABS.zip`, holds:
 - Keychain initials come from the driver names, or from **Keychain initials** in Print & QR if you changed them since opening the page. A card whose keychain can't be made (no letters for initials) keeps its card files; the message names it.
 
 How to print each card and keychain: [Cards and printing](cards-and-printing.md#5-printing-it).
+
+### Full plates
+
+Every card goes on a full plate with its own keychain right next to it, as many sets as fit on the chosen printer: **H2S** 10 sets a plate; **H2D**, **H2D Pro** and **H2C** 9; **X1 Carbon**, **X1E**, **P1S**, **P2S** and **X2D** 4.
+
+The ZIP, e.g. `Tenaris-plates-2026-10-06-H2S-ABS-3MF.zip` (or `…-STL.zip`), holds:
+
+| | |
+|---|---|
+| `plate-1-of-3-H2S.3mf`, … (**Full plates (3MF)**) | one Bambu Studio project per plate for the chosen printer, with the settings and the pause already set. Bambu Studio estimates about 9 h 50 min for a full H2S plate in ABS. |
+| `plate-1-of-3-DARK.stl` and `plate-1-of-3-LIGHT.stl`, … (**Full plates (STL)**) | each plate's dark and light parts, with every piece in place. Import both at once as one object with multiple parts, set the object's **Position X / Y** to the values the README lists for that plate (Bambu Studio puts an imported object in the middle of the plate), drag the prime tower into the free room left for it, and set the settings and the pause yourself. |
+| `NFC-links.csv` | every card and keychain in plate order (Plate, Spot, Piece, Driver, Holder, Link, Published): the list for writing the tags |
+| `README.txt` | the plates and the sets on each, printing, the pause and writing the tags; for the STL files also the settings and where the prime tower goes |
+
+- **The tags go in blank.** At the pause, drop a blank NTAG215 coin tag into every pocket (two per set). After printing, take each card and its keychain off together and keep them together: the keychain shows only initials. Then write each piece's tag from `NFC-links.csv`, tap it to check that the right name opens, and lock it. Step by step: [Cards and printing](cards-and-printing.md#full-plates).
+- Unpublished cards, names that can't be printed and keychain initials work as for **Download all cards (ZIP)** (above). A card whose keychain can't be made goes on the plate alone.
 

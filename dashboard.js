@@ -1195,7 +1195,7 @@ onClick('dl-all-cards', async () => {
   const waiting = cards.filter(c => !isLive(c)).length;
   if (waiting && !confirm(`${waiting} of ${cards.length} cards aren't published yet. Their links (tag and QR code) only work after you publish.\n\nDownload anyway?`)) return;
   allCardsBusy = true;
-  $('dl-all-cards').disabled = true;
+  setAllBusy(true);
   const material = $('all-material') ? $('all-material').value : 'ABS';
   const root = `Tenaris-cards-${today()}-${printer.id}-${material}/`, zip = Bambu3MF.zipWriter(), enc = new TextEncoder();
   const made = [], skipped = [], used = new Set();
@@ -1240,9 +1240,95 @@ onClick('dl-all-cards', async () => {
     say('all-cards-msg', e.message, true);
   } finally {
     allCardsBusy = false;
-    $('dl-all-cards').disabled = false;
+    setAllBusy(false);
   }
 });
+function setAllBusy(on) { for (const id of ['dl-all-cards', 'dl-plates-3mf', 'dl-plates-stl']) if ($(id)) $(id).disabled = on; }
+
+// Owner tab: every card with its keychain on full plates, as many sets as fit on the chosen printer's plate (each
+// card with its keychain to its right): one Bambu Studio project per plate ('3mf'), or each plate's DARK and LIGHT
+// parts as two STL files ('stl'); NFC-links.csv in plate order and README.txt. The tags go in blank at the pause
+// and are written after printing. One plate is made at a time, so 50+ cards fit in memory.
+async function downloadPlates(format) {
+  if (allCardsBusy) return;
+  const cards = state.cards.slice();
+  if (!cards.length) return say('all-cards-msg', 'No cards yet.', true);
+  if (typeof Bambu3MF === 'undefined' || typeof Bambu3MF.platePlan !== 'function' || typeof CardMaker.plateNotes !== 'function' || !hasKeychain()) {
+    return say('all-cards-msg', 'The card maker is out of date in this browser. Reload the page and try again.', true);
+  }
+  const { printer, problem } = chosenPrinter('all-printer');
+  if (problem) return say('all-cards-msg', problem, true);
+  const waiting = cards.filter(c => !isLive(c)).length;
+  if (waiting && !confirm(`${waiting} of ${cards.length} cards aren't published yet. Their links (tag and QR code) only work after you publish.\n\nDownload anyway?`)) return;
+  allCardsBusy = true;
+  setAllBusy(true);
+  const material = $('all-material') ? $('all-material').value : 'ABS';
+  const name = `Tenaris-plates-${today()}-${printer.id}-${material}`, root = name + '/', zip = Bambu3MF.zipWriter(), enc = new TextEncoder();
+  try {
+    await CardMaker.load();
+    const ok = [], skipped = [];
+    const problemsOf = f => { try { return f().problems; } catch (e) { return [e.message]; } };
+    for (const card of cards) {
+      const info = printInfo(card), cp = problemsOf(() => CardMaker.layout(info));
+      if (cp.length) { skipped.push(`${cardLabel(card)}: ${cp.join(' ')}`); continue; }
+      const kp = problemsOf(() => CardMaker.keychainLayout(info));
+      if (kp.length) skipped.push(`${cardLabel(card)} (keychain only): ${kp.join(' ')}`);
+      ok.push({ card, info, keychain: !kp.length });
+    }
+    if (!ok.length) throw new Error(`None of the cards can be printed: ${skipped.join(' ')}`);
+    const C = CardMaker.CARD, K = CardMaker.KEYCHAIN, GAP = 6, set = { w: C.W + GAP + K.W, h: Math.max(C.H, K.H) };
+    const plan = await Bambu3MF.platePlan(printer.id, set), per = plan.slots.length, count = Math.ceil(ok.length / per);
+    const plates = [], rows = [['Plate', 'Spot', 'Piece', 'Driver', 'Holder', 'Link', 'Published']];
+    for (let p = 0; p < count; p++) {
+      say('all-cards-msg', `Making plate ${p + 1} of ${count}…`);
+      const group = ok.slice(p * per, (p + 1) * per), file = `plate-${p + 1}-of-${count}`;
+      const pieces = [], positions = [], sets = [];
+      let m;
+      // Spot = the set's place on the plate (rows from the front, left to right). A set that can't be made leaves its
+      // place empty; a keychain that can't be made leaves its card alone.
+      for (const [i, { card, info, keychain }] of group.entries()) {
+        const [x, y] = plan.slots[i];
+        let cm, k = null;
+        try { cm = CardMaker.model(info); } catch (e) { skipped.push(`${cardLabel(card)}: ${e.message}`); continue; }
+        if (keychain) try { k = CardMaker.keychainModel(info); } catch (e) { skipped.push(`${cardLabel(card)} (keychain only): ${e.message}`); }
+        m = cm;
+        pieces.push({ black: cm.black, white: cm.white, name: cardLabel(card) + ' card' });
+        positions.push([x - set.w / 2 + C.W / 2, y]);
+        if (k) {
+          pieces.push({ black: k.black, white: k.white, name: cardLabel(card) + ' keychain' });
+          positions.push([x + set.w / 2 - K.W / 2, y]);
+        }
+        for (const piece of k ? ['Card', 'Keychain'] : ['Card']) rows.push([String(p + 1), String(i + 1), piece, card.driver, card.note || '', info.link, isLive(card) ? 'Yes' : 'No']);
+        sets.push({ spot: i + 1, driver: card.driver, holder: card.note || '', link: info.link, live: isLive(card), keychain: !!k });
+      }
+      if (!pieces.length) continue;
+      let centre = null;
+      if (format === '3mf') {
+        await zip.add(`${root}${file}-${printer.id}.3mf`, await Bambu3MF.make({ pieces, positions, tower: plan.tower, name: file, pauseZ: m.pauseZ, layerHeight: m.layerHeight, printer: printer.id, material }));
+      } else {
+        const st = Bambu3MF.plateSTL(pieces, positions);
+        await zip.add(`${root}${file}-DARK.stl`, st.black);
+        await zip.add(`${root}${file}-LIGHT.stl`, st.white);
+        centre = st.centre;
+      }
+      plates.push({ file: format === '3mf' ? `${file}-${printer.id}.3mf` : `${file}-DARK.stl + ${file}-LIGHT.stl`, sets, centre });
+    }
+    const made = plates.reduce((t, pl) => t + pl.sets.length, 0);
+    if (!made) throw new Error(`None of the cards can be printed: ${skipped.join(' ')}`);
+    const cell = v => { const t = /^[=+\-@]/.test(v) ? "'" + v : v; return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    await zip.add(root + 'NFC-links.csv', enc.encode('\uFEFF' + rows.map(r => r.map(cell).join(',')).join('\r\n') + '\r\n'));
+    await zip.add(root + 'README.txt', enc.encode(CardMaker.plateNotes({ plates, material, skipped, printer, format, tower: plan.tower })));
+    saveFile(`${name}-${format.toUpperCase()}.zip`, new Blob(zip.finish(), { type: 'application/zip' }));
+    say('all-cards-msg', `Downloaded ${made} card${made === 1 ? '' : 's'} on ${plates.length} plate${plates.length === 1 ? '' : 's'} (up to ${per} sets a plate).` + (skipped.length ? ` Left out: ${skipped.join(' ')}` : ''), skipped.length > 0);
+  } catch (e) {
+    say('all-cards-msg', e.message, true);
+  } finally {
+    allCardsBusy = false;
+    setAllBusy(false);
+  }
+}
+onClick('dl-plates-3mf', () => downloadPlates('3mf'));
+onClick('dl-plates-stl', () => downloadPlates('stl'));
 
 // ================= History =================
 

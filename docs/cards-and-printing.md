@@ -1,6 +1,6 @@
 # Cards and printing
 
-How a card works, how to write its NFC tag, and how to print the 3D card and its keychain from the dashboard's **Print & QR** tab.
+How a card works, how to write its NFC tag, and how to print the 3D card and its keychain from the dashboard's **Print & QR** tab, or every card at once on full plates.
 
 **Contents**
 
@@ -12,6 +12,7 @@ How a card works, how to write its NFC tag, and how to print the 3D card and its
 5. [Printing it](#5-printing-it)
 6. [The STL files (ZIP)](#6-the-stl-files-zip)
    - [All cards at once](#all-cards-at-once)
+   - [Full plates](#full-plates)
 7. [When a card needs reprinting](#7-when-a-card-needs-reprinting)
 8. [Trial checklist](#trial-checklist)
 
@@ -43,6 +44,8 @@ The same link is written to the card's **NFC tag** and encoded in its **QR code*
 6. **Test** the finished pieces with an iPhone and an Android phone: tap each one and scan the card's QR. All should open the page with the right driver name.
 7. **Lock the tags** (only now, after they work through the plastic), then hand them over.
 
+For many cards at once, the owner can download **full plates** instead: every card with its keychain, the tags put in blank at the pause and written after printing ([Full plates](#full-plates)).
+
 Before printing your first cards, set the **Backup line** in Print & QR and publish. It's printed on the cards, and the page tells families to call it if the page ever can't load.
 
 ---
@@ -60,7 +63,7 @@ Use the free **NFC Tools** app (iPhone or Android) and an **NTAG215 PVC coin tag
 Notes:
 
 - iPhones read NFC tags in the background from the iPhone XS onward; the screen must be on. On Android, NFC must be switched on in Settings.
-- Write and test the tag **before** it goes into the card, and test it again after printing.
+- Write and test the tag **before** it goes into the card, and test it again after printing. (On a [full plate](#full-plates) the tags go in blank and are written after printing, through the plastic.)
 - Metal (and some phone cases or wallets with RFID blocking) stops NFC from working.
 
 ---
@@ -77,6 +80,7 @@ The card has two colours: one **dark** and one **light** filament. Below they're
 - **EMERGENCY CONTACT** in big light capitals on two lines: the main text
 - the driver's name in smaller capitals along the bottom, e.g. JANE DOE (1234); a long name wraps onto two lines
 - the upper right is plain: the NFC tag sits inside the card there
+- the light lettering and logo stand 0.1 mm higher than the dark, like the raised numbers on a credit card
 - one left edge: the logo, the headline and the name start at exactly the same line, and the name sits as far from the bottom edge as the logo does from the top
 
 **Back** (printed face down on the plate):
@@ -90,14 +94,14 @@ The Print & QR tab shows both faces before you download, each as seen from its o
 
 | | |
 |---|---|
-| Size | 85.6 × 53.98 × **1.7 mm**, the outline of a credit card with 3.18 mm rounded corners |
+| Size | 85.6 × 53.98 × **1.7 mm** (1.8 mm at the raised lettering), the outline of a credit card with 3.18 mm rounded corners |
 | Printer | An enclosed Bambu Lab printer with AMS and a **0.4 mm nozzle** (not 0.6: it can't draw 3.5 mm letters; the first trial card was blurred by one): X1 Carbon, X1E, P1S, P2S, H2S, H2D, H2D Pro, H2C or X2D (ABS needs the enclosure, so not the open A1, A1 mini, A2L or P1P) |
 | Material | **ABS** (Bambu ABS preset) or **PETG** (Bambu PETG HF preset), one dark and one light filament, the same type for both; **0.1 mm layers** (first layer 0.2 mm), textured PEI plate, bed **90 °C** for ABS, 70 °C for PETG |
 | Speeds | outer walls 60 mm/s at 2000 mm/s², inner walls and top surface 150 mm/s, first layer 30 mm/s: the values of Bambu's own "High Quality" presets, for sharp letters |
-| Layers, from the build plate up | **back** 0–0.3 mm (2 layers, QR artwork, face down) · **core** 0.3–1.3 mm (10 layers, light colour, with the NFC pocket) · **pause** · **roof** 1.3–1.4 mm (1 solid light layer) · **front** 1.4–1.7 mm (3 layers, front artwork, on top). Round the light core, a **1.2 mm dark rim** from the plate to the top. |
+| Layers, from the build plate up | **back** 0–0.3 mm (2 layers, QR artwork, face down) · **core** 0.3–1.3 mm (10 layers, light colour, with the NFC pocket) · **pause** · **roof** 1.3–1.4 mm (1 solid light layer) · **front** 1.4–1.7 mm (3 layers, front artwork, on top) · **raised lettering** 1.7–1.8 mm (1 layer, light only: the front's lettering and logo). Round the light core, a **1.2 mm dark rim** from the plate to the top. |
 | NFC tag | NTAG215 PVC coin, 25.4 mm (1 in) × 0.8 mm |
 | NFC pocket | 26.4 mm round, 1.0 mm deep, centred 67 mm from the left and 38 mm from the bottom of the front (18.6 mm from the left on the back); 2.8 mm of solid card between the pocket and the top edge |
-| Pause | after the layer that ends at **Z = 1.3 mm**, before layer 13 of 16 (shown as 1.4 mm in Bambu Studio's layer slider) |
+| Pause | after the layer that ends at **Z = 1.3 mm**, before layer 13 of 17 (shown as 1.4 mm in Bambu Studio's layer slider) |
 | Covers over the tag | 0.3 mm below (the back) and 0.4 mm above (roof + front) |
 | QR code | 40 × 40 mm including its light margin of 4 squares, 5 mm from the right edge and centred top to bottom; error-correction level M (still reads with about 15% damage). Card links give 37 × 37 squares, about 0.89 mm each (the generator never goes below 0.8 mm). |
 | Lettering | Source Sans 3 Semibold (a free typeface in the style of Frutiger, the Tenaris typeface), set with the font's own kerning, capitals spaced slightly apart (labels a little more), and lines aligned on their visible left edge. EMERGENCY CONTACT about 5.5–5.9 mm capitals; the name 4 mm on one line, 3.5–3.8 mm on two; SCAN / OR TAP 4.5 mm; the backup number about 3.6 mm; BACKUP 3.5 mm. **Nothing smaller than 3.5 mm.** |
@@ -112,22 +116,23 @@ The Print & QR tab shows both faces before you download, each as seen from its o
 - **Bed at most 90 °C.** From the pause on, the PVC tag sits in a card on the hot bed. PVC softens at about 80 °C, and PVC tags made for embedding are rated for beds up to 90 °C, so the project caps the bed at 90 °C (Bambu's ABS presets use 90 °C on the textured plate; PETG HF uses 70 °C). The NTAG215 chip itself is rated to 125 °C unpowered (NXP datasheet).
 - **Light core, dark rim.** The core is light, like the white PVC tag. A dark face shows nothing of a white tag in a white core, and light lettering over a light core stays bright. Round it, a 1.2 mm dark rim keeps the edges dark, so the card reads as one colour; every light letter, the logo and the QR square sit over the light core, never over the rim. Over a dark core, the tag shows through as a pale disc and light lettering looks grey (as on a trial card printed with the filaments swapped), so **filament 1 must be the light one** (the print notes say how to check in Bambu Studio's preview).
 - **Roof.** The first layer after the pause is light over the tag (one colour while it spans the pocket), with the dark rim round it. The printer prints the rim, then the prime tower, then the light bridge over the tag. Above it, 0.3 mm of front artwork.
-- **1.7 mm thick** (2.2 mm before). That's the 0.8 mm tag with its 0.2 mm clearance and the thinnest covers that keep each face opaque: 0.3 mm on the plate side, 0.4 mm on top. Still stiff in solid (100% infill) ABS or PETG.
+- **Raised lettering.** The front's lettering and logo get one more layer, light only, printed after the top layer's dark, so they stand 0.1 mm higher, like a credit card's raised numbers. The light you see is printed alone, with no dark lines beside it: cleaner edges and a purer white. Ironing must stay off: it smears the two colours.
+- **1.7 mm thick** (2.2 mm before; 1.8 mm at the raised lettering). That's the 0.8 mm tag with its 0.2 mm clearance and the thinnest covers that keep each face opaque: 0.3 mm on the plate side, 0.4 mm on top. Still stiff in solid (100% infill) ABS or PETG.
 - **Big, few words.** Small text doesn't print well. If a name can't fit at its minimum size, even on two lines, the dashboard refuses it and asks you to shorten it (**People → Rename**). A few characters have finer details and need bigger letters: Å and cedillas (Ç, Ş) 3.9 mm, the comma and # 3.7 mm. Curly quotes print as straight ones.
 
 ### The keychain
 
 A round key tag with the same NFC tag and the same link as the card, made from the same card in **Print & QR**. Its shape follows popular NFC key tags (MakerWorld and Printables designs, commercial key fobs): a coin with a ring tab, edges rounded so it doesn't dig into a hand or a pocket.
 
-- **Front** (on top): the Tenaris logo across the middle, **EMERGENCY** round the top and **CONTACT** round the bottom, light on the dark coin.
+- **Front** (on top): the Tenaris logo across the middle, **EMERGENCY** round the top and **CONTACT** round the bottom, light on the dark coin and raised 0.1 mm, as on the card.
 - **Back** (on the plate): the contactless symbol over the owner's **initials**. The initials come from the driver name (first letters of the first and last words, leaving out the ID in brackets: Jane Doe (1234) → JD). To change them, type 1–3 letters in **Keychain initials**; the change is kept for this session only, and the Owner tab's all-cards download uses it too while the page stays open.
 
 | | |
 |---|---|
-| Size | **41 mm coin** with a ring tab at the top: 41 × 49 × **3.0 mm** |
+| Size | **41 mm coin** with a ring tab at the top: 41 × 49 × **3.0 mm** (3.1 mm at the raised lettering) |
 | Ring tab | 11 mm across, joined to the coin with 3 mm curves; **5 mm key-ring hole** (fits a 25 mm split ring) with 3 mm of plastic all round |
 | Edges | 0.6 mm 45° chamfer on the plate side, 1.2 mm round on top (each layer's outline steps in) |
-| Layers | **back** 0–0.3 mm (face down) · **core** 0.3–1.3 mm (with the NFC pocket) · **pause** · **light** 1.3–2.7 mm · **front** 2.7–3.0 mm (on top). 29 layers. A 1.2 mm dark rim runs round the light core all the way up, as on the card. |
+| Layers | **back** 0–0.3 mm (face down) · **core** 0.3–1.3 mm (with the NFC pocket) · **pause** · **light** 1.3–2.7 mm · **front** 2.7–3.0 mm (on top) · **raised lettering** 3.0–3.1 mm (light only). 30 layers. A 1.2 mm dark rim runs round the light core all the way up, as on the card. |
 | Pause | the same as the card's: after Z = 1.3 mm, before layer 13 (1.4 mm in the layer slider) |
 | NFC pocket | 26.4 mm round, 1.0 mm deep, at the coin's centre (7.3 mm of plastic round it) |
 | Logo | 31 mm wide, the narrowest the brand allows (Multibar 5.5 mm), with 4.4 mm clear space; this sets the coin's size (about 40 mm is the smallest round shape that fits it) |
@@ -173,7 +178,7 @@ Why 3 mm: a key tag gets bent and pulled on its ring, so it's built like a car k
 The printer finishes layer 12 with the pocket open, moves the head away (Bambu printers park it over the waste chute when paused) and waits.
 
 1. Wait until the head has stopped away from the card. Open the door.
-2. Drop the **written and tested** tag into the pocket (on a shared plate, one in each) and press it flat. If it has an adhesive back, that side goes down. It must sit fully below the rim: nothing may stick up. Don't touch the nozzle, the edges or the prime tower.
+2. Drop the **written and tested** tag into the pocket (on a shared plate, one in each; on a [full plate](#full-plates), a **blank** tag in every pocket) and press it flat. If it has an adhesive back, that side goes down. It must sit fully below the rim: nothing may stick up. Don't touch the nozzle, the edges or the prime tower.
 3. Close the door and press **Resume** straight away: PVC softens at about 80 °C and the bed is hot (90 °C for ABS, 70 °C for PETG), so sealing the tag quickly keeps it flat.
 
 The printer then prints the dark rim, the prime tower (purging the light nozzle after the wait) and seals the tag with light layers, the first printed as a bridge in one colour.
@@ -188,8 +193,9 @@ Without a physical print, the generated files were checked digitally for several
 - the dark and light parts fill the piece exactly, with no gaps or overlaps (their volumes add up to the piece's to within 0.01 mm³)
 - the pocket is the right size and place, and fully enclosed: closed below by the back and above by the roof; the key-ring hole is open in every layer
 - capital heights, letter strokes and gaps and the logo's clear space were checked on the layouts
-- the card, the keychain and both on one plate were sliced with Bambu Studio 2.8 for every listed printer in ABS and in PETG and the G-code checked: one pause, after layer 12 (Z 1.3 mm) and before layer 13 (16 layers for the card, 29 for the keychain); the pocket is open at 26.4 mm on layers 3–12 and covered on every other layer; after the pause the dark rim, then the prime tower, then the roof bridging the pocket in the light filament only; the edges are dark on every layer and no light reaches past the light core; layer height 0.1 mm and the detail speeds; the bed is 90 °C (ABS) or 70 °C (PETG); on the H2D, H2D Pro and X2D each colour stays on its own nozzle
+- the card, the keychain and both on one plate were sliced with Bambu Studio 2.8 for every listed printer in ABS and in PETG and the G-code checked: one pause, after layer 12 (Z 1.3 mm) and before layer 13 (of 16 layers for the card and 29 for the keychain, before the raised lettering added one); the pocket is open at 26.4 mm on layers 3–12 and covered on every other layer; after the pause the dark rim, then the prime tower, then the roof bridging the pocket in the light filament only; the edges are dark on every layer and no light reaches past the light core; layer height 0.1 mm and the detail speeds; the bed is 90 °C (ABS) or 70 °C (PETG); on the H2D, H2D Pro and X2D each colour stays on its own nozzle
 - the top and first layers were drawn from the G-code: every letter (also on the keychain's arcs) and all 7 logo bars are traced on both pieces, and the QR code read from the drawn first layer opens the right link
+- full plates (2026-10-06): a full plate for every listed printer, in ABS, was sliced with Bambu Studio 2.8 and its G-code checked piece by piece: one pause, after Z 1.3 mm; every pocket open at 26.4 mm and sealed by the light roof; the edges dark; and the raised lettering (1.7–1.8 mm on the cards, 3.0–3.1 mm on the keychains) printed in the light filament only
 
 Print and test **one** card and keychain before making a batch.
 
@@ -212,7 +218,30 @@ File names use plain letters (José → Jose).
 
 ### All cards at once
 
-On the owner link: **Owner** tab → **Print files for all cards** → **Download all cards (ZIP)**. One ZIP with a folder per card (Bambu Studio projects for the card, the keychain and both on one plate, STL files and print notes), `NFC-links.csv` with every card's link, and a README. See the [owner guide](owner-guide.md#17-print-files-for-all-cards).
+On the owner link: **Owner** tab → **Print files for all cards** → **Download all cards (ZIP)**. One ZIP with a folder per card (Bambu Studio projects for the card, the keychain and both on one plate, STL files and print notes), `NFC-links.csv` with every card's link, and a README. See the [owner guide](owner-guide.md#17-print-files-for-all-cards). To print every card on full plates instead, see [below](#full-plates).
+
+### Full plates
+
+On the owner link: **Owner** tab → **Print files for all cards** → **Full plates (3MF)** or **Full plates (STL)**. Every card goes on a full plate with its keychain right next to it, as many sets as fit on the chosen printer:
+
+| Printer | Sets per plate |
+|---|---|
+| H2S | 10 |
+| H2D, H2D Pro, H2C | 9 |
+| X1 Carbon, X1E, P1S, P2S, X2D | 4 |
+
+- **Full plates (3MF):** one Bambu Studio project per plate, with the settings and the pause already set. Bambu Studio estimates about 9 h 50 min for a full H2S plate in ABS.
+- **Full plates (STL):** each plate's DARK and LIGHT STL files, with every piece already in place. Import both files at once and choose **Yes** to load them as one object with multiple parts. Bambu Studio puts the object in the middle of the plate: set its **Position X / Y** to the values the README lists for that plate, so every piece is back where it was planned, and drag the prime tower into the free room left for it. Set the settings and the pause yourself ([With the STL files](#with-the-stl-files)).
+- Both ZIPs also hold `NFC-links.csv` (every piece in plate order: Plate, Spot, Piece, Driver, Holder, Link, Published) and `README.txt` (see the [owner guide](owner-guide.md#full-plates)).
+
+The tags go in **blank** and are written after printing:
+
+1. Open the plate's .3mf (or import its two STL files), match filament 1 to the light slot and filament 2 to the dark one, slice and print, as for one card ([section 5](#5-printing-it)). Ironing stays off.
+2. **At the pause** (after Z 1.3 mm, before layer 13; 1.4 mm in the layer slider): drop a **blank** NTAG215 coin tag into **every** pocket, two per set, and press each one flat. Close the door and press **Resume** straight away.
+3. Let the plate cool. Take each card and its keychain off **together** and keep them together: the keychain shows only initials. The sets run in rows from the front of the plate, left to right (Spot 1, 2, …), each keychain just right of its card.
+4. **Write each piece's tag** from its row in `NFC-links.csv`, holding the phone flat on that piece: NFC Tools → **Write → Add a record → URL** → paste the link → **Write**.
+5. **Test:** tap the piece with a phone. The page must open with that driver's name.
+6. When all are right, **lock the tags** (NFC Tools → **Other → Lock tag**; permanent).
 
 ---
 

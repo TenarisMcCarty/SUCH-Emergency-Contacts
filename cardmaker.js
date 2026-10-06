@@ -20,7 +20,9 @@ const CardMaker = (() => {
   //   — pause: insert the tag —
   //   roof   0.1  one solid light layer over the tag (one colour while it spans the pocket)
   //   front  0.3  front artwork, the top surface
-  // 1.7 mm in all (2.2 mm before): the tag and the minimum covers that keep each face opaque.
+  //   bump   0.1  the front's light artwork only, standing 0.1 mm proud (BUMP)
+  // 1.7 mm in all (2.2 mm before), 1.8 mm at the raised lettering: the tag and the minimum covers that keep each
+  // face opaque.
   // The core is light, like the PVC tag: a dark face shows nothing of a white tag in a white core, and light
   // lettering over a light core stays bright. (Over a dark core the tag would show through as a pale disc, and light
   // lettering would look grey.) Between the two faces a 1.2 mm dark rim runs round the light core, so the edges are
@@ -30,6 +32,10 @@ const CardMaker = (() => {
   const LAYER = 0.1, FIRST_LAYER = 0.2;
   const BACK = 0.3, CORE = 1.0, ROOF = 0.1, FRONT = 0.3;
   const PAUSE_Z = BACK + CORE;                   // the Z where the roof starts: pause after this layer
+  // The front's light artwork (lettering, logo) stands BUMP proud, like a credit card's raised numbers: one more
+  // layer, light only, printed after the top layer's dark. The light you see is printed alone, so its edges are
+  // clean (no dark lines alongside it) and it stays pure white.
+  const BUMP = 0.1;
   const T = Math.round((BACK + CORE + ROOF + FRONT) * 1000) / 1000; // 1.7 mm
   const layerNo = z => 1 + Math.round((z - FIRST_LAYER) / LAYER); // the layer whose top is at z
   // NTAG215 PVC coin tag, 1 in (25.4 mm) across and 0.8 mm thick, centred here on the front. 38 mm up leaves
@@ -724,12 +730,15 @@ const CardMaker = (() => {
     for (const r of faceRegions(L.back, piece.w, core)) prism(r, 0, BACK, tris[r.color]); // back, face down
     prism({ outer: core, holes: [pocket] }, BACK, PAUSE_Z, tris.white);                  // core with the pocket
     prism({ outer: core, holes: [] }, PAUSE_Z, frontZ, tris.white);                      // over the tag, after the pause
-    for (const r of faceRegions(L.front, 0, core)) prism(r, frontZ, piece.T, tris[r.color]); // front, on top
+    for (const r of faceRegions(L.front, 0, core)) {                                      // front, on top
+      prism(r, frontZ, piece.T, tris[r.color]);
+      if (r.color === 'white') prism(r, piece.T, piece.T + BUMP, tris.white);             // its light art raised
+    }
     return {
       black: stl(tris.black, title + ' DARK'), white: stl(tris.white, title + ' LIGHT'),
-      thickness: piece.T, pauseZ: PAUSE_Z, pauseLayer: layerNo(PAUSE_Z) + 1, layers: layerNo(piece.T),
+      thickness: piece.T, bump: BUMP, pauseZ: PAUSE_Z, pauseLayer: layerNo(PAUSE_Z) + 1, layers: layerNo(piece.T + BUMP),
       layerHeight: LAYER, firstLayer: FIRST_LAYER,
-      stack: { back: [0, BACK], core: [BACK, PAUSE_Z], cover: [PAUSE_Z, frontZ], front: [frontZ, piece.T] },
+      stack: { back: [0, BACK], core: [BACK, PAUSE_Z], cover: [PAUSE_Z, frontZ], front: [frontZ, piece.T], bump: [piece.T, piece.T + BUMP] },
       bands: bands.map(b => [b.z0, b.z1, b.d]),
       pocket: { x: piece.tag.x, y: piece.tag.y, d: POCKET.d, depth: POCKET.depth, z0: BACK, z1: PAUSE_Z },
       layout: L,
@@ -1051,8 +1060,8 @@ const CardMaker = (() => {
         ...NOZZLE_NOTE];
     const pieceLines = ({ kind, m }) => {
       const k = kind === 'card'
-        ? { head: [`CARD  ${W} x ${H} x ${z(m.thickness)} mm (credit-card outline)`], back: 'back (QR code side)', top: 'LIGHT layer that seals the tag in' }
-        : { head: [`KEYCHAIN  ${KEY.W} mm coin with a ring tab, ${z(m.thickness)} mm thick, rounded edges`,
+        ? { head: [`CARD  ${W} x ${H} x ${z(m.thickness)} mm (credit-card outline), lettering ${m.bump || 0} mm higher`], back: 'back (QR code side)', top: 'LIGHT layer that seals the tag in' }
+        : { head: [`KEYCHAIN  ${KEY.W} mm coin with a ring tab, ${z(m.thickness)} mm thick, rounded edges, lettering ${m.bump || 0} mm higher`,
           `  ${KEY.W} x ${KEY.H} mm with the tab, 5 mm key-ring hole. Edges: ${KEY.edge.chamfer} mm chamfer at the plate, ${KEY.edge.round} mm round on top.`],
           back: 'back (initials)', top: 'LIGHT, seals the tag in' };
       return [
@@ -1063,6 +1072,7 @@ const CardMaker = (() => {
         '  -------------- PAUSE: insert the tag --------------',
         `  ${z(m.stack.cover[0])}-${z(m.stack.cover[1])} mm  ${k.top}; DARK rim round the edge`,
         `  ${z(m.stack.front[0])}-${z(m.stack.front[1])} mm  front (logo side), on top`,
+        ...(m.stack.bump ? [`  ${z(m.stack.bump[0])}-${z(m.stack.bump[1])} mm  front lettering and logo only (LIGHT), raised like a credit card's numbers`] : []),
       ];
     };
     const layerOf = both ? '' : ` of ${m0.layers}`;
@@ -1162,6 +1172,7 @@ const CardMaker = (() => {
       'NFC-links.csv lists every card\'s link, for writing the tags. A card and its keychain have the same link.',
       '',
       `CARD  ${W} x ${H} x ${T.toFixed(1)} mm. KEYCHAIN  ${KEY.W} mm coin with a ring tab, ${KEY.T.toFixed(1)} mm thick, rounded edges.`,
+      `  The front lettering and logo stand ${BUMP} mm higher (light only), like a credit card's raised numbers.`,
       `  Two colours: one DARK and one LIGHT ${material} filament (filament 1 = LIGHT, filament 2 = DARK; the preview`,
       '  must show a dark top with light lettering).',
       `NFC TAG  NTAG215 PVC coin, ${TAG.d} mm (1 in) x ${TAG.thick} mm, one per piece. Pocket ${POCKET.d} mm x ${POCKET.depth.toFixed(1)} mm.`,
@@ -1177,6 +1188,66 @@ const CardMaker = (() => {
       '',
       'CARDS',
       ...cards.map(c => `  ${c.folder}  ${c.driver}${c.holder ? ' (' + c.holder + ')' : ''}`),
+      '',
+    ].join('\n');
+  }
+
+  // README for the owner's "full plates" ZIP: every card with its keychain, as many sets per plate as fit.
+  // plates: [{ file, sets: [{ spot, driver, holder, link, live, keychain }], centre (STL: the object's Position X/Y) }];
+  // format '3mf' or 'stl'; tower: [x, y] (the prime tower's front-left corner).
+  function plateNotes({ plates, material, skipped = [], printer, format, tower, pauseAt }) {
+    const p = {}; // Houston date, YYYY-MM-DD
+    for (const x of new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())) p[x.type] = x.value;
+    const day = `${p.year}-${p.month}-${p.day}`, sets = plates.flatMap(pl => pl.sets), n = sets.length, nk = sets.filter(c => c.keychain).length;
+    const z = v => v.toFixed(1), pl = plates.length;
+    return [
+      `TENARIS EMERGENCY CARDS — ${n} card${n === 1 ? '' : 's'} and ${nk} keychain${nk === 1 ? '' : 's'} on ${pl} full plate${pl === 1 ? '' : 's'} (Bambu Lab ${printer.label}, ${material}, made ${day})`,
+      '',
+      'FILES',
+      ...(format === '3mf'
+        ? [`  plate-<n>-of-${pl}-${printer.id}.3mf  one plate each: Bambu Studio project for the Bambu Lab ${printer.label}, settings and the tag pause set.`,
+          '  Open it, match filament 1 to the LIGHT (white) AMS slot and filament 2 to the DARK one, slice, print.']
+        : [`  plate-<n>-of-${pl}-DARK.stl and -LIGHT.stl  every piece of that plate, in place. Import both files into`,
+          '  Bambu Studio at once and answer "Yes" to loading them as ONE object with multiple parts.',
+          '  Bambu Studio puts the object in the middle of the plate: select it and set its Position X and Y (object panel)',
+          '  to the values listed for that plate under PLATES, so every piece goes back where it was planned.',
+          `  Then drag the prime tower into the free room left for it: its front-left corner at about X ${z(tower[0])}, Y ${z(tower[1])},`,
+          '  touching no piece. Give the DARK part the dark filament and the LIGHT part the light one, and set SETTINGS (below).']),
+      '  NFC-links.csv  every card and keychain in plate order, with its link: the list to write the tags from.',
+      '',
+      'ON EACH PLATE',
+      '  Sets in rows from the front, left to right: each card with its own keychain just to its right. The keychain',
+      '  shows only initials, so take each card and its keychain off together and keep them together.',
+      '',
+      'PRINTING',
+      `  Bambu Lab ${printer.label} with a 0.4 mm nozzle (a 0.6 mm nozzle can't draw letters this small).`,
+      ...(SPLIT_NOZZLES.includes(printer.id)
+        ? ['  Two nozzles: the LIGHT filament prints from the LEFT nozzle and the DARK one from the RIGHT nozzle.']
+        : printer.nozzles > 1 ? ['  Two nozzles: Bambu Studio chooses which nozzle prints each colour (its filament grouping).'] : []),
+      '  Filament 1 = LIGHT (white), filament 2 = DARK. Bambu Studio\'s preview must show a dark top with light lettering.',
+      `  The front lettering and logo stand ${BUMP} mm higher, light only (like a credit card's numbers).`,
+      `  Plate: ${format === '3mf' ? 'the .3mf is set for the Textured PEI plate. On another plate, choose its type in Bambu Studio first;' : 'choose your plate\'s type in Bambu Studio;'}`,
+      '  the bed must stay at 90 C or less (the PVC tags). Ironing OFF (it smears the two colours).',
+      '  ABS: door and top closed except at the pause.',
+      `  PAUSE before layer ${layerNo(PAUSE_Z) + 1} (${z(PAUSE_Z + LAYER)} mm in the layer slider)${pauseAt ? ', ' + pauseAt : ''}: drop a BLANK NTAG215 coin`,
+      `  tag (${TAG.d} mm x ${TAG.thick} mm) into EVERY pocket (one in each card and each keychain) and press it flat:`,
+      '  nothing may stick up. Close the door and press Resume straight away.',
+      '  Let the plate cool before taking the pieces off.',
+      ...(format === 'stl' ? ['', 'SETTINGS (STL files only; the .3mf has them)',
+        `  Layer height ${LAYER} mm, first layer ${FIRST_LAYER} mm. Sparse infill 100%, 3 walls, Arachne. Supports off, prime tower on.`,
+        `  Speeds: ${DETAIL_NOTE}.`,
+        `  Pause: layer slider at layer ${layerNo(PAUSE_Z) + 1} (${z(PAUSE_Z + LAYER)} mm) > right-click > Add Pause; layer ${layerNo(PAUSE_Z)} (${z(PAUSE_Z)} mm) must still show the pockets open.`] : []),
+      '',
+      'WRITING THE TAGS (after printing)',
+      '  Each piece gets its person\'s link. For each line of NFC-links.csv: NFC Tools > Write > Add a record > URL >',
+      '  paste the link > Write, holding the phone flat on that piece. Then tap the piece: the page must show that',
+      '  person\'s name. When all are right, lock each tag (NFC Tools > Other > Lock tag; permanent).',
+      ...(sets.some(c => !c.live) ? ['', 'NOT PUBLISHED YET (links work only after publishing): ' + sets.filter(c => !c.live).map(c => c.driver).join(', ')] : []),
+      ...(skipped.length ? ['', 'LEFT OUT (fix in People > Rename, then download again):', ...skipped.map(t => '  ' + t)] : []),
+      '',
+      'PLATES',
+      ...plates.flatMap(pl => [`  ${pl.file}` + (pl.centre ? `   Position X ${z(pl.centre[0])}, Y ${z(pl.centre[1])}` : ''),
+        ...pl.sets.map(c => `    ${c.spot}. ${c.driver}${c.holder ? ' (' + c.holder + ')' : ''}${c.keychain ? '' : '  (card only)'}`)]),
       '',
     ].join('\n');
   }
@@ -1211,9 +1282,9 @@ const CardMaker = (() => {
   }
 
   return {
-    load, layout, model, preview, printNotes, batchNotes, files, zip, slug,
+    load, layout, model, preview, printNotes, batchNotes, plateNotes, files, zip, slug,
     keychainLayout, keychainModel, keychainPreview, keychainNotes, keychainFiles, initials, notes,
-    LAYER, FIRST_LAYER, CARD: { W, H, R, T, FRONT, CORE, ROOF, BACK, PAUSE_Z, TAG, POCKET, MIN_CAP, MIN_MODULE, GAP },
+    LAYER, FIRST_LAYER, CARD: { W, H, R, T, FRONT, CORE, ROOF, BACK, PAUSE_Z, TAG, POCKET, MIN_CAP, MIN_MODULE, GAP, BUMP },
     KEYCHAIN: { ...KEY, LOGO_W: KEY_LOGO_W },
   };
 })();
